@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright session
+.playwright-session/
+
+# cafe bot data (accounts)
+.cafe-bot-data/
+.claude_backup/
