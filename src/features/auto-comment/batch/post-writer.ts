@@ -136,46 +136,14 @@ export async function writePostWithAccount(
     const currentUrl = page.url();
     console.log('[DEBUG] 현재 URL:', currentUrl);
 
-    const articleIdMatch = currentUrl.match(/articles\/(\d+)/);
+    // URL 디코딩 (네이버 카페는 iframe_url_utf8 파라미터에 인코딩된 URL 사용)
+    const decodedUrl = decodeURIComponent(decodeURIComponent(currentUrl));
+    console.log('[DEBUG] 디코딩된 URL:', decodedUrl);
+
+    // articleid=숫자 패턴으로 추출 (네이버 카페 URL 형식)
+    const articleIdMatch = decodedUrl.match(/articleid=(\d+)/i);
     let articleId = articleIdMatch ? parseInt(articleIdMatch[1], 10) : undefined;
     console.log('[DEBUG] URL에서 추출한 articleId:', articleId);
-
-    // articleId 못 찾으면 페이지에서 직접 추출 시도
-    if (!articleId) {
-      console.log('[DEBUG] URL에서 articleId 못 찾음, 페이지에서 추출 시도...');
-
-      // 방법 1: 일반 article 링크
-      const articleLink = await page.$('a[href*="/articles/"]');
-      if (articleLink) {
-        const href = await articleLink.getAttribute('href');
-        console.log('[DEBUG] 찾은 article 링크:', href);
-        const match = href?.match(/articles\/(\d+)/);
-        if (match) {
-          articleId = parseInt(match[1], 10);
-        }
-      }
-
-      // 방법 2: 성공 모달이나 알림에서 찾기
-      if (!articleId) {
-        const successModal = await page.$('.success_message, .complete_message, .alert_layer');
-        if (successModal) {
-          const modalText = await successModal.textContent();
-          console.log('[DEBUG] 성공 모달 텍스트:', modalText);
-        }
-      }
-
-      // 방법 3: 현재 페이지 전체 HTML에서 articleId 패턴 찾기
-      if (!articleId) {
-        const pageContent = await page.content();
-        const articleMatch = pageContent.match(/articleId["\s:=]+(\d+)/i);
-        if (articleMatch) {
-          articleId = parseInt(articleMatch[1], 10);
-          console.log('[DEBUG] HTML에서 찾은 articleId:', articleId);
-        }
-      }
-    }
-
-    console.log('[DEBUG] 최종 articleId:', articleId);
 
     await saveCookiesForAccount(id);
 
