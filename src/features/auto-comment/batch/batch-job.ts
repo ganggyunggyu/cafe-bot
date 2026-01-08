@@ -3,6 +3,8 @@ import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
+import { connectDB } from '@/shared/lib/mongodb';
+import { PublishedArticle, BatchJobLog } from '@/shared/models';
 import { writePostWithAccount } from './post-writer';
 import { writeCommentWithAccount, writeReplyWithAccount } from '../comment-writer';
 import {
@@ -21,11 +23,29 @@ import { getRandomCommentCount } from './random';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function runBatchJob(
+// 키워드:카테고리 형식 파싱 (공백 허용: "키워드 : 카테고리" 또는 "키워드:카테고리")
+export const parseKeywordWithCategory = (input: string): { keyword: string; category?: string } => {
+  const lastColonIndex = input.lastIndexOf(':');
+  if (lastColonIndex === -1) {
+    return { keyword: input.trim() };
+  }
+
+  const keyword = input.slice(0, lastColonIndex).trim();
+  const category = input.slice(lastColonIndex + 1).trim();
+
+  // 카테고리가 비어있으면 전체를 키워드로 취급
+  if (!category) {
+    return { keyword: input.trim() };
+  }
+
+  return { keyword, category };
+}
+
+export const runBatchJob = async (
   input: BatchJobInput,
   options: BatchJobOptions = {},
   onProgress?: ProgressCallback
-): Promise<BatchJobResult> {
+): Promise<BatchJobResult> => {
   const { service, keywords, ref } = input;
   const delays = { ...DEFAULT_DELAYS, ...options.delays };
 
@@ -58,9 +78,24 @@ export async function runBatchJob(
     };
   }
 
+  // MongoDB 연결
+  await connectDB();
+
+  // 배치 작업 로그 생성
+  const jobLog = await BatchJobLog.create({
+    jobType: 'publish',
+    cafeId,
+    keywords,
+    totalKeywords: keywords.length,
+    results: [],
+    status: 'running',
+    startedAt: new Date(),
+  });
+
   try {
     for (let i = 0; i < keywords.length; i++) {
-      const keyword = keywords[i];
+      const rawKeyword = keywords[i];
+      const { keyword, category } = parseKeywordWithCategory(rawKeyword);
       const writerAccount = getWriterAccount(accounts, i);
       const commenterAccounts = getCommenterAccounts(accounts, writerAccount.id);
 
@@ -69,7 +104,7 @@ export async function runBatchJob(
         keywordIndex: i,
         totalKeywords: keywords.length,
         phase: 'post',
-        message: `[${i + 1}/${keywords.length}] "${keyword}" - ${writerAccount.id}로 글 작성 중...`,
+        message: `[${i + 1}/${keywords.length}] "${keyword}"${category ? ` (${category})` : ''} - ${writerAccount.id}로 글 작성 중...`,
       });
 
       // 1. AI 콘텐츠 생성
@@ -82,6 +117,7 @@ export async function runBatchJob(
         menuId,
         subject: title,
         content: htmlContent,
+        category,
       });
 
       if (!postResult.success || !postResult.articleId) {
@@ -92,8 +128,36 @@ export async function runBatchJob(
           replies: [],
         });
         failed++;
+
+        // 실패 로그 저장
+        jobLog.results.push({
+          keyword,
+          success: false,
+          commentCount: 0,
+          replyCount: 0,
+          error: postResult.error || '글 작성 실패',
+        });
+        jobLog.failed = failed;
+        await jobLog.save();
+
         continue;
       }
+
+      // 발행원고 저장
+      const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${postResult.articleId}`;
+      const publishedArticle = await PublishedArticle.create({
+        articleId: postResult.articleId,
+        cafeId,
+        menuId,
+        keyword,
+        title,
+        content: htmlContent,
+        articleUrl,
+        writerAccountId: writerAccount.id,
+        status: 'published',
+        commentCount: 0,
+        replyCount: 0,
+      });
 
       await sleep(delays.afterPost);
 
@@ -207,6 +271,24 @@ export async function runBatchJob(
         }
       }
 
+      // 댓글/대댓글 수 집계
+      const successCommentCount = commentResults.filter((c) => c.success).length;
+      const successReplyCount = replyResults.filter((r) => r.success).length;
+
+      // 발행원고 업데이트
+      publishedArticle.commentCount = successCommentCount;
+      publishedArticle.replyCount = successReplyCount;
+      await publishedArticle.save();
+
+      // 성공 로그 저장
+      jobLog.results.push({
+        keyword,
+        articleId: postResult.articleId,
+        success: true,
+        commentCount: successCommentCount,
+        replyCount: successReplyCount,
+      });
+
       results.push({
         keyword,
         post: postResult,
@@ -215,6 +297,8 @@ export async function runBatchJob(
       });
 
       completed++;
+      jobLog.completed = completed;
+      await jobLog.save();
 
       // 다음 키워드 전 대기
       if (i < keywords.length - 1) {
@@ -230,20 +314,32 @@ export async function runBatchJob(
       }
     }
 
+    // 배치 완료
+    jobLog.status = failed === 0 ? 'completed' : 'failed';
+    jobLog.finishedAt = new Date();
+    await jobLog.save();
+
     return {
       success: failed === 0,
       totalKeywords: keywords.length,
       completed,
       failed,
       results,
+      jobLogId: jobLog._id.toString(),
     };
   } catch (error) {
+    // 에러 시 작업 로그 실패 처리
+    jobLog.status = 'failed';
+    jobLog.finishedAt = new Date();
+    await jobLog.save();
+
     return {
       success: false,
       totalKeywords: keywords.length,
       completed,
       failed: keywords.length - completed,
       results,
+      jobLogId: jobLog._id.toString(),
     };
   } finally {
     await closeAllContexts();

@@ -12,14 +12,15 @@ export interface WritePostInput {
   menuId: string;
   subject: string;
   content: string;
+  category?: string; // 게시판명 (미지정 시 첫 번째 게시판)
 }
 
-export async function writePostWithAccount(
+export const writePostWithAccount = async (
   account: NaverAccount,
   input: WritePostInput
-): Promise<PostResult> {
+): Promise<PostResult> => {
   const { id, password } = account;
-  const { cafeId, menuId, subject, content } = input;
+  const { cafeId, menuId, subject, content, category } = input;
 
   try {
     const loggedIn = await isAccountLoggedIn(id);
@@ -47,18 +48,44 @@ export async function writePostWithAccount(
 
     await page.waitForTimeout(3000);
 
-    // 게시판 선택 (드롭다운 클릭 → 첫 번째 옵션 선택)
+    // 게시판 선택 (드롭다운 클릭 → 카테고리 선택)
     const boardSelectButton = await page.$('.FormSelectButton button.button');
     if (boardSelectButton) {
       await boardSelectButton.click();
       await page.waitForTimeout(500);
 
-      // 첫 번째 게시판 옵션 클릭
-      const firstBoardOption = await page.$('ul.option_list li.item button.option');
-      if (firstBoardOption) {
-        await firstBoardOption.click();
-        await page.waitForTimeout(500);
+      if (category) {
+        // 특정 카테고리명으로 선택
+        const options = await page.$$('ul.option_list li.item button.option');
+        let found = false;
+
+        for (const option of options) {
+          const text = await option.textContent();
+          if (text?.trim() === category) {
+            await option.click();
+            found = true;
+            console.log(`[DEBUG] 카테고리 "${category}" 선택됨`);
+            break;
+          }
+        }
+
+        if (!found) {
+          // 카테고리를 찾지 못하면 첫 번째 선택
+          console.log(`[DEBUG] 카테고리 "${category}" 없음, 첫 번째 선택`);
+          const firstOption = await page.$('ul.option_list li.item button.option');
+          if (firstOption) {
+            await firstOption.click();
+          }
+        }
+      } else {
+        // 카테고리 미지정 시 첫 번째 게시판 선택
+        const firstBoardOption = await page.$('ul.option_list li.item button.option');
+        if (firstBoardOption) {
+          await firstBoardOption.click();
+        }
       }
+
+      await page.waitForTimeout(500);
     }
 
     // 제목 입력 (.FlexableTextArea textarea.textarea_input)

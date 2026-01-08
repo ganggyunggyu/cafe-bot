@@ -1,8 +1,10 @@
 export { BatchUI } from './batch-ui';
 export { AccountListUI } from './account-list-ui';
-export { runBatchPostAction, testSingleKeywordAction } from './batch-actions';
+export { runBatchPostAction, testSingleKeywordAction, runModifyBatchAction } from './batch-actions';
 export { runBatchJob } from './batch-job';
+export { runModifyBatchJob } from './modify-batch-job';
 export { writePostWithAccount } from './post-writer';
+export { modifyArticleWithAccount } from './article-modifier';
 export { joinCafeWithAccount, joinCafeWithAccounts } from './cafe-join';
 export type {
   BatchJobInput,
@@ -17,3 +19,5 @@ export type {
   BatchProgress,
   ProgressCallback,
 } from './types';
+export type { ModifyBatchInput, ModifyBatchResult, ModifyBatchOptions } from './modify-batch-job';
+export type { ModifyArticleInput, ModifyResult } from './article-modifier';

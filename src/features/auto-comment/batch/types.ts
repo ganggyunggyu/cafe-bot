@@ -49,6 +49,7 @@ export interface BatchJobResult {
   completed: number;
   failed: number;
   results: KeywordResult[];
+  jobLogId?: string;
 }
 
 // 딜레이 설정
@@ -90,16 +91,16 @@ export interface BatchProgress {
 export type ProgressCallback = (progress: BatchProgress) => void;
 
 // 계정 로테이션 헬퍼
-export function getWriterAccount(
+export const getWriterAccount = (
   accounts: NaverAccount[],
   keywordIndex: number
-): NaverAccount {
+): NaverAccount => {
   return accounts[keywordIndex % accounts.length];
 }
 
-export function getCommenterAccounts(
+export const getCommenterAccounts = (
   accounts: NaverAccount[],
   writerAccountId: string
-): NaverAccount[] {
+): NaverAccount[] => {
   return accounts.filter((a) => a.id !== writerAccountId);
 }

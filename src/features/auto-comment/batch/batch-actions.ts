@@ -1,12 +1,13 @@
 'use server';
 
 import { runBatchJob } from './batch-job';
+import { runModifyBatchJob, type ModifyBatchInput, type ModifyBatchResult, type ModifyBatchOptions } from './modify-batch-job';
 import type { BatchJobInput, BatchJobResult, BatchJobOptions } from './types';
 
-export async function runBatchPostAction(
+export const runBatchPostAction = async (
   input: BatchJobInput,
   options?: BatchJobOptions
-): Promise<BatchJobResult> {
+): Promise<BatchJobResult> => {
   try {
     const result = await runBatchJob(input, options);
     return result;
@@ -23,14 +24,33 @@ export async function runBatchPostAction(
 }
 
 // 단일 키워드 테스트용
-export async function testSingleKeywordAction(
+export const testSingleKeywordAction = async (
   service: string,
   keyword: string,
   ref?: string
-): Promise<BatchJobResult> {
+): Promise<BatchJobResult> => {
   return runBatchPostAction({
     service,
     keywords: [keyword],
     ref,
   });
+}
+
+// 수정 배치 작업
+export const runModifyBatchAction = async (
+  input: ModifyBatchInput,
+  options?: ModifyBatchOptions
+): Promise<ModifyBatchResult> => {
+  try {
+    const result = await runModifyBatchJob(input, options);
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      totalArticles: 0,
+      completed: 0,
+      failed: 0,
+      results: [],
+    };
+  }
 }
