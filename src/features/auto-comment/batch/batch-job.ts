@@ -1,4 +1,5 @@
 import { generateContent } from '@/shared/api/content-api';
+import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
@@ -16,40 +17,17 @@ import {
   getWriterAccount,
   getCommenterAccounts,
 } from './types';
+import { getRandomCommentCount } from './random';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// 기본 댓글 템플릿
-const DEFAULT_COMMENT_TEMPLATES = [
-  '좋은 정보 감사합니다!',
-  '도움이 많이 됐어요~',
-  '저도 관심있었는데 좋네요',
-  '잘 보고 갑니다!',
-  '공유 감사해요 ㅎㅎ',
-];
-
-// 기본 대댓글 템플릿
-const DEFAULT_REPLY_TEMPLATES = [
-  '저도 그렇게 생각해요!',
-  '맞아요 ㅎㅎ',
-  '동감이에요~',
-  '좋은 의견이시네요',
-  '저도요!',
-];
-
-function getRandomTemplate(templates: string[]): string {
-  return templates[Math.floor(Math.random() * templates.length)];
-}
 
 export async function runBatchJob(
   input: BatchJobInput,
   options: BatchJobOptions = {},
   onProgress?: ProgressCallback
 ): Promise<BatchJobResult> {
-  const { service, keywords, ref, commentTemplates, replyTemplates } = input;
+  const { service, keywords, ref } = input;
   const delays = { ...DEFAULT_DELAYS, ...options.delays };
-  const comments = commentTemplates?.length ? commentTemplates : DEFAULT_COMMENT_TEMPLATES;
-  const replies = replyTemplates?.length ? replyTemplates : DEFAULT_REPLY_TEMPLATES;
 
   const accounts = getAllAccounts();
 
@@ -129,10 +107,20 @@ export async function runBatchJob(
       });
 
       const commentResults: CommentResult[] = [];
+      const commentTexts: string[] = []; // 대댓글용 저장
+      const commentCount = getRandomCommentCount(); // 5~10개 랜덤
+      const postContent = generated.content; // 글 내용 (API용)
 
-      for (let j = 0; j < commenterAccounts.length; j++) {
-        const commenter = commenterAccounts[j];
-        const commentText = getRandomTemplate(comments);
+      for (let j = 0; j < commentCount; j++) {
+        const commenter = commenterAccounts[j % commenterAccounts.length];
+
+        // AI로 댓글 생성
+        let commentText: string;
+        try {
+          commentText = await generateComment(postContent);
+        } catch {
+          commentText = '좋은 정보 감사합니다!'; // 폴백
+        }
 
         const result = await writeCommentWithAccount(
           commenter,
@@ -148,7 +136,11 @@ export async function runBatchJob(
           error: result.error,
         });
 
-        if (j < commenterAccounts.length - 1) {
+        if (result.success) {
+          commentTexts.push(commentText); // 성공한 댓글 저장
+        }
+
+        if (j < commentCount - 1) {
           await sleep(delays.betweenComments);
         }
       }
@@ -167,13 +159,32 @@ export async function runBatchJob(
       const replyResults: ReplyResult[] = [];
       const successfulComments = commentResults.filter((c) => c.success);
 
-      if (successfulComments.length >= 2) {
-        // 로테이션: 다음 계정이 이전 댓글에 답글
-        for (let j = 0; j < successfulComments.length; j++) {
-          const targetCommentIndex = j;
+      if (successfulComments.length >= 2 && commentTexts.length >= 2) {
+        // 대댓글 개수: 2~4개 랜덤 (댓글 수 이하)
+        const maxReplies = Math.min(4, commentTexts.length);
+        const replyCount = Math.floor(Math.random() * (maxReplies - 1)) + 2; // 2 ~ maxReplies
+
+        // 랜덤 댓글 인덱스 선택 (중복 방지)
+        const availableIndices = commentTexts.map((_, idx) => idx);
+        const selectedIndices: number[] = [];
+        for (let k = 0; k < replyCount && availableIndices.length > 0; k++) {
+          const randIdx = Math.floor(Math.random() * availableIndices.length);
+          selectedIndices.push(availableIndices.splice(randIdx, 1)[0]);
+        }
+
+        for (let j = 0; j < selectedIndices.length; j++) {
+          const targetCommentIndex = selectedIndices[j];
           const replyerIndex = (j + 1) % commenterAccounts.length;
           const replyer = commenterAccounts[replyerIndex];
-          const replyText = getRandomTemplate(replies);
+          const parentComment = commentTexts[targetCommentIndex];
+
+          // AI로 대댓글 생성 (글 내용 + 부모 댓글)
+          let replyText: string;
+          try {
+            replyText = await generateReply(postContent, parentComment);
+          } catch {
+            replyText = '저도 그렇게 생각해요!'; // 폴백
+          }
 
           const result = await writeReplyWithAccount(
             replyer,
@@ -190,7 +201,7 @@ export async function runBatchJob(
             error: result.error,
           });
 
-          if (j < successfulComments.length - 1) {
+          if (j < selectedIndices.length - 1) {
             await sleep(delays.betweenReplies);
           }
         }

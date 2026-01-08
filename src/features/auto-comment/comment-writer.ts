@@ -12,12 +12,12 @@ export interface WriteCommentResult {
   error?: string;
 }
 
-export async function writeCommentWithAccount(
+export const writeCommentWithAccount = async (
   account: NaverAccount,
   cafeId: string,
   articleId: number,
   content: string
-): Promise<WriteCommentResult> {
+): Promise<WriteCommentResult> => {
   const { id, password } = account;
 
   try {
@@ -113,13 +113,13 @@ export async function writeCommentWithAccount(
 }
 
 // 대댓글 작성 함수
-export async function writeReplyWithAccount(
+export const writeReplyWithAccount = async (
   account: NaverAccount,
   cafeId: string,
   articleId: number,
   content: string,
   commentIndex: number = 0 // 몇 번째 댓글에 대댓글 달지 (0부터 시작)
-): Promise<WriteCommentResult> {
+): Promise<WriteCommentResult> => {
   const { id, password } = account;
 
   try {
