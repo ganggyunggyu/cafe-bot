@@ -199,6 +199,20 @@ export const writeReplyWithAccount = async (
     await submitButton.click();
     await page.waitForTimeout(2000);
 
+    // 글 좋아요 (이미 눌렀으면 스킵)
+    const likeButton = await page.$('a.u_likeit_list_btn._button[data-type="like"]');
+    if (likeButton) {
+      const isLiked = await likeButton.evaluate((el) =>
+        el.classList.contains('on') || el.getAttribute('aria-pressed') === 'true'
+      );
+
+      if (!isLiked) {
+        await likeButton.click();
+        console.log(`[DEBUG] ${id} 좋아요 클릭`);
+        await page.waitForTimeout(500);
+      }
+    }
+
     await saveCookiesForAccount(id);
 
     return { accountId: id, success: true };
