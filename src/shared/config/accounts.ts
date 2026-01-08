@@ -25,14 +25,14 @@ export const NAVER_ACCOUNTS: NaverAccount[] = [
   },
 ];
 
-export function getMainAccount(): NaverAccount | undefined {
+export const getMainAccount = (): NaverAccount | undefined => {
   return NAVER_ACCOUNTS.find((a) => a.isMain);
 }
 
-export function getCommentAccounts(): NaverAccount[] {
+export const getCommentAccounts = (): NaverAccount[] => {
   return NAVER_ACCOUNTS.filter((a) => !a.isMain);
 }
 
-export function getAllAccounts(): NaverAccount[] {
+export const getAllAccounts = (): NaverAccount[] => {
   return NAVER_ACCOUNTS;
 }

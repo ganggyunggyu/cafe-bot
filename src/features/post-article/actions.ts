@@ -14,7 +14,7 @@ export interface PostArticleResult {
   generatedContent?: string;
 }
 
-export async function postArticle(input: PostArticleInput): Promise<PostArticleResult> {
+export const postArticle = async (input: PostArticleInput): Promise<PostArticleResult> => {
   try {
     const session = await auth();
 

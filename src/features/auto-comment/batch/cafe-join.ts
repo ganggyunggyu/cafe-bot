@@ -13,10 +13,10 @@ export interface JoinCafeResult {
   error?: string;
 }
 
-export async function joinCafeWithAccount(
+export const joinCafeWithAccount = async (
   account: NaverAccount,
   cafeId: string
-): Promise<JoinCafeResult> {
+): Promise<JoinCafeResult> => {
   const { id, password, nickname } = account;
 
   try {
@@ -107,10 +107,10 @@ export async function joinCafeWithAccount(
 }
 
 // 여러 계정 일괄 가입
-export async function joinCafeWithAccounts(
+export const joinCafeWithAccounts = async (
   accounts: NaverAccount[],
   cafeId: string
-): Promise<JoinCafeResult[]> {
+): Promise<JoinCafeResult[]> => {
   const results: JoinCafeResult[] = [];
 
   for (const account of accounts) {

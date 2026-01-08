@@ -67,7 +67,7 @@ const naverProvider = {
   clientSecret: process.env.NAVER_CLIENT_SECRET!,
 };
 
-async function refreshAccessToken(token: JWT): Promise<JWT> {
+const refreshAccessToken = async (token: JWT): Promise<JWT> => {
   try {
     const url = new URL('https://nid.naver.com/oauth2.0/token');
     url.searchParams.set('grant_type', 'refresh_token');

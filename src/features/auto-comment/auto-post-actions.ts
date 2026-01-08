@@ -22,11 +22,11 @@ const getErrorMessage = (error: unknown, fallback: string) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function writeComments(
+const writeComments = async (
   cafeId: string,
   articleId: number,
   comments: string[]
-): Promise<WriteCommentResult[]> {
+): Promise<WriteCommentResult[]> => {
   const commentAccounts = getCommentAccounts();
   const results: WriteCommentResult[] = [];
 
@@ -45,12 +45,12 @@ async function writeComments(
   return results;
 }
 
-export async function autoPostWithComments(input: {
+export const autoPostWithComments = async (input: {
   service: string;
   keyword: string;
   ref?: string;
   comments: string[];
-}): Promise<AutoPostResult> {
+}): Promise<AutoPostResult> => {
   const { service, keyword, ref, comments } = input;
 
   try {
@@ -111,10 +111,10 @@ export async function autoPostWithComments(input: {
   }
 }
 
-export async function addCommentsToArticle(input: {
+export const addCommentsToArticle = async (input: {
   articleId: number;
   comments: string[];
-}): Promise<{ success: boolean; results?: WriteCommentResult[]; error?: string }> {
+}): Promise<{ success: boolean; results?: WriteCommentResult[]; error?: string }> => {
   const { articleId, comments } = input;
 
   try {

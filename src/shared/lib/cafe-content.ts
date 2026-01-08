@@ -3,7 +3,7 @@ export interface CafePostContent {
   htmlContent: string;
 }
 
-export function buildCafePostContent(rawContent: string, fallbackTitle: string): CafePostContent {
+export const buildCafePostContent = (rawContent: string, fallbackTitle: string): CafePostContent => {
   const lines = rawContent.split('\n');
   const firstLine = lines[0] ?? '';
   const title = firstLine.replace(/^#\s*/, '').trim() || fallbackTitle;

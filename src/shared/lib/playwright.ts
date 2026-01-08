@@ -8,7 +8,7 @@ const COOKIES_FILE = join(SESSION_DIR, 'naver-cookies.json');
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
 
-export async function getBrowser(): Promise<Browser> {
+export const getBrowser = async (): Promise<Browser> => {
   if (!browser) {
     browser = await chromium.launch({
       headless: true,
@@ -17,7 +17,7 @@ export async function getBrowser(): Promise<Browser> {
   return browser;
 }
 
-export async function getContext(): Promise<BrowserContext> {
+export const getContext = async (): Promise<BrowserContext> => {
   if (!context) {
     const b = await getBrowser();
     context = await b.newContext({
@@ -33,7 +33,7 @@ export async function getContext(): Promise<BrowserContext> {
   return context;
 }
 
-export async function getPage(): Promise<Page> {
+export const getPage = async (): Promise<Page> => {
   const ctx = await getContext();
   const pages = ctx.pages();
   if (pages.length > 0) {
@@ -42,7 +42,7 @@ export async function getPage(): Promise<Page> {
   return ctx.newPage();
 }
 
-export async function saveCookies(): Promise<void> {
+export const saveCookies = async (): Promise<void> => {
   if (!context) return;
 
   if (!existsSync(SESSION_DIR)) {
@@ -53,7 +53,7 @@ export async function saveCookies(): Promise<void> {
   writeFileSync(COOKIES_FILE, JSON.stringify(cookies, null, 2));
 }
 
-export function loadCookies(): Array<{
+export const loadCookies = (): Array<{
   name: string;
   value: string;
   domain: string;
@@ -62,7 +62,7 @@ export function loadCookies(): Array<{
   httpOnly: boolean;
   secure: boolean;
   sameSite: 'Strict' | 'Lax' | 'None';
-}> {
+}> => {
   if (!existsSync(COOKIES_FILE)) {
     return [];
   }
@@ -75,7 +75,7 @@ export function loadCookies(): Array<{
   }
 }
 
-export async function closeBrowser(): Promise<void> {
+export const closeBrowser = async (): Promise<void> => {
   if (context) {
     await saveCookies();
     await context.close();
@@ -87,7 +87,7 @@ export async function closeBrowser(): Promise<void> {
   }
 }
 
-export async function isLoggedIn(): Promise<boolean> {
+export const isLoggedIn = async (): Promise<boolean> => {
   const page = await getPage();
 
   try {

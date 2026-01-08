@@ -15,7 +15,7 @@ export interface CommentResult {
   error?: string;
 }
 
-async function ensureLoggedIn(): Promise<boolean> {
+const ensureLoggedIn = async (): Promise<boolean> => {
   const loggedIn = await isLoggedIn();
   if (!loggedIn) {
     throw new Error('네이버 로그인이 필요해. 먼저 로그인해줘.');
@@ -23,7 +23,7 @@ async function ensureLoggedIn(): Promise<boolean> {
   return true;
 }
 
-export async function writeComment(request: CommentRequest): Promise<CommentResult> {
+export const writeComment = async (request: CommentRequest): Promise<CommentResult> => {
   const { cafeId, articleId, content } = request;
 
   try {
@@ -82,7 +82,7 @@ export async function writeComment(request: CommentRequest): Promise<CommentResu
   }
 }
 
-export async function writeReply(request: ReplyRequest): Promise<CommentResult> {
+export const writeReply = async (request: ReplyRequest): Promise<CommentResult> => {
   const { cafeId, articleId, content, parentCommentId } = request;
 
   try {
@@ -155,7 +155,7 @@ export async function writeReply(request: ReplyRequest): Promise<CommentResult> 
   }
 }
 
-export async function naverLogin(id: string, password: string): Promise<CommentResult> {
+export const naverLogin = async (id: string, password: string): Promise<CommentResult> => {
   try {
     const page = await getPage();
 

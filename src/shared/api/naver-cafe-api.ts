@@ -2,10 +2,10 @@ import type { CafePostRequest, CafePostResponse } from '@/shared/types';
 
 const NAVER_API_URL = 'https://openapi.naver.com/v1/cafe';
 
-export async function postToCafe(
+export const postToCafe = async (
   accessToken: string,
   request: CafePostRequest
-): Promise<CafePostResponse> {
+): Promise<CafePostResponse> => {
   const { clubId, menuId, subject, content, openyn, searchopen, replyyn, scrapyn } = request;
 
   const url = `${NAVER_API_URL}/${clubId}/menu/${menuId}/articles`;
@@ -37,11 +37,11 @@ export async function postToCafe(
   return data;
 }
 
-export async function joinCafe(
+export const joinCafe = async (
   accessToken: string,
   clubId: string,
   nickname: string
-): Promise<void> {
+): Promise<void> => {
   const url = `${NAVER_API_URL}/${clubId}/members`;
 
   const params = new URLSearchParams();

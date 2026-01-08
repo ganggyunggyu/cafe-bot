@@ -2,10 +2,10 @@ import type { GenerateContentRequest, GenerateContentResponse } from '@/shared/t
 
 const CONTENT_API_URL = process.env.CONTENT_API_URL || 'http://localhost:8000';
 
-export async function generateContent(
+export const generateContent = async (
   request: GenerateContentRequest
-): Promise<GenerateContentResponse> {
-  const response = await fetch(`${CONTENT_API_URL}/generate/grok`, {
+): Promise<GenerateContentResponse> => {
+  const response = await fetch(`${CONTENT_API_URL}/generate/gemini-cafe-daily`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

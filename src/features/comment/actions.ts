@@ -8,7 +8,7 @@ export interface CommentActionResult {
   error?: string;
 }
 
-export async function postComment(input: CommentInput): Promise<CommentActionResult> {
+export const postComment = async (input: CommentInput): Promise<CommentActionResult> => {
   try {
     const cafeId = input.cafeId || process.env.NAVER_CAFE_ID;
 
@@ -35,7 +35,7 @@ export async function postComment(input: CommentInput): Promise<CommentActionRes
   }
 }
 
-export async function postReply(input: ReplyInput): Promise<CommentActionResult> {
+export const postReply = async (input: ReplyInput): Promise<CommentActionResult> => {
   try {
     const cafeId = input.cafeId || process.env.NAVER_CAFE_ID;
 
@@ -63,7 +63,7 @@ export async function postReply(input: ReplyInput): Promise<CommentActionResult>
   }
 }
 
-export async function loginNaver(input: NaverLoginInput): Promise<CommentActionResult> {
+export const loginNaver = async (input: NaverLoginInput): Promise<CommentActionResult> => {
   try {
     const result = await naverLogin(input.id, input.password);
     return result;

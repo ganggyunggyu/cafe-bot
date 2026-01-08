@@ -15,13 +15,13 @@ export interface AccountList {
   accounts: NaverAccount[];
 }
 
-function ensureDataDir(): void {
+const ensureDataDir = (): void => {
   if (!existsSync(DATA_DIR)) {
     mkdirSync(DATA_DIR, { recursive: true });
   }
 }
 
-export function getAccounts(): NaverAccount[] {
+export const getAccounts = (): NaverAccount[] => {
   ensureDataDir();
 
   if (!existsSync(ACCOUNTS_FILE)) {
@@ -37,14 +37,14 @@ export function getAccounts(): NaverAccount[] {
   }
 }
 
-export function saveAccounts(accounts: NaverAccount[]): void {
+export const saveAccounts = (accounts: NaverAccount[]): void => {
   ensureDataDir();
 
   const data: AccountList = { accounts };
   writeFileSync(ACCOUNTS_FILE, JSON.stringify(data, null, 2));
 }
 
-export function addAccount(account: NaverAccount): NaverAccount[] {
+export const addAccount = (account: NaverAccount): NaverAccount[] => {
   const accounts = getAccounts();
   const existing = accounts.findIndex((a) => a.id === account.id);
 
@@ -58,13 +58,13 @@ export function addAccount(account: NaverAccount): NaverAccount[] {
   return accounts;
 }
 
-export function removeAccount(id: string): NaverAccount[] {
+export const removeAccount = (id: string): NaverAccount[] => {
   const accounts = getAccounts().filter((a) => a.id !== id);
   saveAccounts(accounts);
   return accounts;
 }
 
-export function setMainAccount(id: string): NaverAccount[] {
+export const setMainAccount = (id: string): NaverAccount[] => {
   const accounts = getAccounts().map((a) => ({
     ...a,
     isMain: a.id === id,
@@ -73,10 +73,10 @@ export function setMainAccount(id: string): NaverAccount[] {
   return accounts;
 }
 
-export function getMainAccount(): NaverAccount | undefined {
+export const getMainAccount = (): NaverAccount | undefined => {
   return getAccounts().find((a) => a.isMain);
 }
 
-export function getCommentAccounts(): NaverAccount[] {
+export const getCommentAccounts = (): NaverAccount[] => {
   return getAccounts().filter((a) => !a.isMain);
 }

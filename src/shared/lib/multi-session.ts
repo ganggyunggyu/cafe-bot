@@ -7,11 +7,11 @@ const SESSION_DIR = join(process.cwd(), '.playwright-session');
 let browser: Browser | null = null;
 const contexts: Map<string, BrowserContext> = new Map();
 
-function getSessionFile(accountId: string): string {
+const getSessionFile = (accountId: string): string => {
   return join(SESSION_DIR, `${accountId}-cookies.json`);
 }
 
-export async function getBrowser(): Promise<Browser> {
+export const getBrowser = async (): Promise<Browser> => {
   if (!browser) {
     const isDebug = process.env.PLAYWRIGHT_DEBUG === 'true';
     browser = await chromium.launch({
@@ -22,7 +22,7 @@ export async function getBrowser(): Promise<Browser> {
   return browser;
 }
 
-export async function getContextForAccount(accountId: string): Promise<BrowserContext> {
+export const getContextForAccount = async (accountId: string): Promise<BrowserContext> => {
   if (contexts.has(accountId)) {
     return contexts.get(accountId)!;
   }
@@ -42,7 +42,7 @@ export async function getContextForAccount(accountId: string): Promise<BrowserCo
   return context;
 }
 
-export async function getPageForAccount(accountId: string): Promise<Page> {
+export const getPageForAccount = async (accountId: string): Promise<Page> => {
   const ctx = await getContextForAccount(accountId);
   const pages = ctx.pages();
   if (pages.length > 0) {
@@ -51,7 +51,7 @@ export async function getPageForAccount(accountId: string): Promise<Page> {
   return ctx.newPage();
 }
 
-export async function saveCookiesForAccount(accountId: string): Promise<void> {
+export const saveCookiesForAccount = async (accountId: string): Promise<void> => {
   const context = contexts.get(accountId);
   if (!context) return;
 
@@ -63,7 +63,7 @@ export async function saveCookiesForAccount(accountId: string): Promise<void> {
   writeFileSync(getSessionFile(accountId), JSON.stringify(cookies, null, 2));
 }
 
-export function loadCookiesForAccount(accountId: string): Array<{
+export const loadCookiesForAccount = (accountId: string): Array<{
   name: string;
   value: string;
   domain: string;
@@ -72,7 +72,7 @@ export function loadCookiesForAccount(accountId: string): Array<{
   httpOnly: boolean;
   secure: boolean;
   sameSite: 'Strict' | 'Lax' | 'None';
-}> {
+}> => {
   const sessionFile = getSessionFile(accountId);
 
   if (!existsSync(sessionFile)) {
@@ -87,7 +87,7 @@ export function loadCookiesForAccount(accountId: string): Array<{
   }
 }
 
-export async function closeContextForAccount(accountId: string): Promise<void> {
+export const closeContextForAccount = async (accountId: string): Promise<void> => {
   const context = contexts.get(accountId);
   if (context) {
     await saveCookiesForAccount(accountId);
@@ -96,7 +96,7 @@ export async function closeContextForAccount(accountId: string): Promise<void> {
   }
 }
 
-export async function closeAllContexts(): Promise<void> {
+export const closeAllContexts = async (): Promise<void> => {
   for (const [accountId, context] of contexts) {
     await saveCookiesForAccount(accountId);
     await context.close();
@@ -109,7 +109,7 @@ export async function closeAllContexts(): Promise<void> {
   }
 }
 
-export async function isAccountLoggedIn(accountId: string): Promise<boolean> {
+export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => {
   const page = await getPageForAccount(accountId);
 
   try {
@@ -125,10 +125,10 @@ export async function isAccountLoggedIn(accountId: string): Promise<boolean> {
   }
 }
 
-export async function loginAccount(
+export const loginAccount = async (
   accountId: string,
   password: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
     const page = await getPageForAccount(accountId);
 

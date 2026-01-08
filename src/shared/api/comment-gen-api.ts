@@ -19,10 +19,10 @@ interface GenerateReplyRequest {
   persona_index?: number | null;
 }
 
-export async function generateComment(
+export const generateComment = async (
   postContent: string,
   personaIndex?: number | null
-): Promise<string> {
+): Promise<string> => {
   const body: GenerateCommentRequest = {
     content: postContent,
     persona_index: personaIndex ?? null,
@@ -47,11 +47,11 @@ export async function generateComment(
   return data.comment;
 }
 
-export async function generateReply(
+export const generateReply = async (
   postContent: string,
   parentComment: string,
   personaIndex?: number | null
-): Promise<string> {
+): Promise<string> => {
   const body: GenerateReplyRequest = {
     content: `글 내용:\n${postContent}\n\n연결된 댓글:\n${parentComment}`,
     persona_index: personaIndex ?? null,

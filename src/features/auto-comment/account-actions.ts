@@ -18,7 +18,7 @@ export interface AccountActionResult {
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-export async function getAccountList(): Promise<AccountActionResult> {
+export const getAccountList = async (): Promise<AccountActionResult> => {
   try {
     const accounts = getAccounts();
     return { success: true, accounts };
@@ -27,7 +27,7 @@ export async function getAccountList(): Promise<AccountActionResult> {
   }
 }
 
-export async function addAccountAction(account: NaverAccount): Promise<AccountActionResult> {
+export const addAccountAction = async (account: NaverAccount): Promise<AccountActionResult> => {
   try {
     const accounts = addAccount(account);
     return { success: true, accounts };
@@ -36,7 +36,7 @@ export async function addAccountAction(account: NaverAccount): Promise<AccountAc
   }
 }
 
-export async function removeAccountAction(id: string): Promise<AccountActionResult> {
+export const removeAccountAction = async (id: string): Promise<AccountActionResult> => {
   try {
     const accounts = removeAccount(id);
     return { success: true, accounts };
@@ -45,7 +45,7 @@ export async function removeAccountAction(id: string): Promise<AccountActionResu
   }
 }
 
-export async function setMainAccountAction(id: string): Promise<AccountActionResult> {
+export const setMainAccountAction = async (id: string): Promise<AccountActionResult> => {
   try {
     const accounts = setMainAccount(id);
     return { success: true, accounts };
@@ -54,10 +54,10 @@ export async function setMainAccountAction(id: string): Promise<AccountActionRes
   }
 }
 
-export async function loginAccountAction(
+export const loginAccountAction = async (
   id: string,
   password: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
     return await loginAccount(id, password);
   } catch (error) {

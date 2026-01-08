@@ -1,3 +1,3 @@
-export function getRandomCommentCount(min: number = 5, max: number = 10): number {
+export const getRandomCommentCount = (min: number = 5, max: number = 10): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }

@@ -3,6 +3,6 @@ export const COMMENT_DELAY_RANGE_MS = {
   jitter: 2000,
 } as const;
 
-export function getCommentDelayMs(): number {
+export const getCommentDelayMs = (): number => {
   return COMMENT_DELAY_RANGE_MS.base + Math.random() * COMMENT_DELAY_RANGE_MS.jitter;
 }
