@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { generateContent } from '@/shared/api/content-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
@@ -81,7 +82,32 @@ export const runModifyBatchJob = async (
     };
   }
 
-  await connectDB();
+  // MongoDB 연결 (수정 기능은 DB 필수)
+  try {
+    console.log('[MODIFY BATCH] MongoDB 연결 시도...');
+    await connectDB();
+
+    if (mongoose.connection.readyState !== 1) {
+      console.log('[MODIFY BATCH] MongoDB 연결 실패 - readyState:', mongoose.connection.readyState);
+      return {
+        success: false,
+        totalArticles: 0,
+        completed: 0,
+        failed: 0,
+        results: [],
+      };
+    }
+    console.log('[MODIFY BATCH] MongoDB 연결 성공');
+  } catch (dbError) {
+    console.error('[MODIFY BATCH] MongoDB 연결 실패:', dbError);
+    return {
+      success: false,
+      totalArticles: 0,
+      completed: 0,
+      failed: 0,
+      results: [],
+    };
+  }
 
   // 수정 대상 글 조회 (키워드 개수만큼)
   const limit = adKeywords.length;
