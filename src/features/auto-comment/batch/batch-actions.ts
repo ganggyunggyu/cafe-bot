@@ -12,7 +12,7 @@ export const runBatchPostAction = async (
     const result = await runBatchJob(input, options);
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    console.error('[BATCH ACTION] 에러 발생:', error);
     return {
       success: false,
       totalKeywords: input.keywords.length,

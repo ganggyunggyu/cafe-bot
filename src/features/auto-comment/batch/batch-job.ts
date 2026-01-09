@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { generateContent } from '@/shared/api/content-api';
 import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
@@ -78,19 +79,34 @@ export const runBatchJob = async (
     };
   }
 
-  // MongoDB 연결
-  await connectDB();
+  // MongoDB 연결 (실패해도 배치는 진행)
+  let jobLog: Awaited<ReturnType<typeof BatchJobLog.create>> | null = null;
+  let dbConnected = false;
 
-  // 배치 작업 로그 생성
-  const jobLog = await BatchJobLog.create({
-    jobType: 'publish',
-    cafeId,
-    keywords,
-    totalKeywords: keywords.length,
-    results: [],
-    status: 'running',
-    startedAt: new Date(),
-  });
+  try {
+    console.log('[BATCH] MongoDB 연결 시도...');
+    await connectDB();
+
+    if (mongoose.connection.readyState === 1) {
+      dbConnected = true;
+      console.log('[BATCH] MongoDB 연결 성공');
+
+      jobLog = await BatchJobLog.create({
+        jobType: 'publish',
+        cafeId,
+        keywords,
+        totalKeywords: keywords.length,
+        results: [],
+        status: 'running',
+        startedAt: new Date(),
+      });
+      console.log('[BATCH] 배치 로그 생성 완료:', jobLog._id.toString());
+    } else {
+      console.log('[BATCH] MongoDB 연결 실패 (readyState:', mongoose.connection.readyState, ') - 로깅 없이 진행');
+    }
+  } catch (dbError) {
+    console.log('[BATCH] MongoDB 연결 실패 - 로깅 없이 진행:', dbError);
+  }
 
   try {
     for (let i = 0; i < keywords.length; i++) {
@@ -98,6 +114,8 @@ export const runBatchJob = async (
       const { keyword, category } = parseKeywordWithCategory(rawKeyword);
       const writerAccount = getWriterAccount(accounts, i);
       const commenterAccounts = getCommenterAccounts(accounts, writerAccount.id);
+
+      console.log(`[BATCH] 키워드 ${i + 1}/${keywords.length}: "${keyword}"${category ? ` (${category})` : ''}`);
 
       onProgress?.({
         currentKeyword: keyword,
@@ -108,7 +126,9 @@ export const runBatchJob = async (
       });
 
       // 1. AI 콘텐츠 생성
+      console.log('[BATCH] AI 콘텐츠 생성 요청...');
       const generated = await generateContent({ service, keyword, ref });
+      console.log('[BATCH] AI 콘텐츠 생성 완료');
       const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
 
       // 2. 글 작성
@@ -130,34 +150,39 @@ export const runBatchJob = async (
         failed++;
 
         // 실패 로그 저장
-        jobLog.results.push({
-          keyword,
-          success: false,
-          commentCount: 0,
-          replyCount: 0,
-          error: postResult.error || '글 작성 실패',
-        });
-        jobLog.failed = failed;
-        await jobLog.save();
+        if (jobLog) {
+          jobLog.results.push({
+            keyword,
+            success: false,
+            commentCount: 0,
+            replyCount: 0,
+            error: postResult.error || '글 작성 실패',
+          });
+          jobLog.failed = failed;
+          await jobLog.save();
+        }
 
         continue;
       }
 
-      // 발행원고 저장
-      const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${postResult.articleId}`;
-      const publishedArticle = await PublishedArticle.create({
-        articleId: postResult.articleId,
-        cafeId,
-        menuId,
-        keyword,
-        title,
-        content: htmlContent,
-        articleUrl,
-        writerAccountId: writerAccount.id,
-        status: 'published',
-        commentCount: 0,
-        replyCount: 0,
-      });
+      // 발행원고 저장 (DB 연결 시)
+      let publishedArticle: Awaited<ReturnType<typeof PublishedArticle.create>> | null = null;
+      if (dbConnected) {
+        const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${postResult.articleId}`;
+        publishedArticle = await PublishedArticle.create({
+          articleId: postResult.articleId,
+          cafeId,
+          menuId,
+          keyword,
+          title,
+          content: htmlContent,
+          articleUrl,
+          writerAccountId: writerAccount.id,
+          status: 'published',
+          commentCount: 0,
+          replyCount: 0,
+        });
+      }
 
       await sleep(delays.afterPost);
 
@@ -275,19 +300,23 @@ export const runBatchJob = async (
       const successCommentCount = commentResults.filter((c) => c.success).length;
       const successReplyCount = replyResults.filter((r) => r.success).length;
 
-      // 발행원고 업데이트
-      publishedArticle.commentCount = successCommentCount;
-      publishedArticle.replyCount = successReplyCount;
-      await publishedArticle.save();
+      // 발행원고 업데이트 (DB 연결 시)
+      if (publishedArticle) {
+        publishedArticle.commentCount = successCommentCount;
+        publishedArticle.replyCount = successReplyCount;
+        await publishedArticle.save();
+      }
 
       // 성공 로그 저장
-      jobLog.results.push({
-        keyword,
-        articleId: postResult.articleId,
-        success: true,
-        commentCount: successCommentCount,
-        replyCount: successReplyCount,
-      });
+      if (jobLog) {
+        jobLog.results.push({
+          keyword,
+          articleId: postResult.articleId,
+          success: true,
+          commentCount: successCommentCount,
+          replyCount: successReplyCount,
+        });
+      }
 
       results.push({
         keyword,
@@ -297,8 +326,10 @@ export const runBatchJob = async (
       });
 
       completed++;
-      jobLog.completed = completed;
-      await jobLog.save();
+      if (jobLog) {
+        jobLog.completed = completed;
+        await jobLog.save();
+      }
 
       // 다음 키워드 전 대기
       if (i < keywords.length - 1) {
@@ -315,9 +346,11 @@ export const runBatchJob = async (
     }
 
     // 배치 완료
-    jobLog.status = failed === 0 ? 'completed' : 'failed';
-    jobLog.finishedAt = new Date();
-    await jobLog.save();
+    if (jobLog) {
+      jobLog.status = failed === 0 ? 'completed' : 'failed';
+      jobLog.finishedAt = new Date();
+      await jobLog.save();
+    }
 
     return {
       success: failed === 0,
@@ -325,13 +358,15 @@ export const runBatchJob = async (
       completed,
       failed,
       results,
-      jobLogId: jobLog._id.toString(),
+      jobLogId: jobLog?._id.toString(),
     };
   } catch (error) {
     // 에러 시 작업 로그 실패 처리
-    jobLog.status = 'failed';
-    jobLog.finishedAt = new Date();
-    await jobLog.save();
+    if (jobLog) {
+      jobLog.status = 'failed';
+      jobLog.finishedAt = new Date();
+      await jobLog.save();
+    }
 
     return {
       success: false,
@@ -339,7 +374,7 @@ export const runBatchJob = async (
       completed,
       failed: keywords.length - completed,
       results,
-      jobLogId: jobLog._id.toString(),
+      jobLogId: jobLog?._id.toString(),
     };
   } finally {
     await closeAllContexts();
