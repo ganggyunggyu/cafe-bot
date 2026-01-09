@@ -3,6 +3,8 @@ import {
   saveCookiesForAccount,
   isAccountLoggedIn,
   loginAccount,
+  acquireAccountLock,
+  releaseAccountLock,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 
@@ -19,6 +21,9 @@ export const writeCommentWithAccount = async (
   content: string
 ): Promise<WriteCommentResult> => {
   const { id, password } = account;
+
+  // 계정 락 획득 (동시 접근 방지)
+  await acquireAccountLock(id);
 
   try {
     const loggedIn = await isAccountLoggedIn(id);
@@ -109,6 +114,8 @@ export const writeCommentWithAccount = async (
       success: false,
       error: errorMessage,
     };
+  } finally {
+    releaseAccountLock(id);
   }
 }
 
@@ -121,6 +128,9 @@ export const writeReplyWithAccount = async (
   commentIndex: number = 0 // 몇 번째 댓글에 대댓글 달지 (0부터 시작)
 ): Promise<WriteCommentResult> => {
   const { id, password } = account;
+
+  // 계정 락 획득 (동시 접근 방지)
+  await acquireAccountLock(id);
 
   try {
     const loggedIn = await isAccountLoggedIn(id);
@@ -223,5 +233,7 @@ export const writeReplyWithAccount = async (
       success: false,
       error: errorMessage,
     };
+  } finally {
+    releaseAccountLock(id);
   }
 }

@@ -7,6 +7,37 @@ const SESSION_DIR = join(process.cwd(), '.playwright-session');
 let browser: Browser | null = null;
 const contexts: Map<string, BrowserContext> = new Map();
 
+// 계정별 락 관리 (동시 접근 방지)
+const accountLocks: Map<string, Promise<void>> = new Map();
+const lockResolvers: Map<string, () => void> = new Map();
+
+export const acquireAccountLock = async (accountId: string): Promise<void> => {
+  // 이전 락이 있으면 대기
+  while (accountLocks.has(accountId)) {
+    console.log(`[LOCK] ${accountId} 락 대기 중...`);
+    await accountLocks.get(accountId);
+  }
+
+  // 새 락 생성
+  let resolver: () => void;
+  const lockPromise = new Promise<void>((resolve) => {
+    resolver = resolve;
+  });
+  accountLocks.set(accountId, lockPromise);
+  lockResolvers.set(accountId, resolver!);
+  console.log(`[LOCK] ${accountId} 락 획득`);
+};
+
+export const releaseAccountLock = (accountId: string): void => {
+  const resolver = lockResolvers.get(accountId);
+  if (resolver) {
+    resolver();
+    accountLocks.delete(accountId);
+    lockResolvers.delete(accountId);
+    console.log(`[LOCK] ${accountId} 락 해제`);
+  }
+};
+
 const getSessionFile = (accountId: string): string => {
   return join(SESSION_DIR, `${accountId}-cookies.json`);
 }

@@ -3,6 +3,8 @@ import {
   saveCookiesForAccount,
   isAccountLoggedIn,
   loginAccount,
+  acquireAccountLock,
+  releaseAccountLock,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import type { PostResult } from './types';
@@ -21,6 +23,9 @@ export const writePostWithAccount = async (
 ): Promise<PostResult> => {
   const { id, password } = account;
   const { cafeId, menuId, subject, content, category } = input;
+
+  // 계정 락 획득 (동시 접근 방지)
+  await acquireAccountLock(id);
 
   try {
     const loggedIn = await isAccountLoggedIn(id);
@@ -187,5 +192,8 @@ export const writePostWithAccount = async (
       writerAccountId: id,
       error: errorMessage,
     };
+  } finally {
+    // 락 해제
+    releaseAccountLock(id);
   }
 }
