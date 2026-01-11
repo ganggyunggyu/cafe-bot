@@ -6,6 +6,7 @@ import { postToCafe } from '@/shared/api/naver-cafe-api';
 import { getCommentAccounts } from '@/shared/lib/account-manager';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
+import { getDefaultCafe } from '@/shared/config/cafes';
 import { getCommentDelayMs } from './comment-delay';
 import { writeCommentWithAccount, type WriteCommentResult } from './comment-writer';
 
@@ -63,15 +64,16 @@ export const autoPostWithComments = async (input: {
       };
     }
 
-    const cafeId = process.env.NAVER_CAFE_ID;
-    const menuId = process.env.NAVER_CAFE_MENU_ID;
+    const cafe = getDefaultCafe();
 
-    if (!cafeId || !menuId) {
+    if (!cafe) {
       return {
         success: false,
-        error: '카페 ID 또는 메뉴 ID가 설정되지 않았어.',
+        error: '카페 설정이 없어.',
       };
     }
+
+    const { cafeId, menuId } = cafe;
 
     const generated = await generateContent({ service, keyword, ref });
     const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
@@ -118,13 +120,13 @@ export const addCommentsToArticle = async (input: {
   const { articleId, comments } = input;
 
   try {
-    const cafeId = process.env.NAVER_CAFE_ID;
+    const cafe = getDefaultCafe();
 
-    if (!cafeId) {
-      return { success: false, error: '카페 ID가 설정되지 않았어.' };
+    if (!cafe) {
+      return { success: false, error: '카페 설정이 없어.' };
     }
 
-    const results = await writeComments(cafeId, articleId, comments);
+    const results = await writeComments(cafe.cafeId, articleId, comments);
 
     return { success: true, results };
   } catch (error) {

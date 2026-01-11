@@ -1,6 +1,7 @@
 'use server';
 
 import { writeComment, writeReply, naverLogin } from '@/shared/api/naver-comment-api';
+import { getDefaultCafe } from '@/shared/config/cafes';
 import type { CommentInput, ReplyInput, NaverLoginInput } from '@/shared/types';
 
 export interface CommentActionResult {
@@ -10,7 +11,7 @@ export interface CommentActionResult {
 
 export const postComment = async (input: CommentInput): Promise<CommentActionResult> => {
   try {
-    const cafeId = input.cafeId || process.env.NAVER_CAFE_ID;
+    const cafeId = input.cafeId || getDefaultCafe()?.cafeId;
 
     if (!cafeId) {
       return {
@@ -37,7 +38,7 @@ export const postComment = async (input: CommentInput): Promise<CommentActionRes
 
 export const postReply = async (input: ReplyInput): Promise<CommentActionResult> => {
   try {
-    const cafeId = input.cafeId || process.env.NAVER_CAFE_ID;
+    const cafeId = input.cafeId || getDefaultCafe()?.cafeId;
 
     if (!cafeId) {
       return {
