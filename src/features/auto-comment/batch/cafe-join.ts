@@ -123,3 +123,79 @@ export const joinCafeWithAccounts = async (
 
   return results;
 }
+
+// 배치 가입 결과
+export interface BatchJoinResult {
+  success: boolean;
+  total: number;
+  joined: number;
+  alreadyMember: number;
+  failed: number;
+  results: Array<JoinCafeResult & { cafeName: string }>;
+}
+
+// 전체 계정 → 전체 카페 배치 가입
+export const runBatchCafeJoin = async (
+  onProgress?: (msg: string) => void
+): Promise<BatchJoinResult> => {
+  // 동적 import로 순환 참조 방지
+  const { getAllAccounts } = await import('@/shared/config/accounts');
+  const { getAllCafes } = await import('@/shared/config/cafes');
+  const { closeAllContexts } = await import('@/shared/lib/multi-session');
+
+  const accounts = getAllAccounts();
+  const cafes = getAllCafes();
+
+  const results: Array<JoinCafeResult & { cafeName: string }> = [];
+  let joined = 0;
+  let alreadyMember = 0;
+  let failed = 0;
+
+  const total = accounts.length * cafes.length;
+
+  console.log(`[CAFE-JOIN] 배치 시작: ${accounts.length}개 계정 × ${cafes.length}개 카페 = ${total}건`);
+  onProgress?.(`배치 시작: ${accounts.length}개 계정 × ${cafes.length}개 카페`);
+
+  try {
+    for (const account of accounts) {
+      for (const cafe of cafes) {
+        onProgress?.(`${account.id} → ${cafe.name} 가입 시도...`);
+
+        const result = await joinCafeWithAccount(account, cafe.cafeId);
+
+        results.push({
+          ...result,
+          cafeName: cafe.name,
+        });
+
+        if (result.alreadyMember) {
+          alreadyMember++;
+          console.log(`[CAFE-JOIN] ${account.id} - ${cafe.name}: 이미 회원`);
+        } else if (result.success) {
+          joined++;
+          console.log(`[CAFE-JOIN] ${account.id} - ${cafe.name}: 가입 완료`);
+        } else {
+          failed++;
+          console.log(`[CAFE-JOIN] ${account.id} - ${cafe.name}: 실패 - ${result.error}`);
+        }
+
+        // 다음 요청 전 딜레이
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+
+    console.log(`[CAFE-JOIN] 배치 완료: 가입 ${joined}, 이미 회원 ${alreadyMember}, 실패 ${failed}`);
+    onProgress?.(`완료: 가입 ${joined}, 이미 회원 ${alreadyMember}, 실패 ${failed}`);
+
+    return {
+      success: failed === 0,
+      total,
+      joined,
+      alreadyMember,
+      failed,
+      results,
+    };
+  } finally {
+    await closeAllContexts();
+  }
+}
