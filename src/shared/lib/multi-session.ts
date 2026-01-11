@@ -11,6 +11,10 @@ const contexts: Map<string, BrowserContext> = new Map();
 const accountLocks: Map<string, Promise<void>> = new Map();
 const lockResolvers: Map<string, () => void> = new Map();
 
+// 로그인 상태 캐시 (비활성화: 매번 체크)
+const loginStatusCache: Map<string, number> = new Map();
+const LOGIN_CACHE_TTL = 0; // 캐시 비활성화
+
 export const acquireAccountLock = async (accountId: string): Promise<void> => {
   // 이전 락이 있으면 대기
   while (accountLocks.has(accountId)) {
@@ -125,6 +129,8 @@ export const closeContextForAccount = async (accountId: string): Promise<void> =
     await context.close();
     contexts.delete(accountId);
   }
+  // 캐시도 무효화
+  loginStatusCache.delete(accountId);
 }
 
 export const closeAllContexts = async (): Promise<void> => {
@@ -133,6 +139,7 @@ export const closeAllContexts = async (): Promise<void> => {
     await context.close();
   }
   contexts.clear();
+  loginStatusCache.clear();
 
   if (browser) {
     await browser.close();
@@ -141,6 +148,13 @@ export const closeAllContexts = async (): Promise<void> => {
 }
 
 export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => {
+  // 캐시 확인 (TTL 내면 페이지 이동 없이 true 반환)
+  const cachedTime = loginStatusCache.get(accountId);
+  if (cachedTime && Date.now() - cachedTime < LOGIN_CACHE_TTL) {
+    console.log(`[LOGIN] ${accountId} 캐시 히트 (${Math.round((Date.now() - cachedTime) / 1000)}초 전 확인)`);
+    return true;
+  }
+
   const page = await getPageForAccount(accountId);
 
   try {
@@ -150,8 +164,19 @@ export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => 
     });
 
     const url = page.url();
-    return !url.includes('nidlogin.login');
+    const isLoggedIn = !url.includes('nidlogin.login');
+
+    if (isLoggedIn) {
+      loginStatusCache.set(accountId, Date.now());
+      console.log(`[LOGIN] ${accountId} 로그인 상태 캐시됨`);
+    } else {
+      // 로그아웃 상태면 캐시 무효화
+      loginStatusCache.delete(accountId);
+    }
+
+    return isLoggedIn;
   } catch {
+    loginStatusCache.delete(accountId);
     return false;
   }
 }
@@ -179,6 +204,11 @@ export const loginAccount = async (
     }
 
     await saveCookiesForAccount(accountId);
+
+    // 로그인 성공 시 캐시 갱신
+    loginStatusCache.set(accountId, Date.now());
+    console.log(`[LOGIN] ${accountId} 로그인 완료, 캐시 갱신`);
+
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
