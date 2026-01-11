@@ -7,7 +7,150 @@ import {
   releaseAccountLock,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
-import type { PostResult } from './types';
+import type { Page } from 'playwright';
+import type { PostResult, PostOptions } from './types';
+import { DEFAULT_POST_OPTIONS } from './types';
+
+// 체크박스 상태 설정 헬퍼
+const setCheckbox = async (page: Page, selector: string, checked: boolean) => {
+  const checkbox = await page.$(selector);
+  if (!checkbox) {
+    console.log(`[DEBUG] 체크박스 ${selector} 찾을 수 없음`);
+    return;
+  }
+
+  // DOM에서 직접 checked 상태 확인 (커스텀 체크박스 대응)
+  const isCurrentlyChecked = await checkbox.evaluate((el) => (el as HTMLInputElement).checked);
+  console.log(`[DEBUG] ${selector} 현재: ${isCurrentlyChecked}, 목표: ${checked}`);
+
+  if (isCurrentlyChecked !== checked) {
+    // 라벨 클릭 시도 (커스텀 체크박스는 라벨 클릭이 더 안정적)
+    const labelSelector = `label[for="${selector.replace('#', '')}"]`;
+    const label = await page.$(labelSelector);
+
+    if (label) {
+      await label.click();
+      console.log(`[DEBUG] ${selector} 라벨 클릭`);
+    } else {
+      // 라벨 없으면 체크박스 직접 클릭
+      await checkbox.click();
+      console.log(`[DEBUG] ${selector} 직접 클릭`);
+    }
+    await page.waitForTimeout(300);
+  }
+};
+
+// 게시 옵션 적용
+const applyPostOptions = async (page: Page, options: PostOptions) => {
+  console.log('[DEBUG] 게시 옵션 적용 중...', options);
+
+  // 설정 영역으로 스크롤
+  const settingArea = await page.$('.setting_area');
+  if (settingArea) {
+    await settingArea.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+  }
+
+  // 댓글 허용
+  await setCheckbox(page, '#coment', options.allowComment);
+
+  // 스크랩 허용
+  await setCheckbox(page, '#blog_sharing', options.allowScrap);
+
+  // 복사/저장 허용
+  await setCheckbox(page, '#copy', options.allowCopy);
+
+  // 자동출처 사용
+  await setCheckbox(page, '#automatic_source', options.useAutoSource);
+
+  // CCL 사용
+  await setCheckbox(page, '#ccl', options.useCcl);
+
+  // CCL 세부 옵션 (CCL 사용 시에만)
+  if (options.useCcl) {
+    console.log('[DEBUG] CCL 세부 옵션 설정 시작');
+    await page.waitForTimeout(500);
+
+    // 영리적 이용
+    const commercialBtn = await page.$('.permission_use .permission_select');
+    if (commercialBtn) {
+      console.log('[DEBUG] 영리적 이용 버튼 클릭');
+      await commercialBtn.scrollIntoViewIfNeeded();
+      await commercialBtn.click();
+
+      // 레이어가 나타날 때까지 대기
+      try {
+        await page.waitForSelector('.allowCommercialUseLayer', { state: 'visible', timeout: 3000 });
+        console.log('[DEBUG] 영리적 이용 레이어 표시됨');
+      } catch {
+        console.log('[DEBUG] 영리적 이용 레이어 대기 타임아웃');
+      }
+
+      const commercialText = options.cclCommercial === 'allow' ? '허용' : '허용 안 함';
+      console.log(`[DEBUG] 영리적 이용 선택: ${commercialText}`);
+      const commercialOption = await page.$$(`.allowCommercialUseLayer .layer_button`);
+
+      let commercialFound = false;
+      for (const opt of commercialOption) {
+        const text = await opt.textContent();
+        if (text?.trim() === commercialText) {
+          await opt.click();
+          commercialFound = true;
+          console.log(`[DEBUG] 영리적 이용 "${commercialText}" 클릭 완료`);
+          break;
+        }
+      }
+      if (!commercialFound) {
+        console.log(`[DEBUG] 영리적 이용 옵션 "${commercialText}" 찾지 못함`);
+      }
+      await page.waitForTimeout(300);
+    } else {
+      console.log('[DEBUG] 영리적 이용 버튼 없음');
+    }
+
+    // 콘텐츠 변경
+    const modifyBtn = await page.$('.change_content .permission_select');
+    if (modifyBtn) {
+      console.log('[DEBUG] 콘텐츠 변경 버튼 클릭');
+      await modifyBtn.scrollIntoViewIfNeeded();
+      await modifyBtn.click();
+
+      // 레이어가 나타날 때까지 대기
+      try {
+        await page.waitForSelector('.allowModifyContentsLayer', { state: 'visible', timeout: 3000 });
+        console.log('[DEBUG] 콘텐츠 변경 레이어 표시됨');
+      } catch {
+        console.log('[DEBUG] 콘텐츠 변경 레이어 대기 타임아웃');
+      }
+
+      const modifyTextMap = { allow: '허용', same: '동일조건허용', disallow: '허용 안 함' };
+      const modifyText = modifyTextMap[options.cclModify];
+      console.log(`[DEBUG] 콘텐츠 변경 선택: ${modifyText}`);
+      const modifyOption = await page.$$(`.allowModifyContentsLayer .layer_button`);
+
+      let modifyFound = false;
+      for (const opt of modifyOption) {
+        const text = await opt.textContent();
+        if (text?.trim() === modifyText) {
+          await opt.click();
+          modifyFound = true;
+          console.log(`[DEBUG] 콘텐츠 변경 "${modifyText}" 클릭 완료`);
+          break;
+        }
+      }
+      if (!modifyFound) {
+        console.log(`[DEBUG] 콘텐츠 변경 옵션 "${modifyText}" 찾지 못함`);
+      }
+      await page.waitForTimeout(300);
+    } else {
+      console.log('[DEBUG] 콘텐츠 변경 버튼 없음');
+    }
+
+    console.log('[DEBUG] CCL 세부 옵션 설정 완료');
+  }
+
+  console.log('[DEBUG] 게시 옵션 적용 완료');
+};
 
 export interface WritePostInput {
   cafeId: string;
@@ -15,6 +158,7 @@ export interface WritePostInput {
   subject: string;
   content: string;
   category?: string; // 게시판명 (미지정 시 첫 번째 게시판)
+  postOptions?: PostOptions;
 }
 
 export const writePostWithAccount = async (
@@ -22,7 +166,7 @@ export const writePostWithAccount = async (
   input: WritePostInput
 ): Promise<PostResult> => {
   const { id, password } = account;
-  const { cafeId, menuId, subject, content, category } = input;
+  const { cafeId, menuId, subject, content, category, postOptions = DEFAULT_POST_OPTIONS } = input;
 
   // 계정 락 획득 (동시 접근 방지)
   await acquireAccountLock(id);
@@ -140,6 +284,9 @@ export const writePostWithAccount = async (
     }
 
     await page.waitForTimeout(500);
+
+    // 게시 옵션 설정 (체크박스 조작)
+    await applyPostOptions(page, postOptions);
 
     // 등록 버튼 클릭 (a.BaseButton--skinGreen)
     const submitButton = await page.$('a.BaseButton--skinGreen, a.BaseButton');

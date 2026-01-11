@@ -55,14 +55,6 @@ export default function BatchPage() {
             >
               기본 발행
             </Link>
-            <Link
-              href="/auto"
-              className={cn(
-                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
-              )}
-            >
-              자동 댓글 (Legacy)
-            </Link>
             <span
               className={cn(
                 'text-sm font-semibold text-[color:var(--ink)] border-b-2 border-[var(--accent)]'
@@ -70,6 +62,14 @@ export default function BatchPage() {
             >
               배치 모드
             </span>
+            <Link
+              href="/cafe-join"
+              className={cn(
+                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
+              )}
+            >
+              카페 가입
+            </Link>
           </nav>
         </div>
       </header>

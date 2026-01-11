@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 import { generateContent } from '@/shared/api/content-api';
-import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
+import { generateComment, generateReply, generateAuthorReply } from '@/shared/api/comment-gen-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle, BatchJobLog } from '@/shared/models';
 import { writePostWithAccount } from './post-writer';
@@ -47,7 +48,7 @@ export const runBatchJob = async (
   options: BatchJobOptions = {},
   onProgress?: ProgressCallback
 ): Promise<BatchJobResult> => {
-  const { service, keywords, ref } = input;
+  const { service, keywords, ref, cafeId: inputCafeId, postOptions } = input;
   const delays = { ...DEFAULT_DELAYS, ...options.delays };
 
   const accounts = getAllAccounts();
@@ -66,10 +67,9 @@ export const runBatchJob = async (
   let completed = 0;
   let failed = 0;
 
-  const cafeId = process.env.NAVER_CAFE_ID;
-  const menuId = process.env.NAVER_CAFE_MENU_ID;
+  const cafe = inputCafeId ? getCafeById(inputCafeId) : getDefaultCafe();
 
-  if (!cafeId || !menuId) {
+  if (!cafe) {
     return {
       success: false,
       totalKeywords: keywords.length,
@@ -78,6 +78,9 @@ export const runBatchJob = async (
       results: [],
     };
   }
+
+  const { cafeId, menuId, name: cafeName } = cafe;
+  console.log(`[BATCH] 카페: ${cafeName} (${cafeId})`)
 
   // MongoDB 연결 (실패해도 배치는 진행)
   let jobLog: Awaited<ReturnType<typeof BatchJobLog.create>> | null = null;
@@ -125,9 +128,10 @@ export const runBatchJob = async (
         message: `[${i + 1}/${keywords.length}] "${keyword}"${category ? ` (${category})` : ''} - ${writerAccount.id}로 글 작성 중...`,
       });
 
-      // 1. AI 콘텐츠 생성
+      // 1. AI 콘텐츠 생성 (카테고리가 있으면 키워드에 포함)
+      const keywordWithCategory = category ? `${keyword} (카테고리: ${category})` : keyword;
       console.log('[BATCH] AI 콘텐츠 생성 요청...');
-      const generated = await generateContent({ service, keyword, ref });
+      const generated = await generateContent({ service, keyword: keywordWithCategory, ref });
       console.log('[BATCH] AI 콘텐츠 생성 완료');
       const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
 
@@ -138,6 +142,7 @@ export const runBatchJob = async (
         subject: title,
         content: htmlContent,
         category,
+        postOptions,
       });
 
       if (!postResult.success || !postResult.articleId) {
@@ -236,7 +241,7 @@ export const runBatchJob = async (
 
       await sleep(delays.beforeReplies);
 
-      // 4. 대댓글 체인 (로테이션)
+      // 4. 대댓글 체인 (글쓴이 + 일반 계정 섞기)
       onProgress?.({
         currentKeyword: keyword,
         keywordIndex: i,
@@ -249,48 +254,88 @@ export const runBatchJob = async (
       const successfulComments = commentResults.filter((c) => c.success);
 
       if (successfulComments.length >= 2 && commentTexts.length >= 2) {
-        // 대댓글 개수: 2~4개 랜덤 (댓글 수 이하)
-        const maxReplies = Math.min(4, commentTexts.length);
-        const replyCount = Math.floor(Math.random() * (maxReplies - 1)) + 2; // 2 ~ maxReplies
-
-        // 랜덤 댓글 인덱스 선택 (중복 방지)
-        const availableIndices = commentTexts.map((_, idx) => idx);
-        const selectedIndices: number[] = [];
-        for (let k = 0; k < replyCount && availableIndices.length > 0; k++) {
-          const randIdx = Math.floor(Math.random() * availableIndices.length);
-          selectedIndices.push(availableIndices.splice(randIdx, 1)[0]);
+        // 대댓글 작업 목록 생성 (글쓴이 + 일반)
+        interface ReplyTask {
+          targetCommentIndex: number;
+          isAuthor: boolean;
+          account: typeof writerAccount;
         }
 
-        for (let j = 0; j < selectedIndices.length; j++) {
-          const targetCommentIndex = selectedIndices[j];
-          const replyerIndex = (j + 1) % commenterAccounts.length;
-          const replyer = commenterAccounts[replyerIndex];
-          const parentComment = commentTexts[targetCommentIndex];
+        const replyTasks: ReplyTask[] = [];
+        const availableIndices = commentTexts.map((_, idx) => idx);
 
-          // AI로 대댓글 생성 (글 내용 + 부모 댓글)
+        // 글쓴이 대댓글: 2~3개
+        const authorReplyCount = Math.floor(Math.random() * 2) + 2; // 2~3개
+        for (let k = 0; k < authorReplyCount && availableIndices.length > 0; k++) {
+          const randIdx = Math.floor(Math.random() * availableIndices.length);
+          const targetIdx = availableIndices.splice(randIdx, 1)[0];
+          replyTasks.push({
+            targetCommentIndex: targetIdx,
+            isAuthor: true,
+            account: writerAccount,
+          });
+        }
+
+        // 일반 대댓글: 2~4개
+        const normalReplyCount = Math.min(
+          Math.floor(Math.random() * 3) + 2, // 2~4개
+          availableIndices.length
+        );
+        for (let k = 0; k < normalReplyCount && availableIndices.length > 0; k++) {
+          const randIdx = Math.floor(Math.random() * availableIndices.length);
+          const targetIdx = availableIndices.splice(randIdx, 1)[0];
+          const replyer = commenterAccounts[k % commenterAccounts.length];
+          replyTasks.push({
+            targetCommentIndex: targetIdx,
+            isAuthor: false,
+            account: replyer,
+          });
+        }
+
+        // 작업 순서 섞기 (Fisher-Yates shuffle)
+        for (let k = replyTasks.length - 1; k > 0; k--) {
+          const randIdx = Math.floor(Math.random() * (k + 1));
+          [replyTasks[k], replyTasks[randIdx]] = [replyTasks[randIdx], replyTasks[k]];
+        }
+
+        // 대댓글 작성 실행
+        for (let j = 0; j < replyTasks.length; j++) {
+          const task = replyTasks[j];
+          const parentComment = commentTexts[task.targetCommentIndex];
+
+          // AI로 대댓글 생성
           let replyText: string;
           try {
-            replyText = await generateReply(postContent, parentComment);
+            if (task.isAuthor) {
+              replyText = await generateAuthorReply(postContent, parentComment);
+            } else {
+              replyText = await generateReply(postContent, parentComment);
+            }
           } catch {
-            replyText = '저도 그렇게 생각해요!'; // 폴백
+            replyText = task.isAuthor ? '댓글 감사합니다!' : '저도 그렇게 생각해요!';
           }
 
           const result = await writeReplyWithAccount(
-            replyer,
+            task.account,
             cafeId,
             postResult.articleId,
             replyText,
-            targetCommentIndex
+            task.targetCommentIndex
           );
 
           replyResults.push({
             accountId: result.accountId,
             success: result.success,
-            targetCommentIndex,
+            targetCommentIndex: task.targetCommentIndex,
+            isAuthor: task.isAuthor,
             error: result.error,
           });
 
-          if (j < selectedIndices.length - 1) {
+          console.log(
+            `[BATCH] 대댓글 ${j + 1}/${replyTasks.length}: ${task.isAuthor ? '글쓴이' : '일반'} (${task.account.id})`
+          );
+
+          if (j < replyTasks.length - 1) {
             await sleep(delays.betweenReplies);
           }
         }

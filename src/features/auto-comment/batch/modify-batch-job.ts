@@ -3,6 +3,7 @@ import { generateContent } from '@/shared/api/content-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getDefaultCafe } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle, ModifiedArticle, BatchJobLog, type IPublishedArticle } from '@/shared/models';
 import { modifyArticleWithAccount } from './article-modifier';
@@ -70,9 +71,9 @@ export const runModifyBatchJob = async (
     };
   }
 
-  const cafeId = process.env.NAVER_CAFE_ID;
+  const cafe = getDefaultCafe();
 
-  if (!cafeId) {
+  if (!cafe) {
     return {
       success: false,
       totalArticles: 0,
@@ -81,6 +82,8 @@ export const runModifyBatchJob = async (
       results: [],
     };
   }
+
+  const { cafeId } = cafe;
 
   // MongoDB 연결 (수정 기능은 DB 필수)
   try {
@@ -193,8 +196,9 @@ export const runModifyBatchJob = async (
         message: `[${i + 1}/${articlesToModify.length}] "${adKeyword}" - 광고글로 수정 중...`,
       });
 
-      // 광고 콘텐츠 생성 (새 광고 키워드 사용)
-      const generated = await generateContent({ service, keyword: adKeyword, ref });
+      // 광고 콘텐츠 생성 (카테고리가 있으면 키워드에 포함)
+      const keywordWithCategory = category ? `${adKeyword} (카테고리: ${category})` : adKeyword;
+      const generated = await generateContent({ service, keyword: keywordWithCategory, ref });
       const { title: newTitle, htmlContent: newContent } = buildCafePostContent(generated.content, adKeyword);
 
       // 글 수정

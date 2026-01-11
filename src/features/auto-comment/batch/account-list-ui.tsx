@@ -66,14 +66,17 @@ export function AccountListUI() {
             onClick={handleLoginAll}
             disabled={isPending}
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-semibold text-white transition',
-              'bg-[var(--teal)] hover:brightness-105',
+              'rounded-full px-3 py-1 text-xs font-semibold transition',
+              'border border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal)] hover:text-white',
               'disabled:cursor-not-allowed disabled:opacity-60'
             )}
           >
-            전체 로그인
+            로그인 테스트
           </button>
         </div>
+        <p className={cn('text-xs text-[color:var(--ink-muted)]')}>
+          배치 실행 시 자동 로그인되므로 필수 아님
+        </p>
       </div>
 
       {message && (
@@ -124,12 +127,12 @@ export function AccountListUI() {
               onClick={() => handleLogin(account.id, account.password)}
               disabled={isPending || loginStatus[account.id] === 'loading'}
               className={cn(
-                'rounded-full px-3 py-1 text-xs font-semibold text-white transition',
-                'bg-[var(--teal)] hover:brightness-105',
+                'rounded-full px-2 py-1 text-xs font-medium transition',
+                'border border-gray-300 text-gray-600 hover:bg-gray-100',
                 'disabled:cursor-not-allowed disabled:opacity-60'
               )}
             >
-              로그인
+              테스트
             </button>
           </li>
         ))}

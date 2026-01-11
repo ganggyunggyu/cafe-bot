@@ -209,6 +209,23 @@ export const writeReplyWithAccount = async (
     await submitButton.click();
     await page.waitForTimeout(2000);
 
+    // 해당 댓글 좋아요 (대댓글 단 댓글에 공감)
+    const commentAreas = await page.$$('.comment_area');
+    if (commentAreas[commentIndex]) {
+      const commentLikeButton = await commentAreas[commentIndex].$('a.u_likeit_list_btn._button');
+      if (commentLikeButton) {
+        const isCommentLiked = await commentLikeButton.evaluate(
+          (el) => el.classList.contains('on') || el.getAttribute('aria-pressed') === 'true'
+        );
+
+        if (!isCommentLiked) {
+          await commentLikeButton.click();
+          console.log(`[DEBUG] ${id} 댓글 좋아요 클릭 (index: ${commentIndex})`);
+          await page.waitForTimeout(500);
+        }
+      }
+    }
+
     // 글 좋아요 (이미 눌렀으면 스킵)
     const likeButton = await page.$('a.u_likeit_list_btn._button[data-type="like"]');
     if (likeButton) {
@@ -218,7 +235,7 @@ export const writeReplyWithAccount = async (
 
       if (!isLiked) {
         await likeButton.click();
-        console.log(`[DEBUG] ${id} 좋아요 클릭`);
+        console.log(`[DEBUG] ${id} 글 좋아요 클릭`);
         await page.waitForTimeout(500);
       }
     }

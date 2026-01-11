@@ -2,6 +2,7 @@
 
 import { runBatchJob } from './batch-job';
 import { runModifyBatchJob, type ModifyBatchInput, type ModifyBatchResult, type ModifyBatchOptions } from './modify-batch-job';
+import { runBatchCafeJoin, type BatchJoinResult } from './cafe-join';
 import type { BatchJobInput, BatchJobResult, BatchJobOptions } from './types';
 
 export const runBatchPostAction = async (
@@ -49,6 +50,24 @@ export const runModifyBatchAction = async (
       success: false,
       totalArticles: 0,
       completed: 0,
+      failed: 0,
+      results: [],
+    };
+  }
+}
+
+// 카페 가입 배치 작업 (전체 계정 → 전체 카페)
+export const runCafeJoinBatchAction = async (): Promise<BatchJoinResult> => {
+  try {
+    const result = await runBatchCafeJoin();
+    return result;
+  } catch (error) {
+    console.error('[CAFE-JOIN ACTION] 에러 발생:', error);
+    return {
+      success: false,
+      total: 0,
+      joined: 0,
+      alreadyMember: 0,
       failed: 0,
       results: [],
     };

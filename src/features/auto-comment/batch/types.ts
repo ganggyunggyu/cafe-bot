@@ -5,8 +5,10 @@ export interface BatchJobInput {
   service: string;
   keywords: string[];
   ref?: string;
+  cafeId?: string; // 카페 ID (미지정 시 기본 카페)
   commentTemplates?: string[];
   replyTemplates?: string[];
+  postOptions?: PostOptions;
 }
 
 // 글 작성 결과
@@ -31,6 +33,7 @@ export interface ReplyResult {
   accountId: string;
   success: boolean;
   targetCommentIndex: number;
+  isAuthor?: boolean; // 글쓴이 대댓글 여부
   error?: string;
 }
 
@@ -51,6 +54,28 @@ export interface BatchJobResult {
   results: KeywordResult[];
   jobLogId?: string;
 }
+
+// 게시 옵션
+export interface PostOptions {
+  allowComment: boolean; // 댓글 허용
+  allowScrap: boolean; // 카페·블로그 스크랩 허용
+  allowCopy: boolean; // 복사·저장 허용
+  useAutoSource: boolean; // 자동출처 사용
+  useCcl: boolean; // CCL 사용
+  cclCommercial: 'allow' | 'disallow'; // 영리적 이용
+  cclModify: 'allow' | 'same' | 'disallow'; // 콘텐츠 변경
+}
+
+// 기본 게시 옵션
+export const DEFAULT_POST_OPTIONS: PostOptions = {
+  allowComment: true,
+  allowScrap: true,
+  allowCopy: false,
+  useAutoSource: false,
+  useCcl: false,
+  cclCommercial: 'disallow',
+  cclModify: 'disallow',
+};
 
 // 딜레이 설정
 export interface DelayConfig {

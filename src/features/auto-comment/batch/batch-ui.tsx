@@ -3,14 +3,21 @@
 import { useState, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { runBatchPostAction, runModifyBatchAction } from './batch-actions';
-import type { BatchJobResult, KeywordResult } from './types';
+import { PostOptionsUI } from './post-options-ui';
+import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
+import type { BatchJobResult, KeywordResult, PostOptions } from './types';
+import { DEFAULT_POST_OPTIONS } from './types';
 import type { ModifyBatchResult, SortOrder } from './modify-batch-job';
 
 type JobMode = 'publish' | 'modify';
 
+const cafes = getAllCafes();
+const defaultCafe = getDefaultCafe();
+
 export function BatchUI() {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<JobMode>('publish');
+  const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
   const [service, setService] = useState('');
   const [keywordsText, setKeywordsText] = useState('');
   const [ref, setRef] = useState('');
@@ -18,6 +25,9 @@ export function BatchUI() {
   const [adKeywordsText, setAdKeywordsText] = useState('');
   const [result, setResult] = useState<BatchJobResult | null>(null);
   const [modifyResult, setModifyResult] = useState<ModifyBatchResult | null>(null);
+  const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
+
+  const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 
   const sectionClassName = cn(
     'rounded-2xl border border-[color:var(--border)] bg-white/70 p-4 shadow-sm'
@@ -50,6 +60,8 @@ export function BatchUI() {
           service,
           keywords,
           ref: ref || undefined,
+          cafeId: selectedCafeId || undefined,
+          postOptions,
         });
 
         setResult(res);
@@ -143,6 +155,44 @@ export function BatchUI() {
           {mode === 'publish' ? '발행 설정' : '수정 설정'}
         </h3>
         <div className={cn('flex flex-col gap-3')}>
+          {/* 카페 선택 */}
+          <div className={cn('flex flex-col gap-1')}>
+            <label className={cn('text-xs font-medium text-[color:var(--ink-muted)]')}>
+              카페 선택
+            </label>
+            <select
+              value={selectedCafeId}
+              onChange={(e) => setSelectedCafeId(e.target.value)}
+              className={inputClassName}
+            >
+              {cafes.map((cafe) => (
+                <option key={cafe.cafeId} value={cafe.cafeId}>
+                  {cafe.name} {cafe.isDefault ? '(기본)' : ''}
+                </option>
+              ))}
+            </select>
+            {selectedCafe && (
+              <div className={cn('flex items-center gap-2')}>
+                <p className={cn('text-xs text-[color:var(--ink-muted)] flex-1')}>
+                  카테고리: {selectedCafe.categories.join(', ')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedCafe.categories.join('\n'));
+                  }}
+                  className={cn(
+                    'text-xs px-2 py-1 rounded-lg',
+                    'bg-white/50 hover:bg-white/80 text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]',
+                    'border border-[color:var(--border)] transition'
+                  )}
+                >
+                  복사
+                </button>
+              </div>
+            )}
+          </div>
+
           <input
             type="text"
             placeholder="서비스 (예: 여행, 맛집)"
@@ -162,6 +212,9 @@ export function BatchUI() {
               <p className={cn('text-xs text-[color:var(--ink-muted)] bg-white/50 rounded-xl px-3 py-2')}>
                 카테고리 미지정 시 첫 번째 게시판에 발행됩니다.
               </p>
+              <div className={cn('rounded-xl border border-[color:var(--border)] bg-white/50 p-3')}>
+                <PostOptionsUI options={postOptions} onChange={setPostOptions} />
+              </div>
             </>
           )}
           {mode === 'modify' && (
