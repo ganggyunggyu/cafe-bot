@@ -11,9 +11,9 @@ const contexts: Map<string, BrowserContext> = new Map();
 const accountLocks: Map<string, Promise<void>> = new Map();
 const lockResolvers: Map<string, () => void> = new Map();
 
-// 로그인 상태 캐시 (비활성화: 매번 체크)
+// 로그인 상태 캐시 (TTL: 30분)
 const loginStatusCache: Map<string, number> = new Map();
-const LOGIN_CACHE_TTL = 0; // 캐시 비활성화
+const LOGIN_CACHE_TTL = 30 * 60 * 1000; // 30분
 
 export const acquireAccountLock = async (accountId: string): Promise<void> => {
   // 이전 락이 있으면 대기
