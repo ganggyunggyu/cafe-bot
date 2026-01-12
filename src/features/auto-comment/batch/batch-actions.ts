@@ -9,8 +9,10 @@ export const runBatchPostAction = async (
   input: BatchJobInput,
   options?: BatchJobOptions
 ): Promise<BatchJobResult> => {
+  console.log('[BATCH ACTION] 시작 - keywords:', input.keywords.length);
   try {
     const result = await runBatchJob(input, options);
+    console.log('[BATCH ACTION] 완료 - result:', result.completed, '/', result.totalKeywords);
     return result;
   } catch (error) {
     console.error('[BATCH ACTION] 에러 발생:', error);

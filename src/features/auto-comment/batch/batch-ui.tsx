@@ -18,10 +18,10 @@ export function BatchUI() {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<JobMode>('publish');
   const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
-  const [service, setService] = useState('');
   const [keywordsText, setKeywordsText] = useState('');
   const [ref, setRef] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('oldest');
+  const [daysLimit, setDaysLimit] = useState<number | undefined>(undefined);
   const [adKeywordsText, setAdKeywordsText] = useState('');
   const [result, setResult] = useState<BatchJobResult | null>(null);
   const [modifyResult, setModifyResult] = useState<ModifyBatchResult | null>(null);
@@ -48,7 +48,7 @@ export function BatchUI() {
         .map((k) => k.trim())
         .filter((k) => k.length > 0);
 
-      if (!service || keywords.length === 0) {
+      if (keywords.length === 0) {
         return;
       }
 
@@ -57,7 +57,7 @@ export function BatchUI() {
         setModifyResult(null);
 
         const res = await runBatchPostAction({
-          service,
+          service: '일반',
           keywords,
           ref: ref || undefined,
           cafeId: selectedCafeId || undefined,
@@ -72,7 +72,7 @@ export function BatchUI() {
         .map((k) => k.trim())
         .filter((k) => k.length > 0);
 
-      if (!service || adKeywords.length === 0) {
+      if (adKeywords.length === 0) {
         return;
       }
 
@@ -81,10 +81,12 @@ export function BatchUI() {
         setModifyResult(null);
 
         const res = await runModifyBatchAction({
-          service,
+          service: '일반',
           adKeywords,
           ref: ref || undefined,
           sortOrder,
+          cafeId: selectedCafeId || undefined,
+          daysLimit,
         });
 
         setModifyResult(res);
@@ -110,7 +112,6 @@ export function BatchUI() {
 
   const isSubmitDisabled =
     isPending ||
-    !service ||
     (mode === 'publish' && !keywordsText.trim()) ||
     (mode === 'modify' && !adKeywordsText.trim());
 
@@ -193,13 +194,6 @@ export function BatchUI() {
             )}
           </div>
 
-          <input
-            type="text"
-            placeholder="서비스 (예: 여행, 맛집)"
-            value={service}
-            onChange={(e) => setService(e.target.value)}
-            className={inputClassName}
-          />
           {mode === 'publish' && (
             <>
               <textarea
@@ -234,6 +228,18 @@ export function BatchUI() {
                 <option value="oldest">발행원고 선택: 오래된 순</option>
                 <option value="newest">발행원고 선택: 최신 순</option>
                 <option value="random">발행원고 선택: 랜덤</option>
+              </select>
+              <select
+                value={daysLimit ?? ''}
+                onChange={(e) => setDaysLimit(e.target.value ? Number(e.target.value) : undefined)}
+                className={inputClassName}
+              >
+                <option value="">발행일 필터: 전체</option>
+                <option value="1">발행일 필터: 오늘</option>
+                <option value="3">발행일 필터: 3일 이내</option>
+                <option value="7">발행일 필터: 7일 이내</option>
+                <option value="14">발행일 필터: 14일 이내</option>
+                <option value="30">발행일 필터: 30일 이내</option>
               </select>
               <p className={cn('text-xs text-[color:var(--ink-muted)] bg-white/50 rounded-xl px-3 py-2')}>
                 입력한 광고 키워드 수만큼 발행원고를 가져와서 수정합니다.
@@ -302,6 +308,20 @@ export function BatchUI() {
                   <span className={cn('font-medium text-sm text-[color:var(--ink)]')}>
                     {kr.keyword}
                   </span>
+                  {kr.post.success && kr.post.articleId && (
+                    <a
+                      href={`https://cafe.naver.com/ca-fe/cafes/${selectedCafeId}/articles/${kr.post.articleId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        'text-xs px-2 py-0.5 rounded-lg',
+                        'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
+                        'hover:bg-[color:var(--accent)] hover:text-white transition'
+                      )}
+                    >
+                      #{kr.post.articleId} 보기
+                    </a>
+                  )}
                 </div>
                 <div className={cn('text-xs text-[color:var(--ink-muted)] space-y-0.5')}>
                   <p>
@@ -362,9 +382,18 @@ export function BatchUI() {
                     <span className={cn('font-medium text-sm text-[color:var(--ink)]')}>
                       {mr.keyword}
                     </span>
-                    <span className={cn('text-xs text-[color:var(--ink-muted)]')}>
-                      (#{mr.articleId})
-                    </span>
+                    <a
+                      href={`https://cafe.naver.com/ca-fe/cafes/${selectedCafeId}/articles/${mr.articleId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        'text-xs px-2 py-0.5 rounded-lg',
+                        'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
+                        'hover:bg-[color:var(--accent)] hover:text-white transition'
+                      )}
+                    >
+                      #{mr.articleId} 보기
+                    </a>
                   </div>
                   {mr.error && (
                     <p className={cn('text-xs text-[color:var(--danger)] mt-1')}>

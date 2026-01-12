@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/cn';
 import Link from 'next/link';
-import { BatchUI, AccountListUI } from '@/features/auto-comment/batch';
+import { BatchUI, KeywordGeneratorUI } from '@/features/auto-comment/batch';
 
 export default function BatchPage() {
   return (
@@ -63,12 +63,28 @@ export default function BatchPage() {
               배치 모드
             </span>
             <Link
+              href="/publish"
+              className={cn(
+                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
+              )}
+            >
+              분리 발행
+            </Link>
+            <Link
               href="/cafe-join"
               className={cn(
                 'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
               )}
             >
               카페 가입
+            </Link>
+            <Link
+              href="/accounts"
+              className={cn(
+                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
+              )}
+            >
+              계정 관리
             </Link>
           </nav>
         </div>
@@ -101,7 +117,7 @@ export default function BatchPage() {
               'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
             )}
           >
-            <AccountListUI />
+            <KeywordGeneratorUI />
           </div>
           <div
             className={cn(
@@ -125,10 +141,10 @@ export default function BatchPage() {
               'text-sm text-[color:var(--ink-muted)] space-y-1 list-decimal list-inside'
             )}
           >
-            <li>좌측에서 계정들 &quot;로그인&quot; 버튼으로 Playwright 세션 생성</li>
-            <li>우측에서 서비스 입력 (예: 여행, 맛집)</li>
-            <li>키워드 목록 입력 (한 줄에 하나씩)</li>
-            <li>&quot;배치 실행&quot; 버튼 클릭</li>
+            <li>좌측 키워드 생성기로 AI가 키워드 생성</li>
+            <li>&quot;카테고리 포함 복사&quot; 버튼 클릭</li>
+            <li>우측 배치 입력창에 붙여넣기</li>
+            <li>&quot;배치 발행&quot; 또는 &quot;배치 수정&quot; 버튼 클릭</li>
           </ol>
           <div className={cn('mt-4 p-3 rounded-xl bg-white/50 text-xs text-[color:var(--ink-muted)]')}>
             <p className={cn('font-semibold mb-1')}>작동 방식:</p>
@@ -138,6 +154,9 @@ export default function BatchPage() {
               <li>• 키워드3: 계정C 글 작성 → A,B,D 댓글 → 대댓글 체인</li>
               <li>• ... (계정 로테이션)</li>
             </ul>
+            <p className={cn('mt-2 font-semibold')}>
+              계정 로그인은 <Link href="/accounts" className="text-[color:var(--accent)] underline">계정 관리</Link> 페이지에서 진행
+            </p>
           </div>
         </div>
       </main>
