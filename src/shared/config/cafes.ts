@@ -5,6 +5,7 @@ export interface CafeConfig {
   name: string;
   categories: string[]; // 카테고리(게시판) 목록
   isDefault?: boolean;
+  categoryMenuIds?: Record<string, string>; // 카테고리 → menuId 매핑
 }
 
 // 카페 목록 (첫 번째가 기본 카페)
