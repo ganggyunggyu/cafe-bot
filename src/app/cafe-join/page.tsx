@@ -4,7 +4,7 @@ import { CafeJoinUI } from './cafe-join-ui';
 
 export default function CafeJoinPage() {
   return (
-    <div className={cn('min-h-screen relative overflow-hidden bg-[var(--surface)]')}>
+    <div className={cn('min-h-screen relative overflow-hidden bg-(--surface)')}>
       <div
         className={cn(
           'pointer-events-none absolute -top-24 right-[-10%] h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle_at_center,var(--teal-soft),transparent_65%)] blur-3xl opacity-80'
@@ -26,7 +26,7 @@ export default function CafeJoinPage() {
             <Link href="/" className={cn('flex items-center gap-3')}>
               <div
                 className={cn(
-                  'h-11 w-11 rounded-2xl bg-[var(--teal)] text-white flex items-center justify-center font-semibold'
+                  'h-11 w-11 rounded-2xl bg-(--teal) text-white flex items-center justify-center font-semibold'
                 )}
               >
                 CJ
@@ -34,12 +34,12 @@ export default function CafeJoinPage() {
               <div className={cn('space-y-1')}>
                 <p
                   className={cn(
-                    'text-[10px] uppercase tracking-[0.35em] text-[color:var(--ink-muted)]'
+                    'text-[10px] uppercase tracking-[0.35em] text-(--ink-muted)'
                   )}
                 >
                   Cafe Join
                 </p>
-                <p className={cn('font-[var(--font-display)] text-lg leading-none')}>
+                <p className={cn('font-(--font-display) text-lg leading-none')}>
                   Cafe Bot
                 </p>
               </div>
@@ -48,28 +48,44 @@ export default function CafeJoinPage() {
 
           <nav className={cn('flex items-center gap-4')}>
             <Link
-              href="/"
-              className={cn(
-                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
-              )}
-            >
-              기본 발행
-            </Link>
-            <Link
               href="/batch"
               className={cn(
-                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
+                'text-sm text-(--ink-muted) hover:text-(--ink)'
               )}
             >
               배치 모드
             </Link>
+            <Link
+              href="/publish"
+              className={cn(
+                'text-sm text-(--ink-muted) hover:text-(--ink)'
+              )}
+            >
+              분리 발행
+            </Link>
             <span
               className={cn(
-                'text-sm font-semibold text-[color:var(--ink)] border-b-2 border-[var(--teal)]'
+                'text-sm font-semibold text-(--ink) border-b-2 border-(--teal)'
               )}
             >
               카페 가입
             </span>
+            <Link
+              href="/accounts"
+              className={cn(
+                'text-sm text-(--ink-muted) hover:text-(--ink)'
+              )}
+            >
+              계정 관리
+            </Link>
+            <Link
+              href="/settings"
+              className={cn(
+                'text-sm text-(--ink-muted) hover:text-(--ink)'
+              )}
+            >
+              설정
+            </Link>
           </nav>
         </div>
       </header>
@@ -78,19 +94,19 @@ export default function CafeJoinPage() {
         <div className={cn('mb-8 space-y-2')}>
           <p
             className={cn(
-              'text-xs uppercase tracking-[0.4em] text-[color:var(--ink-muted)]'
+              'text-xs uppercase tracking-[0.4em] text-(--ink-muted)'
             )}
           >
             Batch Cafe Join
           </p>
           <h1
             className={cn(
-              'font-[var(--font-display)] text-3xl sm:text-4xl leading-tight text-[color:var(--ink)]'
+              'font-(--font-display) text-3xl sm:text-4xl leading-tight text-(--ink)'
             )}
           >
             카페 일괄 가입
           </h1>
-          <p className={cn('text-base text-[color:var(--ink-muted)] max-w-xl')}>
+          <p className={cn('text-base text-(--ink-muted) max-w-xl')}>
             모든 계정을 모든 카페에 자동으로 가입시킵니다.
           </p>
         </div>
@@ -105,15 +121,15 @@ export default function CafeJoinPage() {
 
         <div
           className={cn(
-            'mt-10 rounded-2xl border border-[color:var(--border)] bg-[color:var(--teal-soft)]/70 p-6'
+            'mt-10 rounded-2xl border border-(--border) bg-(--teal-soft)/70 p-6'
           )}
         >
-          <h3 className={cn('font-semibold text-[color:var(--teal)] mb-2')}>
+          <h3 className={cn('font-semibold text-(--teal) mb-2')}>
             사용 안내
           </h3>
           <ul
             className={cn(
-              'text-sm text-[color:var(--ink-muted)] space-y-1 list-disc list-inside'
+              'text-sm text-(--ink-muted) space-y-1 list-disc list-inside'
             )}
           >
             <li>accounts.ts에 등록된 모든 계정</li>
