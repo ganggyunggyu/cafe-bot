@@ -39,8 +39,8 @@ export const addBatchToQueue = async (
 
   let jobsAdded = 0;
 
-  // 계정별 딜레이 추적 (각 계정 큐가 독립적으로 딜레이 누적)
-  const accountDelays: Map<string, number> = new Map();
+  // 글로벌 딜레이 (모든 계정 통합 - 동시 발행 방지)
+  let globalDelay = 0;
 
   for (let i = 0; i < keywords.length; i++) {
     const keyword = keywords[i];
@@ -58,12 +58,6 @@ export const addBatchToQueue = async (
 
       const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
 
-      // 계정별 딜레이 계산 (해당 계정의 누적 딜레이만 증가)
-      const currentDelay = accountDelays.get(writerAccount.id) ?? 0;
-      const randomDelay = getRandomDelay(settings.delays.betweenPosts);
-      const newDelay = currentDelay + randomDelay;
-      accountDelays.set(writerAccount.id, newDelay);
-
       // Task Job 추가
       const jobData: PostJobData = {
         type: 'post',
@@ -79,12 +73,15 @@ export const addBatchToQueue = async (
         skipComments, // 글만 발행 모드
       };
 
-      await addTaskJob(writerAccount.id, jobData, currentDelay);
+      await addTaskJob(writerAccount.id, jobData, globalDelay);
       jobsAdded++;
 
+      // 다음 글을 위한 딜레이 누적
+      const randomDelay = getRandomDelay(settings.delays.betweenPosts);
       console.log(
-        `[QUEUE-BATCH] Job 추가: ${keyword} → ${writerAccount.id}, 딜레이: ${Math.round(currentDelay / 1000)}초 (다음: ${Math.round(newDelay / 1000)}초)`
+        `[QUEUE-BATCH] Job 추가: ${keyword} → ${writerAccount.id}, 딜레이: ${Math.round(globalDelay / 1000)}초`
       );
+      globalDelay += randomDelay;
     } catch (error) {
       console.error(`[QUEUE-BATCH] 에러: ${keyword}`, error);
     }

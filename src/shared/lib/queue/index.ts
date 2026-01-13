@@ -6,8 +6,15 @@ import {
   JobResult,
   getTaskQueueName,
   GENERATE_QUEUE_NAME,
+  PostJobData,
 } from './types';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
+import { createHash } from 'crypto';
+
+// 콘텐츠 기반 해시 생성 (중복 방지용)
+const getContentHash = (str: string): string => {
+  return createHash('md5').update(str).digest('hex').slice(0, 8);
+};
 
 // 계정별 큐 캐시
 const taskQueues: Map<string, Queue<TaskJobData, JobResult>> = new Map();
@@ -56,12 +63,30 @@ export const getGenerateQueue = (): Queue<GenerateJobData, JobResult> => {
   return generateQueue;
 };
 
-// Task Job 추가 (랜덤 딜레이 적용)
+// Job ID 생성 (콘텐츠 기반으로 중복 방지)
+const generateJobId = (data: TaskJobData): string => {
+  switch (data.type) {
+    case 'post': {
+      const postData = data as PostJobData;
+      // 제목 기반 해시 (같은 제목이면 같은 ID → 중복 방지)
+      const hash = getContentHash(postData.subject);
+      return `post_${data.accountId}_${hash}`;
+    }
+    case 'comment':
+      // articleId + 내용 해시
+      return `comment_${data.accountId}_${data.articleId}_${getContentHash(data.content)}`;
+    case 'reply':
+      // articleId + commentIndex + 내용 해시
+      return `reply_${data.accountId}_${data.articleId}_${data.commentIndex}_${getContentHash(data.content)}`;
+  }
+};
+
+// Task Job 추가 (랜덤 딜레이 적용, 중복 체크)
 export const addTaskJob = async (
   accountId: string,
   data: TaskJobData,
   delay?: number
-): Promise<Job<TaskJobData, JobResult>> => {
+): Promise<Job<TaskJobData, JobResult> | null> => {
   const queue = getTaskQueue(accountId);
   const settings = await getQueueSettings();
 
@@ -75,9 +100,22 @@ export const addTaskJob = async (
     }
   }
 
+  const jobId = generateJobId(data);
+
+  // 중복 체크: 같은 ID의 job이 이미 있으면 스킵
+  const existingJob = await queue.getJob(jobId);
+  if (existingJob) {
+    const state = await existingJob.getState();
+    // waiting, delayed, active 상태면 중복으로 간주
+    if (['waiting', 'delayed', 'active'].includes(state)) {
+      console.log(`[QUEUE] 중복 Job 스킵: ${jobId} (상태: ${state})`);
+      return null;
+    }
+  }
+
   const job = await queue.add(data.type, data, {
     delay: jobDelay,
-    jobId: `${data.type}_${accountId}_${Date.now()}`,
+    jobId,
   });
 
   console.log(`[QUEUE] Job 추가: ${data.type} (${accountId}), 딜레이: ${Math.round(jobDelay / 1000)}초`);

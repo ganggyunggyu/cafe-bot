@@ -23,7 +23,6 @@ import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle, incrementTodayPostCount } from '@/shared/models';
 import mongoose from 'mongoose';
-import { getRandomCommentCount } from '@/features/auto-comment/batch/random';
 
 // 계정별 워커 캐시
 const taskWorkers: Map<string, Worker<TaskJobData, JobResult>> = new Map();
@@ -51,82 +50,111 @@ const processTaskJob = async (job: Job<TaskJobData, JobResult>): Promise<JobResu
     return { success: false, error: '비활동 시간대' };
   }
 
-  try {
-    switch (data.type) {
-      case 'post': {
-        const postData = data as PostJobData;
-        const result = await Promise.race([
-          writePostWithAccount(account, {
-            cafeId: postData.cafeId,
-            menuId: postData.menuId,
-            subject: postData.subject,
-            content: postData.content,
-            category: postData.category,
-            postOptions: postData.postOptions,
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('타임아웃')), settings.timeout)
-          ),
-        ]);
+  switch (data.type) {
+    case 'post': {
+      const postData = data as PostJobData;
+      const result = await Promise.race([
+        writePostWithAccount(account, {
+          cafeId: postData.cafeId,
+          menuId: postData.menuId,
+          subject: postData.subject,
+          content: postData.content,
+          category: postData.category,
+          postOptions: postData.postOptions,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('타임아웃')), settings.timeout)
+        ),
+      ]);
 
-        // 글 발행 성공 시 체인 작업 추가 (skipComments가 아닌 경우에만)
-        if (result.success && result.articleId && !postData.skipComments) {
+      // 실패 시 에러 throw (BullMQ가 재시도/실패 처리)
+      if (!result.success) {
+        throw new Error(result.error || '글 작성 실패');
+      }
+
+      // 글 발행 성공! 이후 MongoDB 에러가 발생해도 Job을 재시도하면 안 됨
+      // (재시도하면 글이 또 발행됨)
+      try {
+        if (result.articleId && !postData.skipComments) {
           await handlePostSuccess(postData, result.articleId, accounts, settings);
-        } else if (result.success && result.articleId && postData.skipComments) {
-          // 글만 발행 모드: 원고만 저장
+        } else if (result.articleId && postData.skipComments) {
           await saveArticleOnly(postData, result.articleId);
         }
-
-        return {
-          success: result.success,
-          error: result.error,
-          articleId: result.articleId,
-          articleUrl: result.articleUrl,
-        };
+      } catch (chainError) {
+        // MongoDB 저장 실패 등은 로그만 남기고 Job은 성공으로 처리
+        console.error('[WORKER] 체인 작업 중 오류 (글 발행은 완료됨):', chainError);
       }
 
-      case 'comment': {
-        const commentData = data as CommentJobData;
-        const result = await Promise.race([
-          writeCommentWithAccount(
-            account,
-            commentData.cafeId,
-            commentData.articleId,
-            commentData.content
-          ),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('타임아웃')), settings.timeout)
-          ),
-        ]);
-
-        return { success: result.success, error: result.error };
-      }
-
-      case 'reply': {
-        const replyData = data as ReplyJobData;
-        const result = await Promise.race([
-          writeReplyWithAccount(
-            account,
-            replyData.cafeId,
-            replyData.articleId,
-            replyData.content,
-            replyData.commentIndex
-          ),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('타임아웃')), settings.timeout)
-          ),
-        ]);
-
-        return { success: result.success, error: result.error };
-      }
-
-      default:
-        return { success: false, error: '알 수 없는 작업 타입' };
+      return {
+        success: true,
+        articleId: result.articleId,
+        articleUrl: result.articleUrl,
+      };
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-    console.error(`[WORKER] 에러: ${data.type} (${data.accountId})`, errorMessage);
-    return { success: false, error: errorMessage };
+
+    case 'comment': {
+      const commentData = data as CommentJobData;
+      const result = await Promise.race([
+        writeCommentWithAccount(
+          account,
+          commentData.cafeId,
+          commentData.articleId,
+          commentData.content
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('타임아웃')), settings.timeout)
+        ),
+      ]);
+
+      // ARTICLE_NOT_READY 에러: 5분 뒤 재시도
+      if (!result.success && result.error?.startsWith('ARTICLE_NOT_READY:')) {
+        const retryDelay = 5 * 60 * 1000; // 5분
+        console.log(`[WORKER] 글 미준비 - 5분 뒤 재시도: ${commentData.articleId}`);
+        await addTaskJob(data.accountId, commentData, retryDelay);
+        return { success: false, error: result.error, willRetry: true };
+      }
+
+      // 다른 실패는 에러 throw (BullMQ가 재시도/실패 처리)
+      if (!result.success) {
+        throw new Error(result.error || '댓글 작성 실패');
+      }
+
+      return { success: true };
+    }
+
+    case 'reply': {
+      const replyData = data as ReplyJobData;
+      const result = await Promise.race([
+        writeReplyWithAccount(
+          account,
+          replyData.cafeId,
+          replyData.articleId,
+          replyData.content,
+          replyData.commentIndex
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('타임아웃')), settings.timeout)
+        ),
+      ]);
+
+      // ARTICLE_NOT_READY 에러: 5분 뒤 재시도
+      if (!result.success && result.error?.startsWith('ARTICLE_NOT_READY:')) {
+        const retryDelay = 5 * 60 * 1000; // 5분
+        console.log(`[WORKER] 글/댓글 미준비 - 5분 뒤 재시도: ${replyData.articleId}`);
+        await addTaskJob(data.accountId, replyData, retryDelay);
+        return { success: false, error: result.error, willRetry: true };
+      }
+
+      // 다른 실패는 에러 throw (BullMQ가 재시도/실패 처리)
+      if (!result.success) {
+        throw new Error(result.error || '대댓글 작성 실패');
+      }
+
+      return { success: true };
+    }
+
+    default:
+      throw new Error('알 수 없는 작업 타입');
   }
 };
 
@@ -287,22 +315,38 @@ const handlePostSuccess = async (
     return;
   }
 
-  const commentCount = getRandomCommentCount(); // 5~10개
   const postContent = rawContent || content;
 
   // 계정별 댓글 딜레이 추적
   const commentDelays: Map<string, number> = new Map();
   const afterPostDelay = getRandomDelay(settings.delays.afterPost);
 
-  console.log(`[WORKER] 댓글 ${commentCount}개 job 추가 예정`);
+  // 계정당 최대 댓글 수 (1~2개로 제한해서 자연스럽게)
+  const maxCommentsPerAccount = Math.random() < 0.7 ? 1 : 2;
+  // 상한 없음 - 계정 수에 따라 댓글 수 결정 (최소 5개 목표)
+  const maxPossible = commenterAccounts.length * maxCommentsPerAccount;
+  const commentCount = Math.max(5, maxPossible);
+
+  console.log(`[WORKER] 댓글 ${commentCount}개 job 추가 예정 (계정당 최대 ${maxCommentsPerAccount}개, 계정 ${commenterAccounts.length}개)`);
 
   // 댓글 작성자 추적 (자기 댓글에 대댓글 방지용)
   const commentAuthors: string[] = [];
+  // 계정별 댓글 카운트
+  const accountCommentCounts: Map<string, number> = new Map();
 
   // 댓글 AI 생성 및 job 추가
   for (let i = 0; i < commentCount; i++) {
+    // 계정 선택: 라운드 로빈으로 분배 (계정이 적으면 여러 번 댓글 가능)
     const commenter = commenterAccounts[i % commenterAccounts.length];
+    const currentCount = accountCommentCounts.get(commenter.id) ?? 0;
+
+    // 계정당 3개 이상이면 너무 부자연스러우니 스킵
+    if (currentCount >= 3) continue;
+
     const personaIndex = getPersonaIndex(commenter);
+
+    // 계정 댓글 카운트 증가
+    accountCommentCounts.set(commenter.id, (accountCommentCounts.get(commenter.id) ?? 0) + 1);
 
     // AI로 댓글 생성 (계정별 페르소나 적용)
     let commentText: string;
@@ -333,10 +377,19 @@ const handlePostSuccess = async (
   }
 
   // 3. 대댓글 job 추가 (글쓴이 + 다른 계정)
-  // 글쓴이 대댓글: 2~3개
-  const authorReplyCount = Math.floor(Math.random() * 2) + 2;
-  // 일반 대댓글: 2~4개
-  const normalReplyCount = Math.floor(Math.random() * 3) + 2;
+  const actualCommentCount = commentAuthors.length; // 실제 생성된 댓글 수
+  if (actualCommentCount === 0) {
+    console.log('[WORKER] 댓글이 없어서 대댓글 스킵');
+    return;
+  }
+
+  // 글쓴이 대댓글: 1~2개 (댓글 수에 맞게 제한)
+  const authorReplyCount = Math.min(Math.floor(Math.random() * 2) + 1, actualCommentCount);
+  // 일반 대댓글: 1~2개 (계정 수에 맞게 제한)
+  const normalReplyCount = Math.min(
+    Math.floor(Math.random() * 2) + 1,
+    Math.max(actualCommentCount - authorReplyCount, 0)
+  );
   const totalReplyCount = authorReplyCount + normalReplyCount;
 
   console.log(`[WORKER] 대댓글 ${totalReplyCount}개 job 추가 예정 (글쓴이: ${authorReplyCount}, 일반: ${normalReplyCount})`);
@@ -347,12 +400,20 @@ const handlePostSuccess = async (
 
   const replyDelays: Map<string, number> = new Map();
 
-  // 글쓴이 대댓글
+  // 대댓글 받은 댓글 인덱스 추적 (중복 방지)
+  const repliedCommentIndices: Set<number> = new Set();
+
+  // 글쓴이 대댓글 (자기 글에 달린 댓글에 응답 - 자연스러움)
   const writerAccount = accounts.find((a) => a.id === writerAccountId);
   if (writerAccount && isAccountActive(writerAccount)) {
     const writerPersonaIndex = getPersonaIndex(writerAccount);
     for (let i = 0; i < authorReplyCount; i++) {
-      const targetCommentIndex = i % commentCount;
+      // 아직 대댓글 안 받은 댓글 중에서 선택
+      let targetCommentIndex = i % actualCommentCount;
+      while (repliedCommentIndices.has(targetCommentIndex) && repliedCommentIndices.size < actualCommentCount) {
+        targetCommentIndex = (targetCommentIndex + 1) % actualCommentCount;
+      }
+      repliedCommentIndices.add(targetCommentIndex);
 
       let replyText: string;
       try {
@@ -375,32 +436,39 @@ const handlePostSuccess = async (
       };
 
       await addTaskJob(writerAccountId, replyJobData, currentDelay);
-      console.log(`[WORKER] 글쓴이 대댓글 job 추가: ${writerAccountId}, 딜레이: ${Math.round(currentDelay / 1000)}초`);
+      console.log(`[WORKER] 글쓴이 대댓글 job 추가: ${writerAccountId} → 댓글[${targetCommentIndex}], 딜레이: ${Math.round(currentDelay / 1000)}초`);
     }
   }
 
-  // 일반 대댓글 (활동 가능한 계정만, 자기 댓글에 대댓글 방지)
+  // 일반 대댓글 (자기 댓글에 대댓글 방지 강화)
   for (let i = 0; i < normalReplyCount; i++) {
-    const targetCommentIndex = (authorReplyCount + i) % commentCount;
-    const commentAuthorId = commentAuthors[targetCommentIndex];
-
-    // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
-    let replyer = commenterAccounts[(authorReplyCount + i) % commenterAccounts.length];
-
-    if (replyer.id === commentAuthorId) {
-      // 다른 계정으로 변경
-      const alternativeReplyer = commenterAccounts.find(
-        (a) => a.id !== commentAuthorId
-      );
-      if (alternativeReplyer) {
-        replyer = alternativeReplyer;
-      } else {
-        // 대체 계정이 없으면 스킵
-        console.log(`[WORKER] 일반 대댓글 ${i} - 자기 댓글에 대댓글 방지로 스킵`);
-        continue;
+    // 아직 대댓글 안 받은 댓글 중에서 선택
+    let targetCommentIndex = -1;
+    for (let j = 0; j < actualCommentCount; j++) {
+      const idx = (i + j) % actualCommentCount;
+      if (!repliedCommentIndices.has(idx)) {
+        targetCommentIndex = idx;
+        break;
       }
     }
 
+    // 모든 댓글에 대댓글이 달렸으면 스킵
+    if (targetCommentIndex === -1) {
+      console.log(`[WORKER] 일반 대댓글 ${i} - 모든 댓글에 대댓글 있어서 스킵`);
+      continue;
+    }
+
+    repliedCommentIndices.add(targetCommentIndex);
+    const commentAuthorId = commentAuthors[targetCommentIndex];
+
+    // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
+    const availableReplyers = commenterAccounts.filter((a) => a.id !== commentAuthorId);
+    if (availableReplyers.length === 0) {
+      console.log(`[WORKER] 일반 대댓글 ${i} - 사용 가능한 계정 없어서 스킵`);
+      continue;
+    }
+
+    const replyer = availableReplyers[i % availableReplyers.length];
     const replyerPersonaIndex = getPersonaIndex(replyer);
 
     let replyText: string;
@@ -427,5 +495,5 @@ const handlePostSuccess = async (
     console.log(`[WORKER] 일반 대댓글 job 추가: ${replyer.id} → 댓글[${targetCommentIndex}], 딜레이: ${Math.round(currentDelay / 1000)}초`);
   }
 
-  console.log(`[WORKER] 체인 작업 완료: 댓글 ${commentCount}개, 대댓글 ${totalReplyCount}개 job 추가됨`);
+  console.log(`[WORKER] 체인 작업 완료: 댓글 ${actualCommentCount}개, 대댓글 ${totalReplyCount}개 job 추가됨`);
 };

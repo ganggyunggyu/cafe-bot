@@ -63,7 +63,8 @@ export const getQueueSettings = async (): Promise<IQueueSettings> => {
   let settings = await QueueSettings.findOne().lean();
 
   if (!settings) {
-    settings = await QueueSettings.create(DEFAULT_QUEUE_SETTINGS);
+    const created = await QueueSettings.create(DEFAULT_QUEUE_SETTINGS);
+    settings = created.toObject();
   }
 
   return settings as IQueueSettings;
@@ -73,7 +74,11 @@ export const getQueueSettings = async (): Promise<IQueueSettings> => {
 export const updateQueueSettings = async (
   updates: Partial<Omit<IQueueSettings, '_id' | 'updatedAt'>>
 ): Promise<IQueueSettings> => {
-  const settings = await QueueSettings.findOneAndUpdate({}, { $set: updates }, { new: true, upsert: true });
+  const settings = await QueueSettings.findOneAndUpdate(
+    {},
+    { $set: updates },
+    { new: true, upsert: true, lean: true }
+  );
   return settings as IQueueSettings;
 };
 

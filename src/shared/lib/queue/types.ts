@@ -53,6 +53,7 @@ export interface JobResult {
   error?: string;
   articleId?: number;
   articleUrl?: string;
+  willRetry?: boolean; // 5분 뒤 재시도 예정 여부
 }
 
 // 큐 이름 생성
