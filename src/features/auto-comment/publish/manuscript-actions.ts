@@ -39,8 +39,8 @@ export const runManuscriptUploadAction = async (
   let jobsAdded = 0;
   let skipped = 0;
 
-  // 계정별 딜레이 추적
-  const accountDelays: Map<string, number> = new Map();
+  // 글로벌 딜레이 (모든 계정 통합 - 동시 발행 방지)
+  let globalDelay = 0;
 
   // 계정별 남은 포스트 수 추적
   const accountRemainingPosts: Map<string, number> = new Map();
@@ -88,12 +88,6 @@ export const runManuscriptUploadAction = async (
         manuscript.images
       );
 
-      // 계정별 딜레이 계산
-      const currentDelay = accountDelays.get(writerAccount.id) ?? 0;
-      const randomDelay = getRandomDelay(settings.delays.betweenPosts);
-      const newDelay = currentDelay + randomDelay;
-      accountDelays.set(writerAccount.id, newDelay);
-
       // Task Job 추가 (분리발행은 글만 발행, 댓글 없음)
       const jobData: PostJobData = {
         type: 'post',
@@ -109,12 +103,16 @@ export const runManuscriptUploadAction = async (
         skipComments: true,
       };
 
-      await addTaskJob(writerAccount.id, jobData, currentDelay);
+      await addTaskJob(writerAccount.id, jobData, globalDelay);
       jobsAdded++;
 
       console.log(
-        `[MANUSCRIPT] Job 추가: ${manuscript.name} (${manuscript.category || '미지정'}) → ${writerAccount.id}, 딜레이: ${Math.round(currentDelay / 1000)}초`
+        `[MANUSCRIPT] Job 추가: ${manuscript.name} (${manuscript.category || '미지정'}) → ${writerAccount.id}, 딜레이: ${Math.round(globalDelay / 1000)}초`
       );
+
+      // 다음 글을 위한 딜레이 누적
+      const randomDelay = getRandomDelay(settings.delays.betweenPosts);
+      globalDelay += randomDelay;
     } catch (error) {
       console.error(`[MANUSCRIPT] 에러: ${manuscript.name}`, error);
     }

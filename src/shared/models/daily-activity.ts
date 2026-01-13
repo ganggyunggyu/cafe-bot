@@ -37,7 +37,7 @@ export const getTodayString = (): string => {
   return now.toISOString().split('T')[0]; // "2025-01-12"
 };
 
-// 활동 기록 증가
+// 활동 기록 증가 (중복 키 에러 처리 포함)
 export const incrementActivity = async (
   accountId: string,
   cafeId: string,
@@ -45,16 +45,31 @@ export const incrementActivity = async (
 ): Promise<void> => {
   const today = getTodayString();
 
-  await DailyActivity.findOneAndUpdate(
-    { accountId, cafeId, date: today },
-    {
-      $inc: { [type]: 1 },
-      $set: { lastActivityAt: new Date() },
-    },
-    { upsert: true }
-  );
-
-  console.log(`[ACTIVITY] ${accountId}@${cafeId} ${type} +1 (${today})`);
+  try {
+    await DailyActivity.findOneAndUpdate(
+      { accountId, cafeId, date: today },
+      {
+        $inc: { [type]: 1 },
+        $set: { lastActivityAt: new Date() },
+      },
+      { upsert: true }
+    );
+    console.log(`[ACTIVITY] ${accountId}@${cafeId} ${type} +1 (${today})`);
+  } catch (error) {
+    // E11000 duplicate key error - 레이스 컨디션 발생 시 재시도
+    if (error instanceof Error && error.message.includes('E11000')) {
+      await DailyActivity.updateOne(
+        { accountId, cafeId, date: today },
+        {
+          $inc: { [type]: 1 },
+          $set: { lastActivityAt: new Date() },
+        }
+      );
+      console.log(`[ACTIVITY] ${accountId}@${cafeId} ${type} +1 (${today}) [재시도 성공]`);
+    } else {
+      console.error(`[ACTIVITY] 증가 실패:`, error);
+    }
+  }
 };
 
 // 오늘 활동 조회 (계정+카페)
