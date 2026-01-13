@@ -5,6 +5,7 @@ export { KeywordGeneratorUI } from './keyword-generator-ui';
 export { runBatchPostAction, testSingleKeywordAction, runModifyBatchAction } from './batch-actions';
 export { runBatchJob } from './batch-job';
 export { runModifyBatchJob } from './modify-batch-job';
+export { addBatchToQueue, getBatchQueueStatus, stopBatchQueue } from './batch-queue';
 export { writePostWithAccount } from './post-writer';
 export { modifyArticleWithAccount } from './article-modifier';
 export { joinCafeWithAccount, joinCafeWithAccounts } from './cafe-join';

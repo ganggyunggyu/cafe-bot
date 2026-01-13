@@ -21,7 +21,7 @@ export function KeywordGeneratorUI() {
   const categories = selectedCafe?.categories || [];
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-[color:var(--border)] bg-white/80 px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] shadow-sm transition focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]'
+    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
 
   const handleGenerate = () => {
@@ -70,16 +70,16 @@ export function KeywordGeneratorUI() {
   return (
     <div className={cn('space-y-4')}>
       <div className={cn('space-y-1')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
           AI Keyword Generator
         </p>
-        <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
           키워드 생성기
         </h2>
       </div>
 
       <div className={cn('space-y-1')}>
-        <label className={cn('text-xs font-medium text-[color:var(--ink-muted)]')}>
+        <label className={cn('text-xs font-medium text-(--ink-muted)')}>
           카페 선택
         </label>
         <select
@@ -94,7 +94,7 @@ export function KeywordGeneratorUI() {
           ))}
         </select>
         {selectedCafe && (
-          <p className={cn('text-xs text-[color:var(--ink-muted)]')}>
+          <p className={cn('text-xs text-(--ink-muted)')}>
             카테고리: {selectedCafe.categories.join(', ')}
           </p>
         )}
@@ -102,15 +102,17 @@ export function KeywordGeneratorUI() {
 
       <div className={cn('grid grid-cols-2 gap-3')}>
         <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-[color:var(--ink-muted)]')}>
+          <label className={cn('text-xs font-medium text-(--ink-muted)')}>
             생성 개수
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-            min={1}
-            max={200}
+            onChange={(e) => {
+              const val = Number(e.target.value.replace(/\D/g, '')) || 1;
+              setCount(Math.max(1, Math.min(200, val)));
+            }}
             className={inputClassName}
           />
         </div>
@@ -120,9 +122,9 @@ export function KeywordGeneratorUI() {
               type="checkbox"
               checked={shuffle}
               onChange={(e) => setShuffle(e.target.checked)}
-              className={cn('w-4 h-4 rounded accent-[color:var(--accent)]')}
+              className={cn('w-4 h-4 rounded accent-(--accent)')}
             />
-            <span className={cn('text-sm text-[color:var(--ink)]')}>뒤죽박죽 섞기</span>
+            <span className={cn('text-sm text-(--ink)')}>뒤죽박죽 섞기</span>
           </label>
         </div>
       </div>
@@ -140,15 +142,15 @@ export function KeywordGeneratorUI() {
       </button>
 
       {error && (
-        <div className={cn('rounded-xl border border-[color:var(--danger)] bg-[color:var(--danger-soft)] px-4 py-3')}>
-          <p className={cn('text-sm text-[color:var(--danger)]')}>{error}</p>
+        <div className={cn('rounded-xl border border-(--danger) bg-(--danger-soft) px-4 py-3')}>
+          <p className={cn('text-sm text-(--danger)')}>{error}</p>
         </div>
       )}
 
       {result && (
         <div className={cn('space-y-3')}>
           <div className={cn('flex items-center justify-between')}>
-            <h3 className={cn('text-sm font-semibold text-[color:var(--ink)]')}>
+            <h3 className={cn('text-sm font-semibold text-(--ink)')}>
               생성 결과 ({result.length}개)
             </h3>
             <div className={cn('flex gap-2')}>
@@ -156,7 +158,7 @@ export function KeywordGeneratorUI() {
                 onClick={copyKeywordsOnly}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-medium transition',
-                  'bg-white/50 hover:bg-white/80 text-[color:var(--ink)] border border-[color:var(--border)]'
+                  'bg-white/50 hover:bg-white/80 text-(--ink) border border-(--border)'
                 )}
               >
                 키워드만 복사
@@ -166,8 +168,8 @@ export function KeywordGeneratorUI() {
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-medium transition',
                   copied
-                    ? 'bg-[color:var(--success)] text-white'
-                    : 'bg-[color:var(--accent)] text-white hover:brightness-105'
+                    ? 'bg-(--success) text-white'
+                    : 'bg-(--accent) text-white hover:brightness-105'
                 )}
               >
                 {copied ? '복사됨!' : '카테고리 포함 복사'}
@@ -176,7 +178,7 @@ export function KeywordGeneratorUI() {
           </div>
           <div
             className={cn(
-              'max-h-[300px] overflow-y-auto rounded-xl border border-[color:var(--border)] bg-white/50 p-3'
+              'max-h-[300px] overflow-y-auto rounded-xl border border-(--border) bg-white/50 p-3'
             )}
           >
             <div className={cn('flex flex-wrap gap-1.5')}>
@@ -185,11 +187,11 @@ export function KeywordGeneratorUI() {
                   key={i}
                   className={cn(
                     'inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs',
-                    'bg-white border border-[color:var(--border)]'
+                    'bg-white border border-(--border)'
                   )}
                 >
-                  <span className={cn('text-[color:var(--ink)]')}>{k.keyword}</span>
-                  <span className={cn('text-[color:var(--ink-muted)]')}>:{k.category}</span>
+                  <span className={cn('text-(--ink)')}>{k.keyword}</span>
+                  <span className={cn('text-(--ink-muted)')}>:{k.category}</span>
                 </span>
               ))}
             </div>

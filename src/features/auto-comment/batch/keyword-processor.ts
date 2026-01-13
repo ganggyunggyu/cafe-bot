@@ -3,7 +3,7 @@ import type { NaverAccount } from '@/shared/lib/account-manager';
 import { generateContent } from '@/shared/api/content-api';
 import { generateComment, generateReply, generateAuthorReply } from '@/shared/api/comment-gen-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
-import { PublishedArticle, type IPublishedArticle } from '@/shared/models';
+import { PublishedArticle, type IPublishedArticle, incrementTodayPostCount } from '@/shared/models';
 import { writePostWithAccount } from './post-writer';
 import { writeCommentWithAccount, writeReplyWithAccount } from '../comment-writer';
 import {
@@ -216,6 +216,9 @@ export const processKeyword = async ({
         commentCount: 0,
         replyCount: 0,
       });
+
+      // 일일 포스트 카운트 증가
+      await incrementTodayPostCount(writerAccount.id);
     }
 
     await sleep(delays.afterPost);

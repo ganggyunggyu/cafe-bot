@@ -10,14 +10,14 @@ interface PostOptionsUIProps {
 
 export function PostOptionsUI({ options, onChange }: PostOptionsUIProps) {
   const checkboxClassName = cn(
-    'h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]'
+    'h-4 w-4 rounded border-gray-300 text-(--accent) focus:ring-(--accent)'
   );
 
-  const labelClassName = cn('text-sm text-[color:var(--ink)]');
+  const labelClassName = cn('text-sm text-(--ink)');
 
   const selectClassName = cn(
-    'rounded-lg border border-[color:var(--border)] bg-white/80 px-2 py-1 text-xs text-[color:var(--ink)]',
-    'focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent)]'
+    'rounded-lg border border-(--border) bg-white/80 px-2 py-1 text-xs text-(--ink)',
+    'focus:border-(--accent) focus:outline-none focus:ring-1 focus:ring-(--accent)'
   );
 
   const handleChange = <K extends keyof PostOptions>(key: K, value: PostOptions[K]) => {
@@ -27,8 +27,8 @@ export function PostOptionsUI({ options, onChange }: PostOptionsUIProps) {
   return (
     <div className={cn('space-y-3')}>
       <div className={cn('flex items-center justify-between')}>
-        <h4 className={cn('text-sm font-semibold text-[color:var(--ink)]')}>게시 옵션</h4>
-        <span className={cn('text-xs text-[color:var(--ink-muted)]')}>모든 글에 적용</span>
+        <h4 className={cn('text-sm font-semibold text-(--ink)')}>게시 옵션</h4>
+        <span className={cn('text-xs text-(--ink-muted)')}>모든 글에 적용</span>
       </div>
 
       <div className={cn('space-y-2')}>
@@ -86,7 +86,7 @@ export function PostOptionsUI({ options, onChange }: PostOptionsUIProps) {
           {options.useCcl && (
             <div className={cn('ml-6 space-y-2 p-2 rounded-lg bg-white/50')}>
               <div className={cn('flex items-center justify-between gap-2')}>
-                <span className={cn('text-xs text-[color:var(--ink-muted)]')}>영리적 이용</span>
+                <span className={cn('text-xs text-(--ink-muted)')}>영리적 이용</span>
                 <select
                   value={options.cclCommercial}
                   onChange={(e) => handleChange('cclCommercial', e.target.value as 'allow' | 'disallow')}
@@ -98,7 +98,7 @@ export function PostOptionsUI({ options, onChange }: PostOptionsUIProps) {
               </div>
 
               <div className={cn('flex items-center justify-between gap-2')}>
-                <span className={cn('text-xs text-[color:var(--ink-muted)]')}>콘텐츠 변경</span>
+                <span className={cn('text-xs text-(--ink-muted)')}>콘텐츠 변경</span>
                 <select
                   value={options.cclModify}
                   onChange={(e) => handleChange('cclModify', e.target.value as 'allow' | 'same' | 'disallow')}

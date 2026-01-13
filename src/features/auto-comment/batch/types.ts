@@ -9,6 +9,7 @@ export interface BatchJobInput {
   commentTemplates?: string[];
   replyTemplates?: string[];
   postOptions?: PostOptions;
+  skipComments?: boolean; // true면 댓글/대댓글 스킵 (글만 발행)
 }
 
 // 글 작성 결과
@@ -115,17 +116,29 @@ export interface BatchProgress {
 
 export type ProgressCallback = (progress: BatchProgress) => void;
 
-// 계정 로테이션 헬퍼
+// 배열 셔플 (Fisher-Yates)
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+// 계정 랜덤 선택 헬퍼
 export const getWriterAccount = (
   accounts: NaverAccount[],
-  keywordIndex: number
+  _keywordIndex: number
 ): NaverAccount => {
-  return accounts[keywordIndex % accounts.length];
-}
+  const randomIndex = Math.floor(Math.random() * accounts.length);
+  return accounts[randomIndex];
+};
 
 export const getCommenterAccounts = (
   accounts: NaverAccount[],
   writerAccountId: string
 ): NaverAccount[] => {
-  return accounts.filter((a) => a.id !== writerAccountId);
-}
+  const commenters = accounts.filter((a) => a.id !== writerAccountId);
+  return shuffleArray(commenters);
+};

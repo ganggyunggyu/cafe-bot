@@ -3,9 +3,10 @@ import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
-import { PublishedArticle, BatchJobLog, type IPublishedArticle } from '@/shared/models';
+import { BatchJobLog } from '@/shared/models';
 import { processArticleModification, type ModifyProcessResult } from './modify-article-processor';
 import { parseKeywordWithCategory } from './keyword-utils';
+import { buildBaseFilter, fetchArticlesToModify } from './modify-query-utils';
 import type { ProgressCallback } from './types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,39 +40,6 @@ export interface ModifyBatchResult {
 
 export interface ModifyBatchOptions {
   delayBetweenArticles?: number;
-}
-
-interface QueryFilter {
-  cafeId: string;
-  status: string;
-  publishedAt?: { $gte: Date };
-}
-
-const buildBaseFilter = (cafeId: string, daysLimit?: number): QueryFilter => {
-  const baseFilter: QueryFilter = { cafeId, status: 'published' };
-  if (daysLimit) {
-    const limitDate = new Date();
-    limitDate.setDate(limitDate.getDate() - daysLimit);
-    baseFilter.publishedAt = { $gte: limitDate };
-    console.log(`[MODIFY BATCH] ${daysLimit}일 이내 원고만 조회 (${limitDate.toISOString()} 이후)`);
-  }
-  return baseFilter;
-}
-
-const fetchArticlesToModify = async (
-  sortOrder: SortOrder,
-  limit: number,
-  baseFilter: QueryFilter
-): Promise<IPublishedArticle[]> => {
-  if (sortOrder === 'random') {
-    return PublishedArticle.aggregate([
-      { $match: baseFilter },
-      { $sample: { size: limit } },
-    ]);
-  }
-
-  const sortDirection = sortOrder === 'oldest' ? 1 : -1;
-  return PublishedArticle.find(baseFilter).sort({ publishedAt: sortDirection }).limit(limit);
 }
 
 export const runModifyBatchJob = async (

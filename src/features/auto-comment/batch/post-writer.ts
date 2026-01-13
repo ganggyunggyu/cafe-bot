@@ -10,6 +10,7 @@ import type { NaverAccount } from '@/shared/lib/account-manager';
 import type { Page } from 'playwright';
 import type { PostResult, PostOptions } from './types';
 import { DEFAULT_POST_OPTIONS } from './types';
+import { incrementActivity } from '@/shared/models/daily-activity';
 
 // 체크박스 상태 설정 헬퍼
 const setCheckbox = async (page: Page, selector: string, checked: boolean) => {
@@ -250,7 +251,7 @@ export const writePostWithAccount = async (
 
     await titleInput.click();
     await page.waitForTimeout(300);
-    await titleInput.fill(subject);
+    await page.keyboard.type(subject, { delay: 150 }); // 400타/분 속도
     await page.waitForTimeout(500);
 
     // 본문 입력 (SmartEditor - p.se-text-paragraph 클릭 후 타이핑)
@@ -276,7 +277,7 @@ export const writePostWithAccount = async (
     const lines = plainContent.split('\n');
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].trim()) {
-        await page.keyboard.type(lines[i], { delay: 5 });
+        await page.keyboard.type(lines[i], { delay: 150 }); // 400타/분 속도
       }
       if (i < lines.length - 1) {
         await page.keyboard.press('Enter');
@@ -325,6 +326,9 @@ export const writePostWithAccount = async (
     console.log('[DEBUG] URL에서 추출한 articleId:', articleId);
 
     await saveCookiesForAccount(id);
+
+    // 활동 기록
+    await incrementActivity(id, cafeId, 'posts');
 
     return {
       success: true,

@@ -3,7 +3,8 @@ import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
-import { BatchJobLog, type IBatchJobLog } from '@/shared/models';
+import { BatchJobLog, type IBatchJobLog, canPostToday } from '@/shared/models';
+import { isAccountActive } from '@/shared/lib/account-manager';
 import {
   type BatchJobInput,
   type BatchJobResult,
@@ -128,6 +129,23 @@ export const runBatchJob = async (
     for (let i = 0; i < keywords.length; i++) {
       const rawKeyword = keywords[i];
       const writerAccount = getWriterAccount(accounts, i);
+
+      // 활동 시간대 체크
+      if (!isAccountActive(writerAccount)) {
+        console.log(`[BATCH] ${writerAccount.id} 비활동 시간대 - 스킵`);
+        await recordUnexpectedFailure(rawKeyword, writerAccount.id, new Error('비활동 시간대'));
+        continue;
+      }
+
+      // 일일 포스트 제한 체크
+      if (dbConnected) {
+        const canPost = await canPostToday(writerAccount.id, writerAccount.dailyPostLimit);
+        if (!canPost) {
+          console.log(`[BATCH] ${writerAccount.id} 일일 포스트 제한 도달 - 스킵`);
+          await recordUnexpectedFailure(rawKeyword, writerAccount.id, new Error('일일 포스트 제한 도달'));
+          continue;
+        }
+      }
 
       try {
         const { keywordResult, logEntry, success } = await processKeyword({

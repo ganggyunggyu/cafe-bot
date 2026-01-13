@@ -55,11 +55,11 @@ export function AccountListUI() {
   return (
     <div className={cn('space-y-4')}>
       <div className={cn('space-y-2')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
           Accounts
         </p>
         <div className={cn('flex items-center justify-between')}>
-          <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+          <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
             등록된 계정 ({accounts.length}개)
           </h2>
           <button
@@ -67,14 +67,14 @@ export function AccountListUI() {
             disabled={isPending}
             className={cn(
               'rounded-full px-3 py-1 text-xs font-semibold transition',
-              'border border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal)] hover:text-white',
+              'border border-(--teal) text-(--teal) hover:bg-(--teal) hover:text-white',
               'disabled:cursor-not-allowed disabled:opacity-60'
             )}
           >
             로그인 테스트
           </button>
         </div>
-        <p className={cn('text-xs text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-xs text-(--ink-muted)')}>
           배치 실행 시 자동 로그인되므로 필수 아님
         </p>
       </div>
@@ -97,25 +97,25 @@ export function AccountListUI() {
           <li
             key={account.id}
             className={cn(
-              'rounded-xl border border-[color:var(--border)] bg-white/70 px-4 py-3 flex items-center justify-between gap-3'
+              'rounded-xl border border-(--border) bg-white/70 px-4 py-3 flex items-center justify-between gap-3'
             )}
           >
             <div className={cn('flex items-center gap-3')}>
               <span
                 className={cn(
                   'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold',
-                  'bg-[var(--accent-soft)] text-[var(--accent)]'
+                  'bg-(--accent-soft) text-(--accent)'
                 )}
               >
                 {index + 1}
               </span>
               <div>
                 <div className={cn('flex items-center gap-2')}>
-                  <span className={cn('text-sm font-semibold text-[color:var(--ink)]')}>
+                  <span className={cn('text-sm font-semibold text-(--ink)')}>
                     {account.id}
                   </span>
                   {account.nickname && (
-                    <span className={cn('text-xs text-[color:var(--ink-muted)]')}>
+                    <span className={cn('text-xs text-(--ink-muted)')}>
                       ({account.nickname})
                     </span>
                   )}

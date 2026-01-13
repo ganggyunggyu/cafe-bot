@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { runBatchPostAction, runModifyBatchAction } from './batch-actions';
+import { runBatchPostAction, runModifyBatchAction, getQueueStatusAction, type QueueStatusResult } from './batch-actions';
 import { PostOptionsUI } from './post-options-ui';
 import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
-import type { BatchJobResult, KeywordResult, PostOptions } from './types';
+import type { PostOptions } from './types';
 import { DEFAULT_POST_OPTIONS } from './types';
 import type { ModifyBatchResult, SortOrder } from './modify-batch-job';
+import type { QueueBatchResult } from './batch-queue';
 
 type JobMode = 'publish' | 'modify';
 
@@ -23,17 +24,33 @@ export function BatchUI() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('oldest');
   const [daysLimit, setDaysLimit] = useState<number | undefined>(undefined);
   const [adKeywordsText, setAdKeywordsText] = useState('');
-  const [result, setResult] = useState<BatchJobResult | null>(null);
+  const [result, setResult] = useState<QueueBatchResult | null>(null);
   const [modifyResult, setModifyResult] = useState<ModifyBatchResult | null>(null);
   const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
+  const [queueStatus, setQueueStatus] = useState<QueueStatusResult | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
 
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 
+  // 큐 상태 폴링
+  useEffect(() => {
+    if (!isPolling) return;
+
+    const poll = async () => {
+      const status = await getQueueStatusAction();
+      setQueueStatus(status);
+    };
+
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [isPolling]);
+
   const sectionClassName = cn(
-    'rounded-2xl border border-[color:var(--border)] bg-white/70 p-4 shadow-sm'
+    'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
   );
   const inputClassName = cn(
-    'w-full rounded-xl border border-[color:var(--border)] bg-white/80 px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] shadow-sm transition focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]'
+    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
   const submitButtonClassName = cn(
     'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
@@ -65,6 +82,9 @@ export function BatchUI() {
         });
 
         setResult(res);
+        if (res.success) {
+          setIsPolling(true);
+        }
       });
     } else {
       const adKeywords = adKeywordsText
@@ -94,20 +114,12 @@ export function BatchUI() {
     }
   };
 
-  const getStatusIcon = (keywordResult: KeywordResult) => {
-    if (!keywordResult.post.success) return '❌';
-    const allCommentsSuccess = keywordResult.comments.every((c) => c.success);
-    const allRepliesSuccess = keywordResult.replies.every((r) => r.success);
-    if (allCommentsSuccess && allRepliesSuccess) return '✅';
-    return '⚠️';
-  };
-
   const toggleClassName = (isActive: boolean) =>
     cn(
       'flex-1 rounded-xl px-4 py-2 text-sm font-medium transition',
       isActive
-        ? 'bg-[color:var(--accent)] text-white'
-        : 'bg-white/50 text-[color:var(--ink-muted)] hover:bg-white/80'
+        ? 'bg-(--accent) text-white'
+        : 'bg-white/50 text-(--ink-muted) hover:bg-white/80'
     );
 
   const isSubmitDisabled =
@@ -120,15 +132,15 @@ export function BatchUI() {
       <div className={cn('space-y-2')}>
         <p
           className={cn(
-            'text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]'
+            'text-xs uppercase tracking-[0.3em] text-(--ink-muted)'
           )}
         >
           Batch Automation
         </p>
-        <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
           {mode === 'publish' ? '배치 자동 포스팅' : '배치 글 수정'}
         </h2>
-        <p className={cn('text-sm text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-sm text-(--ink-muted)')}>
           {mode === 'publish'
             ? '여러 키워드를 입력하면 계정을 로테이션하며 글 작성 + 댓글 + 대댓글 자동 실행'
             : '발행된 일상글을 광고글로 일괄 수정'}
@@ -136,7 +148,7 @@ export function BatchUI() {
       </div>
 
       {/* 모드 토글 */}
-      <div className={cn('flex gap-2 rounded-2xl border border-[color:var(--border)] bg-white/30 p-1')}>
+      <div className={cn('flex gap-2 rounded-2xl border border-(--border) bg-white/30 p-1')}>
         <button
           onClick={() => setMode('publish')}
           className={toggleClassName(mode === 'publish')}
@@ -152,13 +164,13 @@ export function BatchUI() {
       </div>
 
       <div className={sectionClassName}>
-        <h3 className={cn('text-sm font-semibold text-[color:var(--ink)] mb-3')}>
+        <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>
           {mode === 'publish' ? '발행 설정' : '수정 설정'}
         </h3>
         <div className={cn('flex flex-col gap-3')}>
           {/* 카페 선택 */}
           <div className={cn('flex flex-col gap-1')}>
-            <label className={cn('text-xs font-medium text-[color:var(--ink-muted)]')}>
+            <label className={cn('text-xs font-medium text-(--ink-muted)')}>
               카페 선택
             </label>
             <select
@@ -174,7 +186,7 @@ export function BatchUI() {
             </select>
             {selectedCafe && (
               <div className={cn('flex items-center gap-2')}>
-                <p className={cn('text-xs text-[color:var(--ink-muted)] flex-1')}>
+                <p className={cn('text-xs text-(--ink-muted) flex-1')}>
                   카테고리: {selectedCafe.categories.join(', ')}
                 </p>
                 <button
@@ -184,8 +196,8 @@ export function BatchUI() {
                   }}
                   className={cn(
                     'text-xs px-2 py-1 rounded-lg',
-                    'bg-white/50 hover:bg-white/80 text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]',
-                    'border border-[color:var(--border)] transition'
+                    'bg-white/50 hover:bg-white/80 text-(--ink-muted) hover:text-(--ink)',
+                    'border border-(--border) transition'
                   )}
                 >
                   복사
@@ -203,10 +215,10 @@ export function BatchUI() {
                 className={cn(inputClassName, 'min-h-[120px] resize-none')}
                 rows={5}
               />
-              <p className={cn('text-xs text-[color:var(--ink-muted)] bg-white/50 rounded-xl px-3 py-2')}>
+              <p className={cn('text-xs text-(--ink-muted) bg-white/50 rounded-xl px-3 py-2')}>
                 카테고리 미지정 시 첫 번째 게시판에 발행됩니다.
               </p>
-              <div className={cn('rounded-xl border border-[color:var(--border)] bg-white/50 p-3')}>
+              <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3')}>
                 <PostOptionsUI options={postOptions} onChange={setPostOptions} />
               </div>
             </>
@@ -241,7 +253,7 @@ export function BatchUI() {
                 <option value="14">발행일 필터: 14일 이내</option>
                 <option value="30">발행일 필터: 30일 이내</option>
               </select>
-              <p className={cn('text-xs text-[color:var(--ink-muted)] bg-white/50 rounded-xl px-3 py-2')}>
+              <p className={cn('text-xs text-(--ink-muted) bg-white/50 rounded-xl px-3 py-2')}>
                 입력한 광고 키워드 수만큼 발행원고를 가져와서 수정합니다.
                 카테고리 미지정 시 기존 카테고리를 유지합니다.
               </p>
@@ -271,72 +283,72 @@ export function BatchUI() {
             : '배치 수정'}
       </button>
 
-      {/* 발행 결과 */}
+      {/* 발행 결과 (큐 추가) */}
       {result && mode === 'publish' && (
         <div
           className={cn(
             'rounded-2xl border px-4 py-4',
             result.success
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)]'
+              ? 'border-(--success) bg-(--success-soft)'
+              : 'border-(--danger) bg-(--danger-soft)'
           )}
         >
           <div className={cn('flex items-center justify-between mb-3')}>
             <h3
               className={cn(
                 'font-semibold',
-                result.success ? 'text-[color:var(--success)]' : 'text-[color:var(--danger)]'
+                result.success ? 'text-(--success)' : 'text-(--danger)'
               )}
             >
-              {result.success ? '발행 완료!' : '일부 실패'}
+              {result.success ? '큐에 추가됨' : '실패'}
             </h3>
-            <span className={cn('text-sm text-[color:var(--ink-muted)]')}>
-              {result.completed}/{result.totalKeywords} 성공
+            <span className={cn('text-sm text-(--ink-muted)')}>
+              {result.jobsAdded}개 작업
             </span>
           </div>
+          <p className={cn('text-sm text-(--ink-muted)')}>{result.message}</p>
 
-          <div className={cn('space-y-2')}>
-            {result.results.map((kr, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'rounded-xl border border-[color:var(--border)] bg-white/50 px-3 py-2'
-                )}
-              >
-                <div className={cn('flex items-center gap-2 mb-1')}>
-                  <span>{getStatusIcon(kr)}</span>
-                  <span className={cn('font-medium text-sm text-[color:var(--ink)]')}>
-                    {kr.keyword}
-                  </span>
-                  {kr.post.success && kr.post.articleId && (
-                    <a
-                      href={`https://cafe.naver.com/ca-fe/cafes/${selectedCafeId}/articles/${kr.post.articleId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        'text-xs px-2 py-0.5 rounded-lg',
-                        'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
-                        'hover:bg-[color:var(--accent)] hover:text-white transition'
-                      )}
-                    >
-                      #{kr.post.articleId} 보기
-                    </a>
-                  )}
-                </div>
-                <div className={cn('text-xs text-[color:var(--ink-muted)] space-y-0.5')}>
-                  <p>
-                    글: {kr.post.success ? `성공 (${kr.post.writerAccountId})` : kr.post.error}
-                  </p>
-                  <p>
-                    댓글: {kr.comments.filter((c) => c.success).length}/{kr.comments.length} 성공
-                  </p>
-                  <p>
-                    대댓글: {kr.replies.filter((r) => r.success).length}/{kr.replies.length} 성공
-                  </p>
-                </div>
+          {/* 큐 진행 상황 */}
+          {queueStatus && Object.keys(queueStatus).length > 0 && (
+            <div className={cn('mt-4 space-y-2')}>
+              <div className={cn('flex items-center justify-between')}>
+                <h4 className={cn('text-sm font-medium text-(--ink)')}>진행 상황</h4>
+                <button
+                  onClick={() => setIsPolling(false)}
+                  className={cn('text-xs px-2 py-1 rounded-lg bg-white/50 hover:bg-white/80 text-(--ink-muted)')}
+                >
+                  폴링 중지
+                </button>
               </div>
-            ))}
-          </div>
+              {Object.entries(queueStatus).map(([accountId, status]) => {
+                const total = status.waiting + status.active + status.completed + status.failed;
+                if (total === 0) return null;
+                const progress = total > 0 ? ((status.completed + status.failed) / total) * 100 : 0;
+                return (
+                  <div key={accountId} className={cn('rounded-xl bg-white/50 p-2')}>
+                    <div className={cn('flex items-center justify-between text-xs mb-1')}>
+                      <span className={cn('font-medium text-(--ink)')}>{accountId}</span>
+                      <span className={cn('text-(--ink-muted)')}>
+                        {status.completed}/{total} 완료
+                        {status.failed > 0 && ` (${status.failed} 실패)`}
+                      </span>
+                    </div>
+                    <div className={cn('h-1.5 rounded-full bg-gray-200 overflow-hidden')}>
+                      <div
+                        className={cn('h-full bg-(--accent) transition-all')}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    {status.active > 0 && (
+                      <p className={cn('text-xs text-(--accent) mt-1')}>
+                        {status.active}개 처리 중...
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -346,26 +358,26 @@ export function BatchUI() {
           className={cn(
             'rounded-2xl border px-4 py-4',
             modifyResult.success
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)]'
+              ? 'border-(--success) bg-(--success-soft)'
+              : 'border-(--danger) bg-(--danger-soft)'
           )}
         >
           <div className={cn('flex items-center justify-between mb-3')}>
             <h3
               className={cn(
                 'font-semibold',
-                modifyResult.success ? 'text-[color:var(--success)]' : 'text-[color:var(--danger)]'
+                modifyResult.success ? 'text-(--success)' : 'text-(--danger)'
               )}
             >
               {modifyResult.success ? '수정 완료!' : '일부 실패'}
             </h3>
-            <span className={cn('text-sm text-[color:var(--ink-muted)]')}>
+            <span className={cn('text-sm text-(--ink-muted)')}>
               {modifyResult.completed}/{modifyResult.totalArticles} 성공
             </span>
           </div>
 
           {modifyResult.totalArticles === 0 ? (
-            <p className={cn('text-sm text-[color:var(--ink-muted)]')}>
+            <p className={cn('text-sm text-(--ink-muted)')}>
               수정할 발행원고가 없습니다.
             </p>
           ) : (
@@ -374,12 +386,12 @@ export function BatchUI() {
                 <div
                   key={i}
                   className={cn(
-                    'rounded-xl border border-[color:var(--border)] bg-white/50 px-3 py-2'
+                    'rounded-xl border border-(--border) bg-white/50 px-3 py-2'
                   )}
                 >
                   <div className={cn('flex items-center gap-2')}>
                     <span>{mr.success ? '✅' : '❌'}</span>
-                    <span className={cn('font-medium text-sm text-[color:var(--ink)]')}>
+                    <span className={cn('font-medium text-sm text-(--ink)')}>
                       {mr.keyword}
                     </span>
                     <a
@@ -388,15 +400,15 @@ export function BatchUI() {
                       rel="noopener noreferrer"
                       className={cn(
                         'text-xs px-2 py-0.5 rounded-lg',
-                        'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
-                        'hover:bg-[color:var(--accent)] hover:text-white transition'
+                        'bg-(--accent-soft) text-(--accent-strong)',
+                        'hover:bg-(--accent) hover:text-white transition'
                       )}
                     >
                       #{mr.articleId} 보기
                     </a>
                   </div>
                   {mr.error && (
-                    <p className={cn('text-xs text-[color:var(--danger)] mt-1')}>
+                    <p className={cn('text-xs text-(--danger) mt-1')}>
                       {mr.error}
                     </p>
                   )}
