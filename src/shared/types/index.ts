@@ -52,6 +52,7 @@ export interface GenerateContentRequest {
   service: string;
   keyword: string;
   ref?: string;
+  personaIndex?: number | null; // 페르소나 인덱스 (0~79, null이면 랜덤)
 }
 
 export interface GenerateContentResponse {

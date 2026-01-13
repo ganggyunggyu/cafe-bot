@@ -1,161 +1,20 @@
 'use server';
 
 import mongoose from 'mongoose';
-import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
-import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle } from '@/shared/models';
-import { generateContent } from '@/shared/api/content-api';
-import { generateComment } from '@/shared/api/comment-gen-api';
-import { buildCafePostContent } from '@/shared/lib/cafe-content';
-import { writePostWithAccount } from '../batch/post-writer';
-import { writeCommentWithAccount } from '../comment-writer';
-import { getWriterAccount } from '../batch/types';
-import { parseKeywordWithCategory } from '../batch/keyword-utils';
+import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
+import { addTaskJob } from '@/shared/lib/queue';
+import { startAllTaskWorkers } from '@/shared/lib/queue/workers';
+import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
+import { isAccountActive, getPersonaIndex } from '@/shared/lib/account-manager';
+import type { CommentJobData, ReplyJobData } from '@/shared/lib/queue/types';
 import type {
-  PostOnlyInput,
-  PostOnlyResult,
-  PostOnlyKeywordResult,
   CommentOnlyFilter,
   CommentTargetArticle,
   CommentOnlyResult,
-  CommentOnlyArticleResult,
 } from './types';
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// 글만 발행 (댓글 없이)
-export async function runPostOnlyAction(
-  input: PostOnlyInput
-): Promise<PostOnlyResult> {
-  const { keywords, ref, cafeId: inputCafeId, postOptions } = input;
-
-  console.log('[POST-ONLY] 시작:', keywords.length, '개 키워드');
-
-  const accounts = getAllAccounts();
-  if (accounts.length < 1) {
-    return {
-      success: false,
-      totalKeywords: keywords.length,
-      completed: 0,
-      failed: keywords.length,
-      results: [],
-    };
-  }
-
-  const cafe = inputCafeId ? getCafeById(inputCafeId) : getDefaultCafe();
-  if (!cafe) {
-    return {
-      success: false,
-      totalKeywords: keywords.length,
-      completed: 0,
-      failed: keywords.length,
-      results: [],
-    };
-  }
-
-  const { cafeId, menuId } = cafe;
-  const results: PostOnlyKeywordResult[] = [];
-  let completed = 0;
-  let failed = 0;
-
-  // MongoDB 연결
-  let dbConnected = false;
-  try {
-    await connectDB();
-    dbConnected = mongoose.connection.readyState === 1;
-  } catch {
-    console.log('[POST-ONLY] MongoDB 연결 실패 - 로깅 없이 진행');
-  }
-
-  try {
-    for (let i = 0; i < keywords.length; i++) {
-      const rawKeyword = keywords[i];
-      const { keyword, category } = parseKeywordWithCategory(rawKeyword);
-      const writerAccount = getWriterAccount(accounts, i);
-
-      console.log(`[POST-ONLY] ${i + 1}/${keywords.length}: "${keyword}" (${writerAccount.id})`);
-
-      try {
-        // AI 콘텐츠 생성
-        const keywordWithCategory = category ? `${keyword} (카테고리: ${category})` : keyword;
-        const generated = await generateContent({ service: '일반', keyword: keywordWithCategory, ref });
-        const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
-
-        // 글 작성
-        const postResult = await writePostWithAccount(writerAccount, {
-          cafeId,
-          menuId,
-          subject: title,
-          content: htmlContent,
-          category,
-          postOptions,
-        });
-
-        if (postResult.success && postResult.articleId) {
-          // 발행원고 저장
-          if (dbConnected) {
-            const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${postResult.articleId}`;
-            await PublishedArticle.create({
-              articleId: postResult.articleId,
-              cafeId,
-              menuId,
-              keyword,
-              title,
-              content: htmlContent,
-              articleUrl,
-              writerAccountId: writerAccount.id,
-              status: 'published',
-              commentCount: 0,
-              replyCount: 0,
-            });
-          }
-
-          results.push({
-            keyword,
-            success: true,
-            articleId: postResult.articleId,
-            writerAccountId: writerAccount.id,
-          });
-          completed++;
-        } else {
-          results.push({
-            keyword,
-            success: false,
-            writerAccountId: writerAccount.id,
-            error: postResult.error || '글 작성 실패',
-          });
-          failed++;
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-        results.push({
-          keyword,
-          success: false,
-          writerAccountId: writerAccount.id,
-          error: errorMessage,
-        });
-        failed++;
-      }
-
-      // 다음 키워드 전 대기
-      if (i < keywords.length - 1) {
-        await sleep(5000);
-      }
-    }
-
-    return {
-      success: failed === 0,
-      totalKeywords: keywords.length,
-      completed,
-      failed,
-      results,
-    };
-  } finally {
-    await closeAllContexts();
-  }
-}
 
 // 필터링된 발행원고 조회
 export async function fetchFilteredArticles(
@@ -205,114 +64,230 @@ export async function fetchFilteredArticles(
   }
 }
 
-// 기존 글에 댓글 달기
-export async function runCommentOnlyAction(
-  articles: CommentTargetArticle[]
+// 자동 댓글 달기 (큐 기반)
+// N일 이내 글 중 랜덤 절반, 글당 3~5개, 대댓글 70% / 댓글 30%
+export async function runAutoCommentAction(
+  cafeId: string,
+  daysLimit: number = 3
 ): Promise<CommentOnlyResult> {
-  console.log('[COMMENT-ONLY] 시작:', articles.length, '개 글');
+  console.log('[AUTO-COMMENT] 시작 - cafeId:', cafeId, 'daysLimit:', daysLimit);
 
   const accounts = getAllAccounts();
   if (accounts.length < 2) {
     return {
       success: false,
-      totalArticles: articles.length,
+      totalArticles: 0,
       completed: 0,
-      failed: articles.length,
+      failed: 0,
       results: [],
+      message: '계정이 2개 이상 필요해',
     };
   }
-
-  const results: CommentOnlyArticleResult[] = [];
-  let completed = 0;
-  let failed = 0;
 
   try {
     await connectDB();
 
-    for (let i = 0; i < articles.length; i++) {
-      const article = articles[i];
-      const { articleId, cafeId, keyword, writerAccountId } = article;
+    if (mongoose.connection.readyState !== 1) {
+      console.log('[AUTO-COMMENT] MongoDB 연결 실패');
+      return {
+        success: false,
+        totalArticles: 0,
+        completed: 0,
+        failed: 0,
+        results: [],
+        message: 'MongoDB 연결 실패',
+      };
+    }
 
-      console.log(`[COMMENT-ONLY] ${i + 1}/${articles.length}: #${articleId} "${keyword}"`);
+    const settings = await getQueueSettings();
 
-      try {
-        // 글쓴이 제외한 계정 중 랜덤 1-2개 선택
-        const commenters = accounts
-          .filter((a) => a.id !== writerAccountId)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, Math.floor(Math.random() * 2) + 1); // 1-2개
+    // 워커 시작
+    startAllTaskWorkers();
 
-        let commentsAdded = 0;
+    // N일 이내 글 조회
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysLimit);
 
-        for (const commenter of commenters) {
-          // AI로 댓글 생성
-          let commentText: string;
-          try {
-            commentText = await generateComment(keyword);
-          } catch {
-            commentText = '좋은 정보 감사합니다!';
-          }
+    const allArticles = await PublishedArticle.find({
+      cafeId,
+      status: 'published',
+      publishedAt: { $gte: cutoffDate },
+    }).lean();
 
-          const result = await writeCommentWithAccount(
-            commenter,
-            cafeId,
-            articleId,
-            commentText
-          );
+    console.log(`[AUTO-COMMENT] ${daysLimit}일 이내 글 총 ${allArticles.length}개`);
 
-          if (result.success) {
-            commentsAdded++;
-          }
+    if (allArticles.length === 0) {
+      return {
+        success: true,
+        totalArticles: 0,
+        completed: 0,
+        failed: 0,
+        results: [],
+        message: '대상 글이 없음',
+      };
+    }
 
-          await sleep(3000);
-        }
+    // 랜덤으로 절반 선택
+    const shuffled = allArticles.sort(() => Math.random() - 0.5);
+    const halfCount = Math.max(1, Math.ceil(allArticles.length / 2));
+    const selectedArticles = shuffled.slice(0, halfCount);
 
-        // DB 업데이트
-        if (mongoose.connection.readyState === 1) {
-          await PublishedArticle.updateOne(
-            { cafeId, articleId },
-            { $inc: { commentCount: commentsAdded } }
-          );
-        }
+    console.log(`[AUTO-COMMENT] 랜덤 ${selectedArticles.length}개 선택`);
 
-        results.push({
-          articleId,
-          keyword,
-          success: commentsAdded > 0,
-          commentsAdded,
-        });
+    // 활동 가능한 계정만 필터링
+    const activeAccounts = accounts.filter(isAccountActive);
+    if (activeAccounts.length === 0) {
+      return {
+        success: false,
+        totalArticles: selectedArticles.length,
+        completed: 0,
+        failed: 0,
+        results: [],
+        message: '활동 가능한 계정이 없음 (비활동 시간대)',
+      };
+    }
 
-        if (commentsAdded > 0) {
-          completed++;
-        } else {
-          failed++;
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-        results.push({
-          articleId,
-          keyword,
-          success: false,
-          commentsAdded: 0,
-          error: errorMessage,
-        });
-        failed++;
+    let jobsAdded = 0;
+
+    // 계정별 딜레이 추적
+    const accountDelays: Map<string, number> = new Map();
+
+    // 댓글 작성자 추적 (자기 댓글에 대댓글 방지용)
+    const commentAuthors: Map<string, string[]> = new Map(); // articleId -> [accountId, ...]
+
+    for (let i = 0; i < selectedArticles.length; i++) {
+      const article = selectedArticles[i];
+      const { articleId, keyword, writerAccountId } = article;
+
+      console.log(`[AUTO-COMMENT] ${i + 1}/${selectedArticles.length}: #${articleId} "${keyword}"`);
+
+      // 글쓴이 제외한 활동 가능한 계정
+      const otherAccounts = activeAccounts.filter((a) => a.id !== writerAccountId);
+      if (otherAccounts.length === 0) {
+        console.log(`[AUTO-COMMENT] #${articleId} - 활동 가능한 계정 없음, 스킵`);
+        continue;
       }
 
-      // 다음 글 전 대기
-      if (i < articles.length - 1) {
-        await sleep(5000);
+      // 글당 3~5개 작성
+      const totalCount = Math.floor(Math.random() * 3) + 3; // 3~5
+      // 70% 대댓글, 30% 댓글
+      const replyCount = Math.round(totalCount * 0.7);
+      const commentCount = totalCount - replyCount;
+
+      console.log(`[AUTO-COMMENT] #${articleId} - 댓글 ${commentCount}개, 대댓글 ${replyCount}개 job 추가`);
+
+      // 이 글의 댓글 작성자 추적 초기화
+      const articleCommentAuthors: string[] = [];
+
+      // 댓글 job 추가 (30%)
+      for (let j = 0; j < commentCount; j++) {
+        const commenter = otherAccounts[j % otherAccounts.length];
+        const personaIndex = getPersonaIndex(commenter);
+
+        let commentText: string;
+        try {
+          commentText = await generateComment(keyword, personaIndex);
+        } catch {
+          commentText = '좋은 정보 감사합니다!';
+        }
+
+        const currentDelay = accountDelays.get(commenter.id) ?? 0;
+        const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
+        accountDelays.set(commenter.id, nextDelay);
+
+        const commentJobData: CommentJobData = {
+          type: 'comment',
+          accountId: commenter.id,
+          cafeId,
+          articleId,
+          content: commentText,
+        };
+
+        await addTaskJob(commenter.id, commentJobData, currentDelay);
+        jobsAdded++;
+
+        // 댓글 작성자 기록
+        articleCommentAuthors.push(commenter.id);
       }
+
+      // 대댓글 job 추가 (70%)
+      // 댓글이 끝난 후 대댓글 시작
+      const maxCommentDelay = Math.max(...Array.from(accountDelays.values()), 0);
+      const replyBaseDelay = maxCommentDelay + getRandomDelay(settings.delays.afterPost);
+
+      for (let j = 0; j < replyCount; j++) {
+        // 대댓글 타겟 인덱스
+        const targetCommentIndex = j % Math.max(1, commentCount + (article.commentCount ?? 0));
+
+        // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
+        let replyer = otherAccounts[(commentCount + j) % otherAccounts.length];
+
+        // 새로 단 댓글에 대댓글 다는 경우, 자기 댓글인지 체크
+        if (targetCommentIndex < articleCommentAuthors.length) {
+          const commentAuthorId = articleCommentAuthors[targetCommentIndex];
+          if (replyer.id === commentAuthorId) {
+            // 다른 계정으로 변경
+            const alternativeReplyer = otherAccounts.find(
+              (a) => a.id !== commentAuthorId && a.id !== replyer.id
+            );
+            if (alternativeReplyer) {
+              replyer = alternativeReplyer;
+            } else {
+              // 대체 계정이 없으면 스킵
+              console.log(`[AUTO-COMMENT] #${articleId} 대댓글 ${j} - 자기 댓글에 대댓글 방지로 스킵`);
+              continue;
+            }
+          }
+        }
+
+        const replyerPersonaIndex = getPersonaIndex(replyer);
+
+        let replyText: string;
+        try {
+          replyText = await generateReply(keyword, '이전 댓글', replyerPersonaIndex);
+        } catch {
+          replyText = '저도 그렇게 생각해요!';
+        }
+
+        const currentDelay = accountDelays.get(replyer.id) ?? replyBaseDelay;
+        const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
+        accountDelays.set(replyer.id, nextDelay);
+
+        const replyJobData: ReplyJobData = {
+          type: 'reply',
+          accountId: replyer.id,
+          cafeId,
+          articleId,
+          content: replyText,
+          commentIndex: targetCommentIndex,
+        };
+
+        await addTaskJob(replyer.id, replyJobData, currentDelay);
+        jobsAdded++;
+      }
+
+      // 댓글 작성자 저장
+      commentAuthors.set(String(articleId), articleCommentAuthors);
     }
 
     return {
-      success: failed === 0,
-      totalArticles: articles.length,
-      completed,
-      failed,
-      results,
+      success: jobsAdded > 0,
+      totalArticles: selectedArticles.length,
+      completed: jobsAdded,
+      failed: 0,
+      results: [],
+      message: `${jobsAdded}개 job이 큐에 추가됨 (${selectedArticles.length}개 글 대상)`,
     };
-  } finally {
-    await closeAllContexts();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    console.error('[AUTO-COMMENT] 에러:', errorMessage);
+    return {
+      success: false,
+      totalArticles: 0,
+      completed: 0,
+      failed: 0,
+      results: [],
+      message: errorMessage,
+    };
   }
 }

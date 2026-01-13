@@ -49,6 +49,7 @@ export interface CommentOnlyResult {
   completed: number;
   failed: number;
   results: CommentOnlyArticleResult[];
+  message?: string;
 }
 
 export interface CommentOnlyArticleResult {
@@ -57,4 +58,29 @@ export interface CommentOnlyArticleResult {
   success: boolean;
   commentsAdded: number;
   error?: string;
+}
+
+// 원고 업로드
+export interface ManuscriptFolder {
+  name: string;           // 폴더명 (원고1)
+  category?: string;      // 카테고리 (일상) - 폴더명에서 _ 뒤 추출
+  content: string;        // 원고.txt 내용
+  images: ManuscriptImage[];
+}
+
+export interface ManuscriptImage {
+  name: string;
+  dataUrl: string;        // base64 data URL
+}
+
+export interface ManuscriptUploadInput {
+  manuscripts: ManuscriptFolder[];
+  cafeId?: string;
+  postOptions?: import('../batch/types').PostOptions;
+}
+
+export interface ManuscriptUploadResult {
+  success: boolean;
+  jobsAdded: number;
+  message: string;
 }

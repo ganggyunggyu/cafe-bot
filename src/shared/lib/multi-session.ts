@@ -48,10 +48,9 @@ const getSessionFile = (accountId: string): string => {
 
 export const getBrowser = async (): Promise<Browser> => {
   if (!browser) {
-    const isDebug = process.env.PLAYWRIGHT_DEBUG === 'true';
     browser = await chromium.launch({
-      headless: !isDebug,
-      slowMo: isDebug ? 500 : 0,
+      headless: true,
+      slowMo: 0,
     });
   }
   return browser;

@@ -14,6 +14,7 @@ export const generateContent = async (
       service: request.service,
       keyword: request.keyword,
       ref: request.ref || '',
+      persona_index: request.personaIndex ?? null,
     }),
   });
 

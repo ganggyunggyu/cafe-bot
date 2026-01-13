@@ -13,12 +13,6 @@ interface GenerateCommentResponse {
   elapsed: number;
 }
 
-interface GenerateReplyRequest {
-  content: string;
-  parent_comment?: string;
-  persona_index?: number | null;
-}
-
 export const generateComment = async (
   postContent: string,
   personaIndex?: number | null
@@ -52,12 +46,13 @@ export const generateReply = async (
   parentComment: string,
   personaIndex?: number | null
 ): Promise<string> => {
-  const body: GenerateReplyRequest = {
-    content: `글 내용:\n${postContent}\n\n연결된 댓글:\n${parentComment}`,
+  const body = {
+    parent_comment: parentComment,
+    content: postContent,
     persona_index: personaIndex ?? null,
   };
 
-  const res = await fetch(`${BASE_URL}/generate/comment`, {
+  const res = await fetch(`${BASE_URL}/generate/recomment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -76,17 +71,22 @@ export const generateReply = async (
   return data.comment;
 }
 
-// 글쓴이 대댓글 생성 (감사/친근한 톤)
+// 글쓴이 대댓글 생성 (감사/친근한 톤 - 긍정 페르소나 사용)
 export const generateAuthorReply = async (
   postContent: string,
-  parentComment: string
+  parentComment: string,
+  personaIndex?: number | null
 ): Promise<string> => {
-  const body: GenerateReplyRequest = {
-    content: `[글쓴이 답글 작성]\n\n글 내용:\n${postContent}\n\n받은 댓글:\n${parentComment}\n\n지시사항: 글쓴이로서 댓글에 감사하거나 친근하게 답글을 작성해줘. 1-2문장으로 짧게.`,
-    persona_index: null,
+  // 글쓴이는 긍정적 페르소나(0~4) 중 랜덤 또는 지정값 사용
+  const authorPersona = personaIndex ?? Math.floor(Math.random() * 5); // 0~4
+
+  const body = {
+    parent_comment: parentComment,
+    content: postContent,
+    persona_index: authorPersona,
   };
 
-  const res = await fetch(`${BASE_URL}/generate/comment`, {
+  const res = await fetch(`${BASE_URL}/generate/recomment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

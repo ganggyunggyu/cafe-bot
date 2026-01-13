@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
-import { runPostOnlyAction } from './actions';
-import type { PostOnlyResult } from './types';
+import { runPostOnlyAction, getPostQueueStatusAction, type QueueBatchResult, type QueueStatusResult } from './queue-actions';
 
 const cafes = getAllCafes();
 const defaultCafe = getDefaultCafe();
@@ -17,12 +16,28 @@ export function PostOnlyUI() {
   const [keywordsText, setKeywordsText] = useState('');
   const [ref, setRef] = useState('');
   const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
-  const [result, setResult] = useState<PostOnlyResult | null>(null);
+  const [result, setResult] = useState<QueueBatchResult | null>(null);
+  const [queueStatus, setQueueStatus] = useState<QueueStatusResult | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
 
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 
+  // 큐 상태 폴링
+  useEffect(() => {
+    if (!isPolling) return;
+
+    const poll = async () => {
+      const status = await getPostQueueStatusAction();
+      setQueueStatus(status);
+    };
+
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [isPolling]);
+
   const inputClassName = cn(
-    'w-full rounded-xl border border-[color:var(--border)] bg-white/80 px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] shadow-sm transition focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]'
+    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
 
   const handleSubmit = () => {
@@ -42,26 +57,29 @@ export function PostOnlyUI() {
         postOptions,
       });
       setResult(res);
+      if (res.success) {
+        setIsPolling(true);
+      }
     });
   };
 
   return (
     <div className={cn('space-y-4')}>
       <div className={cn('space-y-1')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
           Post Only Mode
         </p>
-        <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
           글만 발행
         </h2>
-        <p className={cn('text-sm text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-sm text-(--ink-muted)')}>
           댓글 없이 글만 발행 (원고 축적용)
         </p>
       </div>
 
       <div className={cn('space-y-3')}>
         <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-[color:var(--ink-muted)]')}>
+          <label className={cn('text-xs font-medium text-(--ink-muted)')}>
             카페 선택
           </label>
           <select
@@ -76,7 +94,7 @@ export function PostOnlyUI() {
             ))}
           </select>
           {selectedCafe && (
-            <p className={cn('text-xs text-[color:var(--ink-muted)]')}>
+            <p className={cn('text-xs text-(--ink-muted)')}>
               카테고리: {selectedCafe.categories.join(', ')}
             </p>
           )}
@@ -98,7 +116,7 @@ export function PostOnlyUI() {
           className={inputClassName}
         />
 
-        <div className={cn('rounded-xl border border-[color:var(--border)] bg-white/50 p-3')}>
+        <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3')}>
           <PostOptionsUI options={postOptions} onChange={setPostOptions} />
         </div>
       </div>
@@ -120,58 +138,66 @@ export function PostOnlyUI() {
           className={cn(
             'rounded-2xl border px-4 py-4',
             result.success
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)]'
+              ? 'border-(--success) bg-(--success-soft)'
+              : 'border-(--danger) bg-(--danger-soft)'
           )}
         >
           <div className={cn('flex items-center justify-between mb-3')}>
             <h3
               className={cn(
                 'font-semibold',
-                result.success ? 'text-[color:var(--success)]' : 'text-[color:var(--danger)]'
+                result.success ? 'text-(--success)' : 'text-(--danger)'
               )}
             >
-              {result.success ? '발행 완료!' : '일부 실패'}
+              {result.success ? '큐에 추가됨' : '실패'}
             </h3>
-            <span className={cn('text-sm text-[color:var(--ink-muted)]')}>
-              {result.completed}/{result.totalKeywords} 성공
+            <span className={cn('text-sm text-(--ink-muted)')}>
+              {result.jobsAdded}개 작업
             </span>
           </div>
+          <p className={cn('text-sm text-(--ink-muted)')}>{result.message}</p>
 
-          <div className={cn('space-y-2 max-h-[200px] overflow-y-auto')}>
-            {result.results.map((r, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'rounded-xl border border-[color:var(--border)] bg-white/50 px-3 py-2'
-                )}
-              >
-                <div className={cn('flex items-center gap-2')}>
-                  <span>{r.success ? '✅' : '❌'}</span>
-                  <span className={cn('font-medium text-sm text-[color:var(--ink)]')}>
-                    {r.keyword}
-                  </span>
-                  {r.success && r.articleId && (
-                    <a
-                      href={`https://cafe.naver.com/ca-fe/cafes/${selectedCafeId}/articles/${r.articleId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        'text-xs px-2 py-0.5 rounded-lg',
-                        'bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]',
-                        'hover:bg-[color:var(--accent)] hover:text-white transition'
-                      )}
-                    >
-                      #{r.articleId}
-                    </a>
-                  )}
-                </div>
-                {r.error && (
-                  <p className={cn('text-xs text-[color:var(--danger)] mt-1')}>{r.error}</p>
-                )}
+          {/* 큐 진행 상황 */}
+          {queueStatus && Object.keys(queueStatus).length > 0 && (
+            <div className={cn('mt-4 space-y-2')}>
+              <div className={cn('flex items-center justify-between')}>
+                <h4 className={cn('text-sm font-medium text-(--ink)')}>진행 상황</h4>
+                <button
+                  onClick={() => setIsPolling(false)}
+                  className={cn('text-xs px-2 py-1 rounded-lg bg-white/50 hover:bg-white/80 text-(--ink-muted)')}
+                >
+                  폴링 중지
+                </button>
               </div>
-            ))}
-          </div>
+              {Object.entries(queueStatus).map(([accountId, status]) => {
+                const total = status.waiting + status.active + status.completed + status.failed;
+                if (total === 0) return null;
+                const progress = total > 0 ? ((status.completed + status.failed) / total) * 100 : 0;
+                return (
+                  <div key={accountId} className={cn('rounded-xl bg-white/50 p-2')}>
+                    <div className={cn('flex items-center justify-between text-xs mb-1')}>
+                      <span className={cn('font-medium text-(--ink)')}>{accountId}</span>
+                      <span className={cn('text-(--ink-muted)')}>
+                        {status.completed}/{total} 완료
+                        {status.failed > 0 && ` (${status.failed} 실패)`}
+                      </span>
+                    </div>
+                    <div className={cn('h-1.5 rounded-full bg-gray-200 overflow-hidden')}>
+                      <div
+                        className={cn('h-full bg-(--accent) transition-all')}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    {status.active > 0 && (
+                      <p className={cn('text-xs text-(--accent) mt-1')}>
+                        {status.active}개 처리 중...
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
