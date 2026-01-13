@@ -42,6 +42,17 @@ export const releaseAccountLock = (accountId: string): void => {
   }
 };
 
+// 로그인 캐시 무효화 (세션 만료 감지 시 호출)
+export const invalidateLoginCache = (accountId: string): void => {
+  loginStatusCache.delete(accountId);
+  console.log(`[LOGIN] ${accountId} 캐시 무효화됨`);
+};
+
+// 로그인 페이지로 리다이렉트됐는지 확인
+export const isLoginRedirect = (url: string): boolean => {
+  return url.includes('nidlogin.login') || url.includes('nid.naver.com/nidlogin');
+};
+
 const getSessionFile = (accountId: string): string => {
   return join(SESSION_DIR, `${accountId}-cookies.json`);
 }

@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/cn';
 import Link from 'next/link';
-import { BatchUI, KeywordGeneratorUI } from '@/features/auto-comment/batch';
+import { BatchUI, KeywordGeneratorUI, QueueStatusUI } from '@/features/auto-comment/batch';
 
 export default function BatchPage() {
   return (
@@ -132,6 +132,15 @@ export default function BatchPage() {
           >
             <BatchUI />
           </div>
+        </div>
+
+        {/* 큐 상태 모니터링 */}
+        <div
+          className={cn(
+            'mt-8 rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
+          )}
+        >
+          <QueueStatusUI />
         </div>
 
         <div

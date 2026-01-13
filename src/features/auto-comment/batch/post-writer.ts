@@ -5,6 +5,8 @@ import {
   loginAccount,
   acquireAccountLock,
   releaseAccountLock,
+  invalidateLoginCache,
+  isLoginRedirect,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import type { Page } from 'playwright';
@@ -195,6 +197,28 @@ export const writePostWithAccount = async (
       waitUntil: 'networkidle',
       timeout: 30000,
     });
+
+    // 로그인 페이지로 리다이렉트됐는지 확인
+    const currentUrlAfterNav = page.url();
+    if (isLoginRedirect(currentUrlAfterNav)) {
+      console.log(`[POST] ${id} 세션 만료 감지 - 재로그인 시도`);
+      invalidateLoginCache(id);
+
+      const reloginResult = await loginAccount(id, password);
+      if (!reloginResult.success) {
+        return {
+          success: false,
+          writerAccountId: id,
+          error: `세션 만료 후 재로그인 실패: ${reloginResult.error}`,
+        };
+      }
+
+      // 다시 글쓰기 페이지로 이동
+      await page.goto(writeUrl, {
+        waitUntil: 'networkidle',
+        timeout: 30000,
+      });
+    }
 
     await page.waitForTimeout(3000);
 

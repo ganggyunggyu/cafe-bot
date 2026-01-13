@@ -5,6 +5,8 @@ import {
   loginAccount,
   acquireAccountLock,
   releaseAccountLock,
+  invalidateLoginCache,
+  isLoginRedirect,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import { incrementActivity } from '@/shared/models/daily-activity';
@@ -50,27 +52,64 @@ export const writeCommentWithAccount = async (
       timeout: 15000,
     });
 
-    await page.waitForTimeout(1500);
+    // 로그인 페이지로 리다이렉트됐는지 확인
+    const currentUrlAfterNav = page.url();
+    if (isLoginRedirect(currentUrlAfterNav)) {
+      console.log(`[COMMENT] ${id} 세션 만료 감지 - 재로그인 시도`);
+      invalidateLoginCache(id);
 
-    // 댓글 입력창 찾기: textarea.comment_inbox_text
-    let commentInput = await page.$('textarea.comment_inbox_text');
+      const reloginResult = await loginAccount(id, password);
+      if (!reloginResult.success) {
+        return {
+          accountId: id,
+          success: false,
+          error: `세션 만료 후 재로그인 실패: ${reloginResult.error}`,
+        };
+      }
 
-    // iframe 안에 있을 수도 있음
-    if (!commentInput) {
+      // 다시 글 페이지로 이동
+      await page.goto(articleUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000,
+      });
+    }
+
+    // 글이 존재하는지 확인 (삭제됨/비공개 체크)
+    const notFoundIndicator = await page.$('.error_content, .deleted_article, .no_article');
+    if (notFoundIndicator) {
+      return {
+        accountId: id,
+        success: false,
+        error: 'ARTICLE_NOT_READY:글이 아직 처리 중이거나 삭제됨',
+      };
+    }
+
+    // 댓글 입력창 대기 (최대 10초)
+    let commentInput = null;
+    try {
+      commentInput = await page.waitForSelector('textarea.comment_inbox_text', { timeout: 10000 });
+    } catch {
+      // iframe 안에 있을 수도 있음
       const frameHandle = await page.$('iframe#cafe_main');
       if (frameHandle) {
         const frame = await frameHandle.contentFrame();
         if (frame) {
-          commentInput = await frame.$('textarea.comment_inbox_text');
+          try {
+            commentInput = await frame.waitForSelector('textarea.comment_inbox_text', { timeout: 5000 });
+          } catch {
+            // iframe에서도 못 찾음
+          }
         }
       }
     }
 
     if (!commentInput) {
+      // 디버그: 현재 URL 로깅
+      console.log(`[COMMENT] ${id} 댓글 입력창 없음 - URL: ${page.url()}`);
       return {
         accountId: id,
         success: false,
-        error: '댓글 입력창(textarea.comment_inbox_text)을 찾을 수 없어.',
+        error: 'ARTICLE_NOT_READY:댓글 입력창을 찾을 수 없어. 글이 아직 처리 중일 수 있어.',
       };
     }
 
@@ -192,29 +231,51 @@ export const writeReplyWithAccount = async (
       timeout: 15000,
     });
 
+    // 로그인 페이지로 리다이렉트됐는지 확인
+    const currentUrlAfterNav = page.url();
+    if (isLoginRedirect(currentUrlAfterNav)) {
+      console.log(`[REPLY] ${id} 세션 만료 감지 - 재로그인 시도`);
+      invalidateLoginCache(id);
+
+      const reloginResult = await loginAccount(id, password);
+      if (!reloginResult.success) {
+        return {
+          accountId: id,
+          success: false,
+          error: `세션 만료 후 재로그인 실패: ${reloginResult.error}`,
+        };
+      }
+
+      // 다시 글 페이지로 이동
+      await page.goto(articleUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000,
+      });
+    }
+
     await page.waitForTimeout(1500);
 
     // N번째 댓글의 "답글쓰기" 버튼 찾기
     const replyButtons = await page.$$('a.comment_info_button');
 
     if (replyButtons.length === 0) {
+      console.log(`[REPLY] ${id} 답글쓰기 버튼 없음 - URL: ${page.url()}`);
       return {
         accountId: id,
         success: false,
-        error: '답글쓰기 버튼을 찾을 수 없어.',
+        error: 'ARTICLE_NOT_READY:답글쓰기 버튼을 찾을 수 없어. 댓글이 아직 없을 수 있어.',
       };
     }
 
-    if (commentIndex >= replyButtons.length) {
-      return {
-        accountId: id,
-        success: false,
-        error: `${commentIndex}번째 댓글이 없어. (총 ${replyButtons.length}개 댓글)`,
-      };
+    // 인덱스가 범위를 벗어나면 마지막 댓글에 대댓글 달기 (댓글 job 실패 등으로 인한 케이스)
+    let targetIndex = commentIndex;
+    if (targetIndex >= replyButtons.length) {
+      console.log(`[REPLY] ${id} 대댓글 인덱스 ${targetIndex} → ${replyButtons.length - 1}로 조정 (총 ${replyButtons.length}개 댓글)`);
+      targetIndex = replyButtons.length - 1;
     }
 
     // 답글쓰기 버튼 클릭
-    await replyButtons[commentIndex].click();
+    await replyButtons[targetIndex].click();
     await page.waitForTimeout(1000);
 
     // 대댓글 입력창 찾기 (취소 버튼이 있는 CommentWriter 내의 textarea)
@@ -224,7 +285,7 @@ export const writeReplyWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: '대댓글 입력창을 찾을 수 없어.',
+        error: 'ARTICLE_NOT_READY:대댓글 입력창을 찾을 수 없어.',
       };
     }
 
@@ -283,8 +344,8 @@ export const writeReplyWithAccount = async (
 
     // 해당 댓글 좋아요 (대댓글 단 댓글에 공감)
     const commentAreas = await page.$$('.comment_area');
-    if (commentAreas[commentIndex]) {
-      const commentLikeButton = await commentAreas[commentIndex].$('a.u_likeit_list_btn._button');
+    if (commentAreas[targetIndex]) {
+      const commentLikeButton = await commentAreas[targetIndex].$('a.u_likeit_list_btn._button');
       if (commentLikeButton) {
         const isCommentLiked = await commentLikeButton.evaluate(
           (el) => el.classList.contains('on') || el.getAttribute('aria-pressed') === 'true'
@@ -292,7 +353,7 @@ export const writeReplyWithAccount = async (
 
         if (!isCommentLiked) {
           await commentLikeButton.click();
-          console.log(`[DEBUG] ${id} 댓글 좋아요 클릭 (index: ${commentIndex})`);
+          console.log(`[DEBUG] ${id} 댓글 좋아요 클릭 (index: ${targetIndex})`);
           await page.waitForTimeout(500);
         }
       }
