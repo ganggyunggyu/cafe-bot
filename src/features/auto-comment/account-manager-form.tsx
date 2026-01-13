@@ -20,10 +20,10 @@ export function AccountManagerForm({
   onSubmit,
 }: AccountManagerFormProps) {
   const sectionClassName = cn(
-    'rounded-2xl border border-[color:var(--border)] bg-white/70 p-4 shadow-sm'
+    'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
   );
   const inputClassName = cn(
-    'w-full rounded-xl border border-[color:var(--border)] bg-white/80 px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] shadow-sm transition focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]'
+    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
   const primaryButtonClassName = cn(
     'rounded-2xl px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(216,92,47,0.35)] transition',
@@ -33,7 +33,7 @@ export function AccountManagerForm({
 
   return (
     <div className={sectionClassName}>
-      <h3 className={cn('text-sm font-semibold text-[color:var(--ink)] mb-3')}>
+      <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>
         새 계정 추가
       </h3>
       <div className={cn('flex flex-col gap-2')}>

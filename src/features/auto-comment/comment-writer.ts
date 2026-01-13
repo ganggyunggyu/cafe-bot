@@ -7,6 +7,7 @@ import {
   releaseAccountLock,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
+import { incrementActivity } from '@/shared/models/daily-activity';
 
 export interface WriteCommentResult {
   accountId: string;
@@ -45,11 +46,11 @@ export const writeCommentWithAccount = async (
     const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
 
     await page.goto(articleUrl, {
-      waitUntil: 'networkidle',
-      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+      timeout: 15000,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1500);
 
     // 댓글 입력창 찾기: textarea.comment_inbox_text
     let commentInput = await page.$('textarea.comment_inbox_text');
@@ -102,9 +103,46 @@ export const writeCommentWithAccount = async (
     }
 
     await submitButton.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1500);
+
+    // 에러 팝업 확인 (권한 없음 등)
+    const errorPopup = await page.$('.LayerPopup, .popup_layer, [role="alertdialog"]');
+    if (errorPopup) {
+      const errorText = await errorPopup.textContent();
+      if (errorText?.includes('권한') || errorText?.includes('없습니다')) {
+        return {
+          accountId: id,
+          success: false,
+          error: errorText.trim().slice(0, 100) || '권한 에러',
+        };
+      }
+    }
+
+    // 댓글 목록에서 방금 작성한 내용 확인
+    const commentAreas = await page.$$('.comment_area');
+    let found = false;
+    const contentPreview = content.slice(0, 15);
+
+    for (const area of commentAreas) {
+      const text = await area.textContent();
+      if (text?.includes(contentPreview)) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      return {
+        accountId: id,
+        success: false,
+        error: '댓글이 등록되지 않음 (목록에서 확인 불가)',
+      };
+    }
 
     await saveCookiesForAccount(id);
+
+    // 활동 기록
+    await incrementActivity(id, cafeId, 'comments');
 
     return { accountId: id, success: true };
   } catch (error) {
@@ -150,11 +188,11 @@ export const writeReplyWithAccount = async (
     const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
 
     await page.goto(articleUrl, {
-      waitUntil: 'networkidle',
-      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+      timeout: 15000,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1500);
 
     // N번째 댓글의 "답글쓰기" 버튼 찾기
     const replyButtons = await page.$$('a.comment_info_button');
@@ -207,7 +245,41 @@ export const writeReplyWithAccount = async (
     }
 
     await submitButton.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1500);
+
+    // 에러 팝업 확인 (권한 없음 등)
+    const errorPopup = await page.$('.LayerPopup, .popup_layer, [role="alertdialog"]');
+    if (errorPopup) {
+      const errorText = await errorPopup.textContent();
+      if (errorText?.includes('권한') || errorText?.includes('없습니다')) {
+        return {
+          accountId: id,
+          success: false,
+          error: errorText.trim().slice(0, 100) || '권한 에러',
+        };
+      }
+    }
+
+    // 대댓글 목록에서 방금 작성한 내용 확인
+    const replyAreas = await page.$$('.comment_area');
+    let replyFound = false;
+    const contentPreview = content.slice(0, 15);
+
+    for (const area of replyAreas) {
+      const text = await area.textContent();
+      if (text?.includes(contentPreview)) {
+        replyFound = true;
+        break;
+      }
+    }
+
+    if (!replyFound) {
+      return {
+        accountId: id,
+        success: false,
+        error: '대댓글이 등록되지 않음 (목록에서 확인 불가)',
+      };
+    }
 
     // 해당 댓글 좋아요 (대댓글 단 댓글에 공감)
     const commentAreas = await page.$$('.comment_area');
@@ -241,6 +313,10 @@ export const writeReplyWithAccount = async (
     }
 
     await saveCookiesForAccount(id);
+
+    // 활동 기록 (대댓글 + 좋아요)
+    await incrementActivity(id, cafeId, 'replies');
+    await incrementActivity(id, cafeId, 'likes');
 
     return { accountId: id, success: true };
   } catch (error) {

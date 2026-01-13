@@ -15,14 +15,14 @@ export function PostForm() {
   const [ref, setRef] = useState('');
 
   const labelClassName = cn(
-    'text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--ink-muted)]'
+    'text-xs font-semibold uppercase tracking-[0.2em] text-(--ink-muted)'
   );
   const inputClassName = cn(
-    'w-full rounded-2xl border border-[color:var(--border)] bg-white/80 px-4 py-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] shadow-sm transition focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]'
+    'w-full rounded-2xl border border-(--border) bg-white/80 px-4 py-3 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
   const submitClassName = cn(
     'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
-    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]',
+    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)',
     'disabled:cursor-not-allowed disabled:opacity-60'
   );
 
@@ -130,8 +130,8 @@ export function PostForm() {
           className={cn(
             'rounded-2xl border px-4 py-3 text-sm',
             result.success
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)] text-[color:var(--success)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)] text-[color:var(--danger)]'
+              ? 'border-(--success) bg-(--success-soft) text-(--success)'
+              : 'border-(--danger) bg-(--danger-soft) text-(--danger)'
           )}
         >
           {result.success ? (
@@ -143,7 +143,7 @@ export function PostForm() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    'inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--teal)] underline-offset-4 hover:underline'
+                    'inline-flex items-center gap-2 text-sm font-semibold text-(--teal) underline-offset-4 hover:underline'
                   )}
                 >
                   게시글 보기

@@ -101,12 +101,12 @@ export function AccountManagerUI() {
       <div className={cn('space-y-2')}>
         <p
           className={cn(
-            'text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]'
+            'text-xs uppercase tracking-[0.3em] text-(--ink-muted)'
           )}
         >
           Account Desk
         </p>
-        <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
           계정 관리
         </h2>
       </div>
@@ -116,8 +116,8 @@ export function AccountManagerUI() {
           className={cn(
             'rounded-2xl border px-4 py-3 text-sm',
             message.type === 'success'
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)] text-[color:var(--success)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)] text-[color:var(--danger)]'
+              ? 'border-(--success) bg-(--success-soft) text-(--success)'
+              : 'border-(--danger) bg-(--danger-soft) text-(--danger)'
           )}
         >
           {message.text}
