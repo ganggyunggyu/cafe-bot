@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
 import {
   getCafesAction,
   addCafeAction,
-  deleteCafeAction,
   updateCafeAction,
+  deleteCafeAction,
+  CafeInput,
 } from './actions';
 
 interface CafeData {
@@ -14,239 +15,361 @@ interface CafeData {
   menuId: string;
   name: string;
   categories: string[];
+  categoryMenuIds?: Record<string, string>;
   isDefault?: boolean;
   fromConfig?: boolean;
 }
 
+interface CafeFormData {
+  cafeId: string;
+  menuId: string;
+  name: string;
+  categories: string;
+  categoryMenuIds: string;
+  isDefault: boolean;
+}
+
+const INITIAL_FORM: CafeFormData = {
+  cafeId: '',
+  menuId: '1',
+  name: '',
+  categories: '',
+  categoryMenuIds: '',
+  isDefault: false,
+};
+
+// categoryMenuIds 파싱 (문자열 → 객체)
+const parseCategoryMenuIds = (str: string): Record<string, string> => {
+  if (!str.trim()) return {};
+  const result: Record<string, string> = {};
+  str.split(',').forEach((pair) => {
+    const [cat, menuId] = pair.split(':').map((s) => s.trim());
+    if (cat && menuId) {
+      result[cat] = menuId;
+    }
+  });
+  return result;
+};
+
+// categoryMenuIds 직렬화 (객체 → 문자열)
+const serializeCategoryMenuIds = (obj?: Record<string, string>): string => {
+  if (!obj) return '';
+  return Object.entries(obj)
+    .map(([cat, menuId]) => `${cat}:${menuId}`)
+    .join(', ');
+};
+
 export function CafeManagerUI() {
   const [isPending, startTransition] = useTransition();
   const [cafes, setCafes] = useState<CafeData[]>([]);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newCafe, setNewCafe] = useState({ cafeId: '', menuId: '1', name: '', categories: '' });
+  const [form, setForm] = useState<CafeFormData>(INITIAL_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
-  const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
-  );
-
-  const loadCafes = () => {
-    startTransition(async () => {
+  const loadCafes = async () => {
+    try {
       const data = await getCafesAction();
       setCafes(data);
-    });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     loadCafes();
   }, []);
 
-  const handleAdd = () => {
-    if (!newCafe.cafeId || !newCafe.name) {
-      setMessage({ type: 'error', text: '카페 ID와 이름을 입력해' });
+  const resetForm = () => {
+    setForm(INITIAL_FORM);
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const openEditForm = (cafe: CafeData) => {
+    setForm({
+      cafeId: cafe.cafeId,
+      menuId: cafe.menuId,
+      name: cafe.name,
+      categories: cafe.categories.join('\n'),
+      categoryMenuIds: serializeCategoryMenuIds(cafe.categoryMenuIds),
+      isDefault: cafe.isDefault ?? false,
+    });
+    setEditingId(cafe.cafeId);
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.cafeId || !form.name) {
+      alert('카페ID와 이름은 필수입니다');
       return;
     }
 
-    startTransition(async () => {
-      const result = await addCafeAction({
-        cafeId: newCafe.cafeId,
-        menuId: newCafe.menuId || '1',
-        name: newCafe.name,
-        categories: newCafe.categories.split(',').map((c) => c.trim()).filter(Boolean),
-      });
+    const input: CafeInput = {
+      cafeId: form.cafeId,
+      menuId: form.menuId || '1',
+      name: form.name,
+      categories: form.categories.split('\n').map((s) => s.trim()).filter(Boolean),
+      categoryMenuIds: parseCategoryMenuIds(form.categoryMenuIds),
+      isDefault: form.isDefault,
+    };
 
-      if (result.success) {
-        setMessage({ type: 'success', text: '카페 추가 완료' });
-        setNewCafe({ cafeId: '', menuId: '1', name: '', categories: '' });
-        setShowAddForm(false);
-        loadCafes();
+    startTransition(async () => {
+      if (editingId) {
+        await updateCafeAction(editingId, input);
       } else {
-        setMessage({ type: 'error', text: result.error || '추가 실패' });
+        const result = await addCafeAction(input);
+        if (!result.success) {
+          alert(result.error);
+          return;
+        }
       }
+      resetForm();
+      loadCafes();
     });
   };
 
-  const handleDelete = (cafeId: string, name: string) => {
-    if (!confirm(`"${name}" 카페를 삭제할까?`)) return;
-
+  const handleDelete = (cafeId: string) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
     startTransition(async () => {
       await deleteCafeAction(cafeId);
-      setMessage({ type: 'success', text: `${name} 삭제 완료` });
       loadCafes();
     });
   };
 
-  const handleSetDefault = (cafeId: string) => {
-    startTransition(async () => {
-      await updateCafeAction(cafeId, { isDefault: true });
-      setMessage({ type: 'success', text: '기본 카페 설정 완료' });
-      loadCafes();
-    });
-  };
+  if (isLoading) {
+    return <div className={cn('p-4 text-center text-(--ink-muted)')}>로딩 중...</div>;
+  }
 
   return (
     <div className={cn('space-y-4')}>
-      <div className={cn('space-y-2')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>Cafes</p>
-        <div className={cn('flex items-center justify-between')}>
-          <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
-            등록된 카페 ({cafes.length}개)
-          </h2>
+      <div className={cn('flex justify-between items-center')}>
+        <h3 className={cn('text-sm font-semibold text-(--ink)')}>카페 관리</h3>
+        {!showForm && (
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => setShowForm(true)}
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-semibold transition',
-              'bg-(--teal) text-white hover:brightness-105'
-            )}
-          >
-            {showAddForm ? '취소' : '+ 추가'}
-          </button>
-        </div>
-      </div>
-
-      {message && (
-        <div
-          className={cn(
-            'rounded-xl border px-3 py-2 text-sm',
-            message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-          )}
-        >
-          {message.text}
-        </div>
-      )}
-
-      {showAddForm && (
-        <div className={cn('rounded-xl border border-(--border) bg-white/50 p-4 space-y-3')}>
-          <input
-            type="text"
-            placeholder="카페 ID (숫자)"
-            value={newCafe.cafeId}
-            onChange={(e) => setNewCafe((p) => ({ ...p, cafeId: e.target.value }))}
-            className={inputClassName}
-          />
-          <input
-            type="text"
-            placeholder="메뉴 ID (기본: 1)"
-            value={newCafe.menuId}
-            onChange={(e) => setNewCafe((p) => ({ ...p, menuId: e.target.value }))}
-            className={inputClassName}
-          />
-          <input
-            type="text"
-            placeholder="카페 이름"
-            value={newCafe.name}
-            onChange={(e) => setNewCafe((p) => ({ ...p, name: e.target.value }))}
-            className={inputClassName}
-          />
-          <input
-            type="text"
-            placeholder="카테고리 (쉼표로 구분)"
-            value={newCafe.categories}
-            onChange={(e) => setNewCafe((p) => ({ ...p, categories: e.target.value }))}
-            className={inputClassName}
-          />
-          <p className={cn('text-xs text-(--ink-muted)')}>
-            카페 ID는 카페 URL에서 확인: cafe.naver.com/ca-fe/cafes/<strong>31640041</strong>/...
-          </p>
-          <button
-            onClick={handleAdd}
-            disabled={isPending}
-            className={cn(
-              'w-full rounded-xl px-4 py-2 text-sm font-semibold text-white transition',
-              'bg-(--teal) hover:brightness-105',
-              'disabled:cursor-not-allowed disabled:opacity-60'
+              'px-3 py-1.5 text-xs rounded-lg',
+              'bg-(--accent) text-white hover:opacity-90 transition'
             )}
           >
             카페 추가
           </button>
+        )}
+      </div>
+
+      {/* 폼 */}
+      {showForm && (
+        <div className={cn('p-4 rounded-xl border border-(--border) bg-white/50 space-y-3')}>
+          <div className={cn('text-sm font-medium text-(--ink)')}>
+            {editingId ? '카페 수정' : '새 카페 추가'}
+          </div>
+
+          <div className={cn('grid grid-cols-2 gap-3')}>
+            <div className={cn('space-y-1')}>
+              <label className={cn('text-xs text-(--ink-muted)')}>카페 ID *</label>
+              <input
+                type="text"
+                value={form.cafeId}
+                onChange={(e) => setForm({ ...form, cafeId: e.target.value })}
+                disabled={!!editingId}
+                className={cn(
+                  'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm',
+                  editingId && 'bg-gray-100 cursor-not-allowed'
+                )}
+                placeholder="31640041"
+              />
+            </div>
+
+            <div className={cn('space-y-1')}>
+              <label className={cn('text-xs text-(--ink-muted)')}>기본 메뉴 ID</label>
+              <input
+                type="text"
+                value={form.menuId}
+                onChange={(e) => setForm({ ...form, menuId: e.target.value })}
+                className={cn(
+                  'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
+                )}
+                placeholder="1"
+              />
+            </div>
+          </div>
+
+          <div className={cn('space-y-1')}>
+            <label className={cn('text-xs text-(--ink-muted)')}>카페 이름 *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className={cn(
+                'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
+              )}
+              placeholder="테스트 카페"
+            />
+          </div>
+
+          <div className={cn('space-y-1')}>
+            <label className={cn('text-xs text-(--ink-muted)')}>
+              카테고리 (줄바꿈으로 구분)
+            </label>
+            <textarea
+              value={form.categories}
+              onChange={(e) => setForm({ ...form, categories: e.target.value })}
+              rows={4}
+              className={cn(
+                'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm resize-none'
+              )}
+              placeholder={'자유게시판\n일상\n정보'}
+            />
+          </div>
+
+          <div className={cn('space-y-1')}>
+            <label className={cn('text-xs text-(--ink-muted)')}>
+              카테고리별 메뉴ID (카테고리:메뉴ID, ...)
+            </label>
+            <input
+              type="text"
+              value={form.categoryMenuIds}
+              onChange={(e) => setForm({ ...form, categoryMenuIds: e.target.value })}
+              className={cn(
+                'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
+              )}
+              placeholder="자유게시판:1, 일상:2, 정보:3"
+            />
+            <p className={cn('text-xs text-(--ink-muted)')}>
+              각 카테고리별로 다른 메뉴ID를 지정하고 싶을 때 사용
+            </p>
+          </div>
+
+          <div className={cn('flex items-center gap-2')}>
+            <input
+              type="checkbox"
+              id="isDefault"
+              checked={form.isDefault}
+              onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
+              className={cn('rounded')}
+            />
+            <label htmlFor="isDefault" className={cn('text-sm text-(--ink)')}>
+              기본 카페로 설정
+            </label>
+          </div>
+
+          <div className={cn('flex gap-2')}>
+            <button
+              onClick={handleSubmit}
+              disabled={isPending}
+              className={cn(
+                'flex-1 rounded-xl py-2.5 text-sm font-medium transition',
+                'bg-(--accent) text-white hover:opacity-90',
+                isPending && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              {isPending ? '저장 중...' : editingId ? '수정' : '추가'}
+            </button>
+            <button
+              onClick={resetForm}
+              disabled={isPending}
+              className={cn(
+                'rounded-xl px-4 py-2.5 text-sm font-medium border border-(--border)',
+                'hover:bg-gray-50 transition'
+              )}
+            >
+              취소
+            </button>
+          </div>
         </div>
       )}
 
-      {cafes.length === 0 ? (
-        <div className={cn('rounded-xl border border-(--border) bg-white/50 p-6 text-center')}>
-          <p className={cn('text-sm text-(--ink-muted)')}>
-            등록된 카페가 없어. "+ 추가" 버튼을 눌러봐.
-          </p>
-        </div>
-      ) : (
-        <ul className={cn('space-y-2')}>
-          {cafes.map((cafe) => (
-            <li
+      {/* 목록 */}
+      <div className={cn('space-y-2')}>
+        {cafes.length === 0 ? (
+          <div className={cn('p-4 text-center text-(--ink-muted) text-sm')}>
+            등록된 카페가 없습니다
+          </div>
+        ) : (
+          cafes.map((cafe) => (
+            <div
               key={cafe.cafeId}
               className={cn(
-                'rounded-xl border border-(--border) bg-white/70 px-4 py-3'
+                'p-3 rounded-xl border border-(--border) bg-white/50',
+                'flex flex-col gap-2'
               )}
             >
-              <div className={cn('flex items-center justify-between gap-3')}>
-                <div className={cn('flex-1')}>
+              <div className={cn('flex justify-between items-start')}>
+                <div>
                   <div className={cn('flex items-center gap-2')}>
-                    <span className={cn('text-sm font-semibold text-(--ink)')}>{cafe.name}</span>
+                    <span className={cn('font-medium text-(--ink)')}>{cafe.name}</span>
                     {cafe.isDefault && (
-                      <span className={cn('text-xs bg-(--teal-soft) text-(--teal) px-1.5 py-0.5 rounded')}>
+                      <span
+                        className={cn(
+                          'text-xs px-2 py-0.5 rounded-full',
+                          'bg-(--accent)/10 text-(--accent)'
+                        )}
+                      >
                         기본
                       </span>
                     )}
                     {cafe.fromConfig && (
-                      <span className={cn('text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded')}>
-                        설정파일
+                      <span
+                        className={cn(
+                          'text-xs px-2 py-0.5 rounded-full',
+                          'bg-gray-200 text-gray-600'
+                        )}
+                      >
+                        config
                       </span>
                     )}
                   </div>
-                  <p className={cn('text-xs text-(--ink-muted)')}>
+                  <div className={cn('text-xs text-(--ink-muted) mt-0.5')}>
                     ID: {cafe.cafeId} | 메뉴: {cafe.menuId}
-                  </p>
-                  {cafe.categories.length > 0 && (
-                    <div className={cn('flex flex-wrap gap-1 mt-1')}>
-                      {cafe.categories.slice(0, 5).map((cat) => (
-                        <span
-                          key={cat}
-                          className={cn('text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded')}
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                      {cafe.categories.length > 5 && (
-                        <span className={cn('text-xs text-gray-400')}>
-                          +{cafe.categories.length - 5}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  </div>
                 </div>
-                <div className={cn('flex gap-2')}>
-                  {!cafe.isDefault && !cafe.fromConfig && (
-                    <button
-                      onClick={() => handleSetDefault(cafe.cafeId)}
-                      disabled={isPending}
-                      className={cn(
-                        'rounded-full px-2 py-1 text-xs font-medium transition',
-                        'border border-(--teal) text-(--teal) hover:bg-(--teal-soft)',
-                        'disabled:cursor-not-allowed disabled:opacity-60'
-                      )}
-                    >
-                      기본설정
-                    </button>
-                  )}
-                  {!cafe.fromConfig && (
-                    <button
-                      onClick={() => handleDelete(cafe.cafeId, cafe.name)}
-                      disabled={isPending}
-                      className={cn(
-                        'rounded-full px-2 py-1 text-xs font-medium transition',
-                        'border border-red-300 text-red-600 hover:bg-red-50',
-                        'disabled:cursor-not-allowed disabled:opacity-60'
-                      )}
-                    >
-                      삭제
-                    </button>
-                  )}
+                <div className={cn('flex gap-1')}>
+                  <button
+                    onClick={() => openEditForm(cafe)}
+                    className={cn(
+                      'px-2 py-1 text-xs rounded-lg',
+                      'border border-(--border) hover:bg-gray-50 transition'
+                    )}
+                  >
+                    수정
+                  </button>
+                  <button
+                    onClick={() => handleDelete(cafe.cafeId)}
+                    className={cn(
+                      'px-2 py-1 text-xs rounded-lg',
+                      'border border-red-200 text-red-500 hover:bg-red-50 transition'
+                    )}
+                  >
+                    삭제
+                  </button>
                 </div>
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
+
+              {/* 카테고리 표시 */}
+              {cafe.categories.length > 0 && (
+                <div className={cn('flex flex-wrap gap-1')}>
+                  {cafe.categories.map((cat) => {
+                    const menuId = cafe.categoryMenuIds?.[cat];
+                    return (
+                      <span
+                        key={cat}
+                        className={cn(
+                          'text-xs px-2 py-0.5 rounded-full',
+                          'bg-gray-100 text-gray-600'
+                        )}
+                      >
+                        {cat}
+                        {menuId && <span className={cn('text-gray-400')}> ({menuId})</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

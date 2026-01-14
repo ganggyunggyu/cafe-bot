@@ -1,7 +1,7 @@
 'use server';
 
 import { connectDB } from '@/shared/lib/mongodb';
-import { Account, Cafe, type IAccount, type ICafe } from '@/shared/models';
+import { Account, Cafe, type IAccount, type ICafe, type ActivityHours } from '@/shared/models';
 import { revalidatePath } from 'next/cache';
 
 export interface AccountInput {
@@ -9,6 +9,12 @@ export interface AccountInput {
   password: string;
   nickname?: string;
   isMain?: boolean;
+  // 활동 설정
+  activityHours?: ActivityHours;
+  restDays?: number[];
+  dailyPostLimit?: number;
+  // 페르소나 설정
+  personaId?: string;
 }
 
 export interface CafeInput {
@@ -16,12 +22,25 @@ export interface CafeInput {
   menuId: string;
   name: string;
   categories?: string[];
+  categoryMenuIds?: Record<string, string>;
   isDefault?: boolean;
 }
 
 // ========== 계정 CRUD ==========
 
-export async function getAccountsAction() {
+export interface AccountData {
+  id: string;
+  password: string;
+  nickname?: string;
+  isMain?: boolean;
+  activityHours?: ActivityHours;
+  restDays?: number[];
+  dailyPostLimit?: number;
+  personaId?: string;
+  fromConfig?: boolean;
+}
+
+export async function getAccountsAction(): Promise<AccountData[]> {
   await connectDB();
   const dbAccounts = await Account.find({ isActive: true }).sort({ isMain: -1, createdAt: 1 }).lean();
 
@@ -33,6 +52,10 @@ export async function getAccountsAction() {
       password: a.password,
       nickname: a.nickname,
       isMain: a.isMain,
+      activityHours: a.activityHours,
+      restDays: a.restDays,
+      dailyPostLimit: a.dailyPostLimit,
+      personaId: a.personaId,
       fromConfig: true,
     }));
   }
@@ -42,6 +65,10 @@ export async function getAccountsAction() {
     password: a.password,
     nickname: a.nickname,
     isMain: a.isMain,
+    activityHours: a.activityHours,
+    restDays: a.restDays,
+    dailyPostLimit: a.dailyPostLimit,
+    personaId: a.personaId,
     fromConfig: false,
   }));
 }
@@ -51,7 +78,7 @@ export async function addAccountAction(input: AccountInput) {
 
   const existing = await Account.findOne({ accountId: input.accountId });
   if (existing) {
-    return { success: false, error: '이미 존재하는 계정이야' };
+    return { success: false, error: '이미 존재하는 계정입니다' };
   }
 
   await Account.create({
@@ -59,6 +86,10 @@ export async function addAccountAction(input: AccountInput) {
     password: input.password,
     nickname: input.nickname,
     isMain: input.isMain ?? false,
+    activityHours: input.activityHours,
+    restDays: input.restDays,
+    dailyPostLimit: input.dailyPostLimit,
+    personaId: input.personaId,
   });
 
   revalidatePath('/accounts');
@@ -78,22 +109,43 @@ export async function updateAccountAction(accountId: string, input: Partial<Acco
 }
 
 export async function deleteAccountAction(accountId: string) {
-  await connectDB();
+  try {
+    await connectDB();
 
-  await Account.findOneAndUpdate(
-    { accountId },
-    { $set: { isActive: false } }
-  );
+    const result = await Account.findOneAndUpdate(
+      { accountId },
+      { $set: { isActive: false } },
+      { new: true }
+    );
 
-  revalidatePath('/accounts');
-  return { success: true };
+    if (!result) {
+      console.error(`[DELETE] 계정 찾기 실패: ${accountId}`);
+      return { success: false, error: '계정을 찾을 수 없습니다' };
+    }
+
+    console.log(`[DELETE] 계정 삭제 완료: ${accountId}`);
+    revalidatePath('/accounts');
+    return { success: true };
+  } catch (error) {
+    console.error(`[DELETE] 에러:`, error);
+    return { success: false, error: '삭제 중 오류 발생' };
+  }
 }
 
 // ========== 카페 CRUD ==========
 
 export async function getCafesAction() {
-  await connectDB();
+  console.log('[CAFE-ACTION] getCafesAction 호출');
+  console.log('[CAFE-ACTION] MONGODB_URI:', process.env.MONGODB_URI ? '설정됨' : '없음');
+  try {
+    await connectDB();
+    console.log('[CAFE-ACTION] connectDB 완료');
+  } catch (err) {
+    console.error('[CAFE-ACTION] connectDB 에러:', err);
+    return [];
+  }
   const dbCafes = await Cafe.find({ isActive: true }).sort({ isDefault: -1, createdAt: 1 }).lean();
+  console.log('[CAFE-ACTION] DB 카페 수:', dbCafes.length, dbCafes.map(c => c.name));
 
   // MongoDB에 데이터가 없으면 하드코딩된 데이터 반환
   if (dbCafes.length === 0) {
@@ -103,19 +155,27 @@ export async function getCafesAction() {
       menuId: c.menuId,
       name: c.name,
       categories: c.categories,
+      categoryMenuIds: c.categoryMenuIds,
       isDefault: c.isDefault,
       fromConfig: true,
     }));
   }
 
-  return dbCafes.map((c) => ({
-    cafeId: c.cafeId,
-    menuId: c.menuId,
-    name: c.name,
-    categories: c.categories,
-    isDefault: c.isDefault,
-    fromConfig: false,
-  }));
+  return dbCafes.map((c) => {
+    // Map을 일반 객체로 변환
+    const categoryMenuIds = c.categoryMenuIds instanceof Map
+      ? Object.fromEntries(c.categoryMenuIds)
+      : c.categoryMenuIds;
+    return {
+      cafeId: c.cafeId,
+      menuId: c.menuId,
+      name: c.name,
+      categories: c.categories,
+      categoryMenuIds,
+      isDefault: c.isDefault,
+      fromConfig: false,
+    };
+  });
 }
 
 export async function addCafeAction(input: CafeInput) {
@@ -123,7 +183,7 @@ export async function addCafeAction(input: CafeInput) {
 
   const existing = await Cafe.findOne({ cafeId: input.cafeId });
   if (existing) {
-    return { success: false, error: '이미 존재하는 카페야' };
+    return { success: false, error: '이미 존재하는 카페입니다' };
   }
 
   // 기본 카페로 설정하면 기존 기본 카페 해제
@@ -136,6 +196,7 @@ export async function addCafeAction(input: CafeInput) {
     menuId: input.menuId,
     name: input.name,
     categories: input.categories ?? [],
+    categoryMenuIds: input.categoryMenuIds,
     isDefault: input.isDefault ?? false,
   });
 
@@ -193,6 +254,10 @@ export async function migrateFromConfigAction() {
         password: acc.password,
         nickname: acc.nickname,
         isMain: acc.isMain ?? false,
+        activityHours: acc.activityHours,
+        restDays: acc.restDays,
+        dailyPostLimit: acc.dailyPostLimit,
+        personaId: acc.personaId,
       });
       accountsAdded++;
     }
@@ -207,6 +272,7 @@ export async function migrateFromConfigAction() {
         menuId: cafe.menuId,
         name: cafe.name,
         categories: cafe.categories,
+        categoryMenuIds: cafe.categoryMenuIds,
         isDefault: cafe.isDefault ?? false,
       });
       cafesAdded++;
