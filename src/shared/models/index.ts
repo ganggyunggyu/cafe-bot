@@ -1,7 +1,15 @@
-export { PublishedArticle, type IPublishedArticle } from './published-article';
+export {
+  PublishedArticle,
+  type IPublishedArticle,
+  type IArticleComment,
+  hasCommented,
+  addCommentToArticle,
+  getArticleComments,
+  getAccountCommentStats,
+} from './published-article';
 export { ModifiedArticle, type IModifiedArticle } from './modified-article';
 export { BatchJobLog, type IBatchJobLog } from './batch-job-log';
-export { Account, type IAccount } from './account';
+export { Account, type IAccount, type ActivityHours } from './account';
 export { Cafe, type ICafe } from './cafe';
 export {
   DailyPostCount,
