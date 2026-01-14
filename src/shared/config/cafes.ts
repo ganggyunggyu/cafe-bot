@@ -1,52 +1,47 @@
-// 카페 설정 인터페이스
-export interface CafeConfig {
-  cafeId: string;
-  menuId: string;
-  name: string;
-  categories: string[]; // 카테고리(게시판) 목록
-  isDefault?: boolean;
-  categoryMenuIds?: Record<string, string>; // 카테고리 → menuId 매핑
-}
+import type { CafeConfig } from '@/entities/cafe';
+import { connectDB } from '@/shared/lib/mongodb';
+import { Cafe } from '@/shared/models';
 
-// 카페 목록 (첫 번째가 기본 카페)
-export const CAFE_LIST: CafeConfig[] = [
-  {
-    cafeId: '31640041',
-    menuId: '1',
-    name: '으스스',
-    categories: ['자유게시판', '일상', '괴담', '광고'],
-    isDefault: true,
-  },
-  // 추가 카페 예시:
-  {
-    cafeId: '31642514',
-    menuId: '1',
-    name: '벤타쿠',
-    categories: [
-      '자유게시판',
-      '밴드 뉴스',
-      '공연/라이브',
-      '가사/번역',
-      '앨범/굿즈',
-      '직관 후기',
-      '악기/연주',
-      '중고장터',
-      '구매대행',
-    ],
-  },
-];
+// MongoDB에서 카페 데이터 가져오기
+export const getAllCafes = async (): Promise<CafeConfig[]> => {
+  try {
+    await connectDB();
+    const dbCafes = await Cafe.find({ isActive: true })
+      .sort({ isDefault: -1, createdAt: 1 })
+      .lean();
 
-// 기본 카페 가져오기
-export const getDefaultCafe = (): CafeConfig | undefined => {
-  return CAFE_LIST.find((c) => c.isDefault) || CAFE_LIST[0];
+    return dbCafes.map((c) => {
+      const categoryMenuIds =
+        c.categoryMenuIds instanceof Map
+          ? Object.fromEntries(c.categoryMenuIds)
+          : c.categoryMenuIds;
+
+      return {
+        cafeId: c.cafeId,
+        menuId: c.menuId,
+        name: c.name,
+        categories: c.categories || [],
+        isDefault: c.isDefault,
+        categoryMenuIds,
+      };
+    });
+  } catch (error) {
+    console.error('[CAFES] MongoDB 조회 실패:', error);
+    return [];
+  }
 };
 
-// 카페 ID로 찾기
-export const getCafeById = (cafeId: string): CafeConfig | undefined => {
-  return CAFE_LIST.find((c) => c.cafeId === cafeId);
+export const getDefaultCafe = async (): Promise<CafeConfig | undefined> => {
+  const cafes = await getAllCafes();
+  return cafes.find((c) => c.isDefault) || cafes[0];
 };
 
-// 전체 카페 목록
-export const getAllCafes = (): CafeConfig[] => {
-  return CAFE_LIST.filter((c) => c.cafeId && c.menuId);
+export const getCafeById = async (cafeId: string): Promise<CafeConfig | undefined> => {
+  const cafes = await getAllCafes();
+  return cafes.find((c) => c.cafeId === cafeId);
 };
+
+// 하위 호환성을 위한 동기 버전 (빈 배열 반환, 사용 자제)
+export const CAFE_LIST: CafeConfig[] = [];
+
+export type { CafeConfig } from '@/entities/cafe';

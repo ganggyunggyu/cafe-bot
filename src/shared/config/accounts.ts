@@ -1,86 +1,40 @@
+import { connectDB } from '@/shared/lib/mongodb';
+import { Account } from '@/shared/models';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 
-/*
- * ┌─────────────────────────────────────────────────────────────────┐
- * │                        계정 설정 가이드                           │
- * └─────────────────────────────────────────────────────────────────┘
- *
- * ■ 활동 설정
- * ┌──────────────────┬─────────────────────────────────────────────┐
- * │ activityHours    │ { start: 9, end: 22 } → 오전 9시~오후 10시    │
- * │ restDays         │ [0, 6] → 일요일(0), 토요일(6) 휴식            │
- * │ dailyPostLimit   │ 5 → 하루 글 5개 제한                          │
- * └──────────────────┴─────────────────────────────────────────────┘
- *
- * ■ 페르소나 설정
- * ┌──────────────────┬─────────────────────────────────────────────┐
- * │ personaIndex     │ 0~79 → 고정 페르소나 (아래 표 참고)           │
- * │ personaCategory  │ 'neutral' → 해당 카테고리 내 랜덤             │
- * └──────────────────┴─────────────────────────────────────────────┘
- *
- * ■ 페르소나 인덱스 범위
- * ┌────────┬─────────────┬────────────────────────────────────────┐
- * │ 범위   │ 카테고리     │ 설명                                   │
- * ├────────┼─────────────┼────────────────────────────────────────┤
- * │  0~4   │ positive    │ 긍정적 반응                             │
- * │  5~17  │ neutral     │ 중립적 반응                             │
- * │ 18~23  │ cynical     │ 냉소/시니컬                             │
- * │ 24~27  │ critical    │ 질문/비판                               │
- * │ 28~32  │ ad_skeptic  │ 광고의심                                │
- * │ 33~43  │ community   │ 커뮤니티별                              │
- * │ 44~49  │ mom_cafe    │ 맘카페/여성커뮤                          │
- * │ 50~57  │ interest    │ 관심사별                                │
- * │ 58~64  │ age_group   │ 연령대별                                │
- * │ 65~72  │ lifestyle   │ 생활상황별                              │
- * │ 73~79  │ style       │ 반응유형/말투                            │
- * └────────┴─────────────┴────────────────────────────────────────┘
- */
+// MongoDB에서 계정 데이터 가져오기
+export const getAllAccounts = async (): Promise<NaverAccount[]> => {
+  try {
+    await connectDB();
+    const dbAccounts = await Account.find({ isActive: true })
+      .sort({ isMain: -1, createdAt: 1 })
+      .lean();
 
-// 계정 목록 (첫 번째가 메인 계정)
-export const NAVER_ACCOUNTS: NaverAccount[] = [
-  // {
-  //   id: 'ganggyunggyu',
-  //   password: '12Qwaszx!@',
-  //   nickname: '테스트1',
-  //   isMain: true,
-  //   activityHours: { start: 9, end: 22 },
-  //   personaCategory: 'neutral',
-  // },
-  {
-    id: 'akepzkthf12',
-    password: '12qwaszx',
-    nickname: '테스트2',
-    activityHours: { start: 8, end: 23 },
-    dailyPostLimit: 5,
-    personaCategory: 'cynical',
-  },
-  {
-    id: 'qwzx16',
-    password: '12Qwaszx!@',
-    nickname: '테스트4',
-    activityHours: { start: 10, end: 21 },
-    dailyPostLimit: 4,
-    personaCategory: 'ad_skeptic',
-  },
-  {
-    id: 'ggg8019',
-    password: '12Qwaszx!@',
-    nickname: '테스트5',
-    activityHours: { start: 7, end: 24 },
-    restDays: [0],
-    dailyPostLimit: 6,
-    personaCategory: 'community',
-  },
-];
-
-export const getMainAccount = (): NaverAccount | undefined => {
-  return NAVER_ACCOUNTS.find((a) => a.isMain);
+    return dbAccounts.map((a) => ({
+      id: a.accountId,
+      password: a.password,
+      nickname: a.nickname,
+      isMain: a.isMain,
+      activityHours: a.activityHours,
+      restDays: a.restDays,
+      dailyPostLimit: a.dailyPostLimit,
+      personaId: a.personaId,
+    }));
+  } catch (error) {
+    console.error('[ACCOUNTS] MongoDB 조회 실패:', error);
+    return [];
+  }
 };
 
-export const getCommentAccounts = (): NaverAccount[] => {
-  return NAVER_ACCOUNTS.filter((a) => !a.isMain);
+export const getMainAccount = async (): Promise<NaverAccount | undefined> => {
+  const accounts = await getAllAccounts();
+  return accounts.find((a) => a.isMain) || accounts[0];
 };
 
-export const getAllAccounts = (): NaverAccount[] => {
-  return NAVER_ACCOUNTS;
+export const getCommentAccounts = async (): Promise<NaverAccount[]> => {
+  const accounts = await getAllAccounts();
+  return accounts.filter((a) => !a.isMain);
 };
+
+// 하위 호환성을 위한 동기 버전 (빈 배열 반환, 사용 자제)
+export const NAVER_ACCOUNTS: NaverAccount[] = [];
