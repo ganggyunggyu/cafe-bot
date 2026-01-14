@@ -109,7 +109,7 @@ export const writeCommentWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: 'ARTICLE_NOT_READY:댓글 입력창을 찾을 수 없어. 글이 아직 처리 중일 수 있어.',
+        error: 'ARTICLE_NOT_READY:댓글 입력창을 찾을 수 없습니다. 글이 아직 처리 중일 수 있습니다.',
       };
     }
 
@@ -137,7 +137,7 @@ export const writeCommentWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: '등록 버튼(a.btn_register)을 찾을 수 없어.',
+        error: '등록 버튼(a.btn_register)을 찾을 수 없습니다.',
       };
     }
 
@@ -263,7 +263,7 @@ export const writeReplyWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: 'ARTICLE_NOT_READY:답글쓰기 버튼을 찾을 수 없어. 댓글이 아직 없을 수 있어.',
+        error: 'ARTICLE_NOT_READY:답글쓰기 버튼을 찾을 수 없습니다. 댓글이 아직 없을 수 있습니다.',
       };
     }
 
@@ -285,7 +285,7 @@ export const writeReplyWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: 'ARTICLE_NOT_READY:대댓글 입력창을 찾을 수 없어.',
+        error: 'ARTICLE_NOT_READY:대댓글 입력창을 찾을 수 없습니다.',
       };
     }
 
@@ -301,7 +301,7 @@ export const writeReplyWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: '대댓글 등록 버튼을 찾을 수 없어.',
+        error: '대댓글 등록 버튼을 찾을 수 없습니다.',
       };
     }
 

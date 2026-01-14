@@ -11,7 +11,8 @@ export interface CommentActionResult {
 
 export const postComment = async (input: CommentInput): Promise<CommentActionResult> => {
   try {
-    const cafeId = input.cafeId || getDefaultCafe()?.cafeId;
+    const defaultCafe = await getDefaultCafe();
+    const cafeId = input.cafeId || defaultCafe?.cafeId;
 
     if (!cafeId) {
       return {
@@ -38,7 +39,8 @@ export const postComment = async (input: CommentInput): Promise<CommentActionRes
 
 export const postReply = async (input: ReplyInput): Promise<CommentActionResult> => {
   try {
-    const cafeId = input.cafeId || getDefaultCafe()?.cafeId;
+    const defaultCafe = await getDefaultCafe();
+    const cafeId = input.cafeId || defaultCafe?.cafeId;
 
     if (!cafeId) {
       return {

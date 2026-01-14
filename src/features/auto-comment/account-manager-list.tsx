@@ -37,7 +37,7 @@ export function AccountManagerList({
         등록된 계정 ({accounts.length}개)
       </h3>
       {accounts.length === 0 ? (
-        <p className={cn('text-sm text-(--ink-muted)')}>등록된 계정이 없어.</p>
+        <p className={cn('text-sm text-(--ink-muted)')}>등록된 계정이 없습니다.</p>
       ) : (
         <ul className={cn('space-y-2')}>
           {accounts.map((account) => (

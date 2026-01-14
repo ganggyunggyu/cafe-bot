@@ -26,7 +26,7 @@ export const postArticle = async (input: PostArticleInput): Promise<PostArticleR
       };
     }
 
-    const defaultCafe = getDefaultCafe();
+    const defaultCafe = await getDefaultCafe();
     const cafeId = input.cafeId || defaultCafe?.cafeId;
     const menuId = input.menuId || defaultCafe?.menuId;
 

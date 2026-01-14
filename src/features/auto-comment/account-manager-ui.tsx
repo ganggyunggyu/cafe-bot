@@ -36,7 +36,7 @@ export function AccountManagerUI() {
     const { id, password, nickname } = newAccount;
 
     if (!id || !password) {
-      setMessage({ type: 'error', text: 'ID와 비밀번호를 입력해줘.' });
+      setMessage({ type: 'error', text: 'ID와 비밀번호를 입력해주세요.' });
       return;
     }
 
@@ -50,7 +50,7 @@ export function AccountManagerUI() {
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
         setNewAccount({ id: '', password: '', nickname: '' });
-        setMessage({ type: 'success', text: '계정이 추가됐어.' });
+        setMessage({ type: 'success', text: '계정이 추가되었습니다.' });
       } else {
         setMessage({ type: 'error', text: result.error || '추가 실패' });
       }
@@ -62,7 +62,7 @@ export function AccountManagerUI() {
       const result = await removeAccountAction(id);
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
-        setMessage({ type: 'success', text: '계정이 삭제됐어.' });
+        setMessage({ type: 'success', text: '계정이 삭제되었습니다.' });
       }
     });
   };
@@ -72,7 +72,7 @@ export function AccountManagerUI() {
       const result = await setMainAccountAction(id);
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
-        setMessage({ type: 'success', text: '메인 계정이 설정됐어.' });
+        setMessage({ type: 'success', text: '메인 계정이 설정되었습니다.' });
       }
     });
   };
