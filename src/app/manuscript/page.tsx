@@ -73,6 +73,12 @@ export default function ManuscriptPage() {
               카페 가입
             </Link>
             <Link
+              href="/nickname-change"
+              className={cn('text-sm text-(--ink-muted) hover:text-(--ink)')}
+            >
+              닉네임 변경
+            </Link>
+            <Link
               href="/accounts"
               className={cn('text-sm text-(--ink-muted) hover:text-(--ink)')}
             >

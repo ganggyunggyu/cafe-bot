@@ -1,18 +1,39 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { runCafeJoinBatchAction } from '@/features/auto-comment/batch/batch-actions';
-import { getAllAccounts } from '@/shared/config/accounts';
-import { getAllCafes } from '@/shared/config/cafes';
+import { getAccountsAction, getCafesAction } from '@/features/accounts/actions';
 import type { BatchJoinResult } from '@/features/auto-comment/batch/cafe-join';
 
-const accounts = getAllAccounts();
-const cafes = getAllCafes();
+interface AccountInfo {
+  id: string;
+  isMain?: boolean;
+}
+
+interface CafeInfo {
+  cafeId: string;
+  name: string;
+  isDefault?: boolean;
+}
 
 export function CafeJoinUI() {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<BatchJoinResult | null>(null);
+  const [accounts, setAccounts] = useState<AccountInfo[]>([]);
+  const [cafes, setCafes] = useState<CafeInfo[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [accountsData, cafesData] = await Promise.all([
+        getAccountsAction(),
+        getCafesAction(),
+      ]);
+      setAccounts(accountsData.map((a) => ({ id: a.id, isMain: a.isMain })));
+      setCafes(cafesData.map((c) => ({ cafeId: c.cafeId, name: c.name, isDefault: c.isDefault })));
+    };
+    loadData();
+  }, []);
 
   const handleRun = () => {
     startTransition(async () => {
