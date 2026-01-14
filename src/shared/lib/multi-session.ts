@@ -210,7 +210,7 @@ export const loginAccount = async (
 
     const currentUrl = page.url();
     if (currentUrl.includes('nidlogin.login')) {
-      return { success: false, error: '로그인 실패. ID/PW 확인해줘.' };
+      return { success: false, error: '로그인 실패. ID/PW를 확인해주세요.' };
     }
 
     await saveCookiesForAccount(accountId);

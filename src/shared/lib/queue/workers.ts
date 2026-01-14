@@ -18,10 +18,10 @@ import {
 } from '@/features/auto-comment/comment-writer';
 import { generateComment, generateReply, generateAuthorReply } from '@/shared/api/comment-gen-api';
 import { getAllAccounts } from '@/shared/config/accounts';
-import { isAccountActive, getPersonaIndex, getNextActiveTime, NaverAccount } from '@/shared/lib/account-manager';
+import { isAccountActive, getPersonaId, getNextActiveTime, NaverAccount } from '@/shared/lib/account-manager';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
 import { connectDB } from '@/shared/lib/mongodb';
-import { PublishedArticle, incrementTodayPostCount } from '@/shared/models';
+import { PublishedArticle, incrementTodayPostCount, addCommentToArticle, hasCommented } from '@/shared/models';
 import mongoose from 'mongoose';
 
 // 계정별 워커 캐시
@@ -37,7 +37,7 @@ const processTaskJob = async (job: Job<TaskJobData, JobResult>): Promise<JobResu
 
   console.log(`[WORKER] 처리 시작: ${data.type} (${data.accountId})`);
 
-  const accounts = getAllAccounts();
+  const accounts = await getAllAccounts();
   const account = accounts.find((a) => a.id === data.accountId);
 
   if (!account) {
@@ -96,6 +96,19 @@ const processTaskJob = async (job: Job<TaskJobData, JobResult>): Promise<JobResu
 
     case 'comment': {
       const commentData = data as CommentJobData;
+
+      // 중복 체크: 이미 이 계정으로 댓글 달았으면 스킵
+      const alreadyCommented = await hasCommented(
+        commentData.cafeId,
+        commentData.articleId,
+        account.id,
+        'comment'
+      );
+      if (alreadyCommented) {
+        console.log(`[WORKER] 중복 댓글 스킵: ${account.id} → #${commentData.articleId}`);
+        return { success: true }; // 성공으로 처리 (재시도 방지)
+      }
+
       const result = await Promise.race([
         writeCommentWithAccount(
           account,
@@ -119,6 +132,18 @@ const processTaskJob = async (job: Job<TaskJobData, JobResult>): Promise<JobResu
       // 다른 실패는 에러 throw (BullMQ가 재시도/실패 처리)
       if (!result.success) {
         throw new Error(result.error || '댓글 작성 실패');
+      }
+
+      // DB에 댓글 기록 저장
+      try {
+        await addCommentToArticle(commentData.cafeId, commentData.articleId, {
+          accountId: account.id,
+          nickname: account.nickname || account.id,
+          content: commentData.content,
+          type: 'comment',
+        });
+      } catch (dbErr) {
+        console.error('[WORKER] 댓글 DB 저장 실패:', dbErr);
       }
 
       return { success: true };
@@ -150,6 +175,19 @@ const processTaskJob = async (job: Job<TaskJobData, JobResult>): Promise<JobResu
       // 다른 실패는 에러 throw (BullMQ가 재시도/실패 처리)
       if (!result.success) {
         throw new Error(result.error || '대댓글 작성 실패');
+      }
+
+      // DB에 대댓글 기록 저장
+      try {
+        await addCommentToArticle(replyData.cafeId, replyData.articleId, {
+          accountId: account.id,
+          nickname: account.nickname || account.id,
+          content: replyData.content,
+          type: 'reply',
+          parentIndex: replyData.commentIndex,
+        });
+      } catch (dbErr) {
+        console.error('[WORKER] 대댓글 DB 저장 실패:', dbErr);
       }
 
       return { success: true };
@@ -229,8 +267,8 @@ export const closeAllWorkers = async (): Promise<void> => {
 };
 
 // 모든 등록된 계정에 대해 워커 시작
-export const startAllTaskWorkers = (): void => {
-  const accounts = getAllAccounts();
+export const startAllTaskWorkers = async (): Promise<void> => {
+  const accounts = await getAllAccounts();
 
   for (const account of accounts) {
     createTaskWorker(account.id);
@@ -276,7 +314,7 @@ const saveArticleOnly = async (postData: PostJobData, articleId: number): Promis
 const handlePostSuccess = async (
   postData: PostJobData,
   articleId: number,
-  accounts: ReturnType<typeof getAllAccounts>,
+  accounts: NaverAccount[],
   settings: Awaited<ReturnType<typeof getQueueSettings>>
 ): Promise<void> => {
   const { cafeId, menuId, keyword, subject, content, rawContent, accountId: writerAccountId } = postData;
@@ -286,9 +324,10 @@ const handlePostSuccess = async (
   // 1. 원고 MongoDB 저장 + 일일 포스트 카운트 증가
   try {
     await connectDB();
+    console.log(`[WORKER] MongoDB 연결 상태: ${mongoose.connection.readyState}`);
     if (mongoose.connection.readyState === 1) {
       const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
-      await PublishedArticle.create({
+      const created = await PublishedArticle.create({
         articleId,
         cafeId,
         menuId,
@@ -300,11 +339,14 @@ const handlePostSuccess = async (
         status: 'published',
         commentCount: 0,
         replyCount: 0,
+        comments: [], // 빈 댓글 배열 초기화
       });
 
       // 일일 포스트 카운트 증가
       await incrementTodayPostCount(writerAccountId);
-      console.log(`[WORKER] 원고 저장 완료: #${articleId}`);
+      console.log(`[WORKER] 원고 저장 완료: #${articleId}, _id=${created._id}`);
+    } else {
+      console.log(`[WORKER] MongoDB 미연결 - 원고 저장 스킵: #${articleId}`);
     }
   } catch (dbError) {
     console.error('[WORKER] 원고 저장 실패:', dbError);
@@ -327,13 +369,12 @@ const handlePostSuccess = async (
   const commentDelays: Map<string, number> = new Map();
   const afterPostDelay = getRandomDelay(settings.delays.afterPost);
 
-  // 계정당 최대 댓글 수 (1~2개로 제한해서 자연스럽게)
-  const maxCommentsPerAccount = Math.random() < 0.7 ? 1 : 2;
-  // 상한 없음 - 계정 수에 따라 댓글 수 결정 (최소 5개 목표)
-  const maxPossible = commenterAccounts.length * maxCommentsPerAccount;
-  const commentCount = Math.max(5, maxPossible);
+  // 계정당 최대 댓글 수 = 1 (대댓글은 별도)
+  const maxCommentsPerAccount = 1;
+  // 댓글 수 = 계정 수 (계정당 1개씩)
+  const commentCount = commenterAccounts.length;
 
-  console.log(`[WORKER] 댓글 ${commentCount}개 job 추가 예정 (계정당 최대 ${maxCommentsPerAccount}개, 계정 ${commenterAccounts.length}개)`);
+  console.log(`[WORKER] 댓글 ${commentCount}개 job 추가 예정 (계정당 ${maxCommentsPerAccount}개)`);
 
   // 댓글 작성자 추적 (자기 댓글에 대댓글 방지용) - {accountId, nickname} 쌍으로 저장
   const commentAuthors: Array<{ id: string; nickname: string }> = [];
@@ -346,10 +387,10 @@ const handlePostSuccess = async (
     const commenter = commenterAccounts[i % commenterAccounts.length];
     const currentCount = accountCommentCounts.get(commenter.id) ?? 0;
 
-    // 계정당 3개 이상이면 너무 부자연스러우니 스킵
-    if (currentCount >= 3) continue;
+    // 계정당 1개까지만 (대댓글은 별도로 제한 없음)
+    if (currentCount >= maxCommentsPerAccount) continue;
 
-    const personaIndex = getPersonaIndex(commenter);
+    const personaId = getPersonaId(commenter);
 
     // 계정 댓글 카운트 증가
     accountCommentCounts.set(commenter.id, (accountCommentCounts.get(commenter.id) ?? 0) + 1);
@@ -357,7 +398,7 @@ const handlePostSuccess = async (
     // AI로 댓글 생성 (계정별 페르소나 적용 + 글쓴이 닉네임 전달)
     let commentText: string;
     try {
-      commentText = await generateComment(postContent, personaIndex, writerNickname);
+      commentText = await generateComment(postContent, personaId, writerNickname);
     } catch {
       commentText = '좋은 정보 감사합니다!';
     }
@@ -417,7 +458,7 @@ const handlePostSuccess = async (
 
   // 글쓴이 대댓글 (자기 글에 달린 댓글에 응답 - 자연스러움)
   if (writerAccount) {
-    const writerPersonaIndex = getPersonaIndex(writerAccount);
+    const writerPersonaId = getPersonaId(writerAccount);
     const writerActivityDelay = getNextActiveTime(writerAccount);
 
     for (let i = 0; i < authorReplyCount; i++) {
@@ -434,7 +475,7 @@ const handlePostSuccess = async (
 
       let replyText: string;
       try {
-        replyText = await generateAuthorReply(postContent, '댓글 감사합니다', writerPersonaIndex, parentAuthorNickname);
+        replyText = await generateAuthorReply(postContent, '댓글 감사합니다', writerPersonaId, parentAuthorNickname, writerNickname);
       } catch {
         replyText = '댓글 감사합니다!';
       }
@@ -482,25 +523,35 @@ const handlePostSuccess = async (
     repliedCommentIndices.add(targetCommentIndex);
     const targetCommentAuthor = commentAuthors[targetCommentIndex];
 
+    // 방어 코드: targetCommentAuthor가 없으면 스킵
+    if (!targetCommentAuthor?.id) {
+      console.log(`[WORKER] 일반 대댓글 ${i} - 댓글 작성자 정보 없음 (index: ${targetCommentIndex})`);
+      continue;
+    }
+
     // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
+    console.log(`[WORKER] 대댓글 계정 선택: 댓글[${targetCommentIndex}] 작성자=${targetCommentAuthor.id}, 후보=${commenterAccounts.map(a => a.id).join(',')}`);
     const availableReplyers = commenterAccounts.filter((a) => a.id !== targetCommentAuthor.id);
     if (availableReplyers.length === 0) {
-      console.log(`[WORKER] 일반 대댓글 ${i} - 사용 가능한 계정 없어서 스킵`);
+      console.log(`[WORKER] 일반 대댓글 ${i} - 사용 가능한 계정 없어서 스킵 (댓글 작성자: ${targetCommentAuthor.id})`);
       continue;
     }
 
     const replyer = availableReplyers[i % availableReplyers.length];
-    const replyerPersonaIndex = getPersonaIndex(replyer);
+    const replyerPersonaId = getPersonaId(replyer);
+
+    const replyerNickname = replyer.nickname || replyer.id;
 
     let replyText: string;
     try {
-      // 글쓴이 닉네임 + 원댓글 작성자 닉네임 전달
+      // 글쓴이 닉네임 + 원댓글 작성자 닉네임 + 대댓글 작성자 닉네임 전달
       replyText = await generateReply(
         postContent,
         '좋은 정보네요',
-        replyerPersonaIndex,
+        replyerPersonaId,
         writerNickname,
-        targetCommentAuthor.nickname
+        targetCommentAuthor.nickname,
+        replyerNickname
       );
     } catch {
       replyText = '저도 그렇게 생각해요!';

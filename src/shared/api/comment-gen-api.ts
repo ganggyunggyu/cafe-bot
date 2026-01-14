@@ -3,7 +3,7 @@ const BASE_URL = process.env.COMMENT_GEN_API_URL || 'http://localhost:8000';
 interface GenerateCommentRequest {
   content: string;
   author_name?: string;
-  persona_index?: number | null;
+  persona_id?: string | null;
 }
 
 interface GenerateReplyRequest {
@@ -11,27 +11,32 @@ interface GenerateReplyRequest {
   content?: string;
   author_name?: string;
   parent_author?: string;
-  persona_index?: number | null;
+  commenter_name?: string;
+  persona_id?: string | null;
 }
 
 interface GenerateCommentResponse {
   success: boolean;
   comment: string;
+  persona_id: string;
   persona: string;
   model: string;
   elapsed: number;
 }
 
+// 긍정 페르소나 ID 목록 (글쓴이 대댓글용)
+const POSITIVE_PERSONA_IDS = ['cute_f', 'warm_f', 'enthusiast', 'grateful', 'supporter'];
+
 // 댓글 생성 (제3자 입장)
 export const generateComment = async (
   postContent: string,
-  personaIndex?: number | null,
+  personaId?: string | null,
   authorName?: string
 ): Promise<string> => {
   const body: GenerateCommentRequest = {
     content: postContent,
     author_name: authorName,
-    persona_index: personaIndex ?? null,
+    persona_id: personaId ?? null,
   };
 
   const res = await fetch(`${BASE_URL}/generate/comment`, {
@@ -57,16 +62,18 @@ export const generateComment = async (
 export const generateReply = async (
   postContent: string,
   parentComment: string,
-  personaIndex?: number | null,
+  personaId?: string | null,
   authorName?: string,
-  parentAuthor?: string
+  parentAuthor?: string,
+  commenterName?: string
 ): Promise<string> => {
   const body: GenerateReplyRequest = {
     parent_comment: parentComment,
     content: postContent,
     author_name: authorName,
     parent_author: parentAuthor,
-    persona_index: personaIndex ?? null,
+    commenter_name: commenterName,
+    persona_id: personaId ?? null,
   };
 
   const res = await fetch(`${BASE_URL}/generate/recomment`, {
@@ -92,17 +99,19 @@ export const generateReply = async (
 export const generateAuthorReply = async (
   postContent: string,
   parentComment: string,
-  personaIndex?: number | null,
-  parentAuthor?: string
+  personaId?: string | null,
+  parentAuthor?: string,
+  commenterName?: string
 ): Promise<string> => {
-  // 글쓴이는 긍정적 페르소나(0~4) 중 랜덤 또는 지정값 사용
-  const authorPersona = personaIndex ?? Math.floor(Math.random() * 5);
+  // 글쓴이는 긍정적 페르소나 중 랜덤 또는 지정값 사용
+  const authorPersonaId = personaId ?? POSITIVE_PERSONA_IDS[Math.floor(Math.random() * POSITIVE_PERSONA_IDS.length)];
 
   const body: GenerateReplyRequest = {
     parent_comment: parentComment,
     content: postContent,
     parent_author: parentAuthor,
-    persona_index: authorPersona,
+    commenter_name: commenterName,
+    persona_id: authorPersonaId,
   };
 
   const res = await fetch(`${BASE_URL}/generate/recomment`, {

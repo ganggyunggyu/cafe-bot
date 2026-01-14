@@ -18,7 +18,7 @@ export interface CommentResult {
 const ensureLoggedIn = async (): Promise<boolean> => {
   const loggedIn = await isLoggedIn();
   if (!loggedIn) {
-    throw new Error('네이버 로그인이 필요해. 먼저 로그인해줘.');
+    throw new Error('네이버 로그인이 필요합니다. 먼저 로그인해주세요.');
   }
   return true;
 }
@@ -44,7 +44,7 @@ export const writeComment = async (request: CommentRequest): Promise<CommentResu
     const frame = await frameHandle?.contentFrame();
 
     if (!frame) {
-      throw new Error('카페 프레임을 찾을 수 없어.');
+      throw new Error('카페 프레임을 찾을 수 없습니다.');
     }
 
     // 댓글 입력창 찾기
@@ -54,7 +54,7 @@ export const writeComment = async (request: CommentRequest): Promise<CommentResu
     );
 
     if (!commentInput) {
-      throw new Error('댓글 입력창을 찾을 수 없어.');
+      throw new Error('댓글 입력창을 찾을 수 없습니다.');
     }
 
     await commentInput.click();
@@ -67,7 +67,7 @@ export const writeComment = async (request: CommentRequest): Promise<CommentResu
     );
 
     if (!submitButton) {
-      throw new Error('등록 버튼을 찾을 수 없어.');
+      throw new Error('등록 버튼을 찾을 수 없습니다.');
     }
 
     await submitButton.click();
@@ -77,7 +77,7 @@ export const writeComment = async (request: CommentRequest): Promise<CommentResu
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했어.';
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return { success: false, error: errorMessage };
   }
 }
@@ -102,7 +102,7 @@ export const writeReply = async (request: ReplyRequest): Promise<CommentResult> 
     const frame = await frameHandle?.contentFrame();
 
     if (!frame) {
-      throw new Error('카페 프레임을 찾을 수 없어.');
+      throw new Error('카페 프레임을 찾을 수 없습니다.');
     }
 
     // 대댓글 버튼 찾기 (답글 버튼)
@@ -114,7 +114,7 @@ export const writeReply = async (request: ReplyRequest): Promise<CommentResult> 
     );
 
     if (!replyButton) {
-      throw new Error('답글 버튼을 찾을 수 없어.');
+      throw new Error('답글 버튼을 찾을 수 없습니다.');
     }
 
     await replyButton.click();
@@ -127,7 +127,7 @@ export const writeReply = async (request: ReplyRequest): Promise<CommentResult> 
     );
 
     if (!replyInput) {
-      throw new Error('대댓글 입력창을 찾을 수 없어.');
+      throw new Error('대댓글 입력창을 찾을 수 없습니다.');
     }
 
     await replyInput.click();
@@ -140,7 +140,7 @@ export const writeReply = async (request: ReplyRequest): Promise<CommentResult> 
     );
 
     if (!submitButton) {
-      throw new Error('등록 버튼을 찾을 수 없어.');
+      throw new Error('등록 버튼을 찾을 수 없습니다.');
     }
 
     await submitButton.click();
@@ -150,7 +150,7 @@ export const writeReply = async (request: ReplyRequest): Promise<CommentResult> 
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했어.';
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return { success: false, error: errorMessage };
   }
 }
@@ -175,14 +175,14 @@ export const naverLogin = async (id: string, password: string): Promise<CommentR
     // 로그인 성공 확인
     const currentUrl = page.url();
     if (currentUrl.includes('nidlogin.login')) {
-      throw new Error('로그인 실패. ID/PW를 확인해줘.');
+      throw new Error('로그인 실패. ID/PW를 확인해주세요.');
     }
 
     await saveCookies();
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했어.';
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return { success: false, error: errorMessage };
   }
 }

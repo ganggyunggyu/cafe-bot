@@ -10,21 +10,6 @@ export interface ActivityHours {
   end: number; // 종료 시간 (0-23)
 }
 
-// 페르소나 카테고리
-export type PersonaCategory =
-  | 'positive' // 0~4: 긍정적 반응
-  | 'neutral' // 5~17: 중립적 반응
-  | 'cynical' // 18~23: 냉소/시니컬
-  | 'critical' // 24~27: 질문/비판
-  | 'ad_skeptic' // 28~32: 광고의심
-  | 'community' // 33~43: 커뮤니티별
-  | 'mom_cafe' // 44~49: 맘카페/여성커뮤
-  | 'interest' // 50~57: 관심사별
-  | 'age_group' // 58~64: 연령대별
-  | 'lifestyle' // 65~72: 생활상황별
-  | 'style' // 73~79: 반응유형/특수/말투
-  | 'random'; // null: 랜덤
-
 export interface NaverAccount {
   id: string;
   password: string;
@@ -35,8 +20,7 @@ export interface NaverAccount {
   restDays?: number[]; // 휴식 요일 (0=일요일, 6=토요일)
   dailyPostLimit?: number; // 하루 글 발행 제한 (미설정 시 무제한)
   // 페르소나 설정
-  personaIndex?: number; // 고정 페르소나 (0~79, 미설정 시 랜덤)
-  personaCategory?: PersonaCategory; // 페르소나 카테고리 (해당 범위 내 랜덤)
+  personaId?: string; // 고정 페르소나 ID (미설정 시 랜덤)
 }
 
 export interface AccountList {
@@ -109,36 +93,11 @@ export const getCommentAccounts = (): NaverAccount[] => {
   return getAccounts().filter((a) => !a.isMain);
 };
 
-// 페르소나 카테고리 → 인덱스 범위
-const PERSONA_RANGES: Record<PersonaCategory, [number, number] | null> = {
-  positive: [0, 4],
-  neutral: [5, 17],
-  cynical: [18, 23],
-  critical: [24, 27],
-  ad_skeptic: [28, 32],
-  community: [33, 43],
-  mom_cafe: [44, 49],
-  interest: [50, 57],
-  age_group: [58, 64],
-  lifestyle: [65, 72],
-  style: [73, 79],
-  random: null,
-};
-
-// 계정의 페르소나 인덱스 가져오기 (고정 또는 카테고리 범위 내 랜덤)
-export const getPersonaIndex = (account: NaverAccount): number | null => {
+// 계정의 페르소나 ID 가져오기 (고정 또는 랜덤)
+export const getPersonaId = (account: NaverAccount): string | null => {
   // 고정 페르소나가 있으면 사용
-  if (account.personaIndex !== undefined) {
-    return account.personaIndex;
-  }
-
-  // 카테고리가 있으면 해당 범위 내 랜덤
-  if (account.personaCategory && account.personaCategory !== 'random') {
-    const range = PERSONA_RANGES[account.personaCategory];
-    if (range) {
-      const [min, max] = range;
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+  if (account.personaId) {
+    return account.personaId;
   }
 
   // 그 외에는 null (API에서 랜덤 처리)
