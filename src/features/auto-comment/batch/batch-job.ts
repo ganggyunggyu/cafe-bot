@@ -29,7 +29,7 @@ export const runBatchJob = async (
   console.log('[BATCH] runBatchJob 시작');
   console.log('[BATCH] input:', JSON.stringify({ service, keywords: keywords.length, cafeId: inputCafeId }));
 
-  const accounts = getAllAccounts();
+  const accounts = await getAllAccounts();
   console.log('[BATCH] 계정 수:', accounts.length);
 
   if (accounts.length < 2) {
@@ -47,7 +47,7 @@ export const runBatchJob = async (
   let completed = 0;
   let failed = 0;
 
-  const cafe = inputCafeId ? getCafeById(inputCafeId) : getDefaultCafe();
+  const cafe = inputCafeId ? await getCafeById(inputCafeId) : await getDefaultCafe();
   console.log('[BATCH] 카페 조회:', inputCafeId, '->', cafe?.name);
 
   if (!cafe) {

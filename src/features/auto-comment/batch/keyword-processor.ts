@@ -1,5 +1,5 @@
 import { HydratedDocument } from 'mongoose';
-import type { NaverAccount } from '@/shared/lib/account-manager';
+import { type NaverAccount, getPersonaId } from '@/shared/lib/account-manager';
 import { generateContent } from '@/shared/api/content-api';
 import { generateComment, generateReply, generateAuthorReply } from '@/shared/api/comment-gen-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
@@ -60,7 +60,7 @@ interface ReplyTask {
 const buildReplyTasks = (
   writerAccount: NaverAccount,
   commenterAccounts: NaverAccount[],
-  commentAuthors: string[],
+  commentAuthors: Array<{ id: string; nickname: string }>,
   commentTexts: string[]
 ): ReplyTask[] => {
   const replyTasks: ReplyTask[] = [];
@@ -90,7 +90,7 @@ const buildReplyTasks = (
 
     // 자기가 쓴 댓글이 아닌 것 중에서 랜덤 선택
     const validIndices = availableIndices.filter(
-      (idx) => commentAuthors[idx] !== replyer.id
+      (idx) => commentAuthors[idx].id !== replyer.id
     );
 
     if (validIndices.length > 0) {
@@ -102,7 +102,7 @@ const buildReplyTasks = (
       const otherAccountIdx = (k + 1) % commenterAccounts.length;
       replyer = commenterAccounts[otherAccountIdx];
       const retryIndices = availableIndices.filter(
-        (idx) => commentAuthors[idx] !== replyer.id
+        (idx) => commentAuthors[idx].id !== replyer.id
       );
       if (retryIndices.length > 0) {
         const randIdx = Math.floor(Math.random() * retryIndices.length);
@@ -163,8 +163,9 @@ export const processKeyword = async ({
 
     // 1. AI 콘텐츠 생성 (카테고리가 있으면 키워드에 포함)
     const keywordWithCategory = category ? `${keyword} (카테고리: ${category})` : keyword;
+    const personaId = getPersonaId(writerAccount);
     console.log('[BATCH] AI 콘텐츠 생성 요청...');
-    const generated = await generateContent({ service, keyword: keywordWithCategory, ref });
+    const generated = await generateContent({ service, keyword: keywordWithCategory, ref, personaId });
     console.log('[BATCH] AI 콘텐츠 생성 완료');
     const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
 
@@ -234,7 +235,7 @@ export const processKeyword = async ({
 
     const commentResults: CommentResult[] = [];
     const commentTexts: string[] = []; // 대댓글용 저장
-    const commentAuthors: string[] = []; // 댓글 작성자 추적 (자기 댓글에 대댓글 방지)
+    const commentAuthors: Array<{ id: string; nickname: string }> = []; // 댓글 작성자 추적 (자기 댓글에 대댓글 방지)
     const commentCount = getRandomCommentCount(); // 5~10개 랜덤
     const postContent = generated.content; // 글 내용 (API용)
 
@@ -265,7 +266,7 @@ export const processKeyword = async ({
 
       if (result.success) {
         commentTexts.push(commentText); // 성공한 댓글 저장
-        commentAuthors.push(commenter.id); // 작성자 ID 저장
+        commentAuthors.push({ id: commenter.id, nickname: commenter.nickname || commenter.id }); // 작성자 정보 저장
       }
 
       if (j < commentCount - 1) {
@@ -289,19 +290,22 @@ export const processKeyword = async ({
 
     if (successfulComments.length >= 2 && commentTexts.length >= 2) {
       const replyTasks = buildReplyTasks(writerAccount, commenterAccounts, commentAuthors, commentTexts);
+      const writerNickname = writerAccount.nickname || writerAccount.id;
 
       // 대댓글 작성 실행
       for (let j = 0; j < replyTasks.length; j++) {
         const task = replyTasks[j];
         const parentComment = commentTexts[task.targetCommentIndex];
+        const parentAuthor = commentAuthors[task.targetCommentIndex];
+        const commenterNickname = task.account.nickname || task.account.id;
 
         // AI로 대댓글 생성
         let replyText: string;
         try {
           if (task.isAuthor) {
-            replyText = await generateAuthorReply(postContent, parentComment);
+            replyText = await generateAuthorReply(postContent, parentComment, undefined, parentAuthor.nickname, writerNickname);
           } else {
-            replyText = await generateReply(postContent, parentComment);
+            replyText = await generateReply(postContent, parentComment, undefined, writerNickname, parentAuthor.nickname, commenterNickname);
           }
         } catch {
           replyText = task.isAuthor ? '댓글 감사합니다!' : '저도 그렇게 생각해요!';

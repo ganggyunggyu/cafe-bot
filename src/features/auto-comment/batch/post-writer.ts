@@ -269,7 +269,7 @@ export const writePostWithAccount = async (
       return {
         success: false,
         writerAccountId: id,
-        error: '제목 입력창을 찾을 수 없어. 카페 가입이 필요할 수 있어.',
+        error: '제목 입력창을 찾을 수 없습니다. 카페 가입이 필요할 수 있습니다.',
       };
     }
 
@@ -285,7 +285,7 @@ export const writePostWithAccount = async (
       return {
         success: false,
         writerAccountId: id,
-        error: '본문 입력창을 찾을 수 없어.',
+        error: '본문 입력창을 찾을 수 없습니다.',
       };
     }
 
@@ -320,7 +320,7 @@ export const writePostWithAccount = async (
       return {
         success: false,
         writerAccountId: id,
-        error: '등록 버튼을 찾을 수 없어.',
+        error: '등록 버튼을 찾을 수 없습니다.',
       };
     }
 

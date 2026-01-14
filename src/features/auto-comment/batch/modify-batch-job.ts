@@ -60,7 +60,7 @@ export const runModifyBatchJob = async (
     };
   }
 
-  const accounts = getAllAccounts();
+  const accounts = await getAllAccounts();
 
   if (accounts.length === 0) {
     return {
@@ -72,7 +72,7 @@ export const runModifyBatchJob = async (
     };
   }
 
-  const cafe = inputCafeId ? getCafeById(inputCafeId) : getDefaultCafe();
+  const cafe = inputCafeId ? await getCafeById(inputCafeId) : await getDefaultCafe();
 
   if (!cafe) {
     return {

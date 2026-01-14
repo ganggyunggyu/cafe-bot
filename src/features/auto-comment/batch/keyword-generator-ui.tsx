@@ -1,21 +1,37 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { generateKeywords, type GeneratedKeyword } from '@/shared/api/keyword-gen-api';
-import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
+import { getCafesAction } from '@/features/accounts/actions';
 
-const cafes = getAllCafes();
-const defaultCafe = getDefaultCafe();
+interface CafeConfig {
+  cafeId: string;
+  name: string;
+  categories: string[];
+  isDefault?: boolean;
+}
 
 export function KeywordGeneratorUI() {
   const [isPending, startTransition] = useTransition();
-  const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
+  const [cafes, setCafes] = useState<CafeConfig[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState('');
   const [count, setCount] = useState(60);
   const [shuffle, setShuffle] = useState(true);
   const [result, setResult] = useState<GeneratedKeyword[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // 카페 데이터 로딩
+  useEffect(() => {
+    const loadCafes = async () => {
+      const data = await getCafesAction();
+      setCafes(data);
+      const defaultCafe = data.find((c) => c.isDefault) || data[0];
+      if (defaultCafe) setSelectedCafeId(defaultCafe.cafeId);
+    };
+    loadCafes();
+  }, []);
 
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
   const categories = selectedCafe?.categories || [];
@@ -26,7 +42,7 @@ export function KeywordGeneratorUI() {
 
   const handleGenerate = () => {
     if (categories.length === 0) {
-      setError('카페를 선택해줘.');
+      setError('카페를 선택해주세요.');
       return;
     }
 

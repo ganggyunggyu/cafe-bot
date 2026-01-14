@@ -99,7 +99,7 @@ export const modifyArticleWithAccount = async (
         success: false,
         articleId,
         modifierAccountId: id,
-        error: '제목 입력창을 찾을 수 없어. 수정 권한이 없을 수 있어.',
+        error: '제목 입력창을 찾을 수 없습니다. 수정 권한이 없을 수 있습니다.',
       };
     }
 
@@ -117,7 +117,7 @@ export const modifyArticleWithAccount = async (
         success: false,
         articleId,
         modifierAccountId: id,
-        error: '본문 입력창을 찾을 수 없어.',
+        error: '본문 입력창을 찾을 수 없습니다.',
       };
     }
 
@@ -154,7 +154,7 @@ export const modifyArticleWithAccount = async (
         success: false,
         articleId,
         modifierAccountId: id,
-        error: '수정 완료 버튼을 찾을 수 없어.',
+        error: '수정 완료 버튼을 찾을 수 없습니다.',
       };
     }
 

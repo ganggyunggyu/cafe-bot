@@ -1,13 +1,29 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getAllAccounts } from '@/shared/config/accounts';
+import { getAccountsAction } from '@/features/accounts/actions';
 import { loginAccountAction } from '../actions';
 
+interface AccountInfo {
+  id: string;
+  password: string;
+  nickname?: string;
+  isMain?: boolean;
+}
+
 export function AccountListUI() {
-  const accounts = getAllAccounts();
+  const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [isPending, startTransition] = useTransition();
+
+  // 계정 데이터 로딩
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const data = await getAccountsAction();
+      setAccounts(data);
+    };
+    loadAccounts();
+  }, []);
   const [loginStatus, setLoginStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 

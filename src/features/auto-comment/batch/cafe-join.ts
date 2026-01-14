@@ -65,7 +65,7 @@ export const joinCafeWithAccount = async (
       return {
         success: false,
         accountId: id,
-        error: '가입 버튼을 찾을 수 없어. 이미 가입됐거나 가입이 제한된 카페일 수 있어.',
+        error: '가입 버튼을 찾을 수 없습니다. 이미 가입됐거나 가입이 제한된 카페일 수 있습니다.',
       };
     }
 
@@ -143,8 +143,8 @@ export const runBatchCafeJoin = async (
   const { getAllCafes } = await import('@/shared/config/cafes');
   const { closeAllContexts } = await import('@/shared/lib/multi-session');
 
-  const accounts = getAllAccounts();
-  const cafes = getAllCafes();
+  const accounts = await getAllAccounts();
+  const cafes = await getAllCafes();
 
   const results: Array<JoinCafeResult & { cafeName: string }> = [];
   let joined = 0;
