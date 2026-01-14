@@ -8,7 +8,7 @@ import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
 import { addTaskJob } from '@/shared/lib/queue';
 import { startAllTaskWorkers } from '@/shared/lib/queue/workers';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
-import { isAccountActive, getPersonaIndex } from '@/shared/lib/account-manager';
+import { getPersonaIndex, getNextActiveTime } from '@/shared/lib/account-manager';
 import type { CommentJobData, ReplyJobData } from '@/shared/lib/queue/types';
 import type {
   CommentOnlyFilter,
@@ -134,19 +134,6 @@ export async function runAutoCommentAction(
 
     console.log(`[AUTO-COMMENT] 랜덤 ${selectedArticles.length}개 선택`);
 
-    // 활동 가능한 계정만 필터링
-    const activeAccounts = accounts.filter(isAccountActive);
-    if (activeAccounts.length === 0) {
-      return {
-        success: false,
-        totalArticles: selectedArticles.length,
-        completed: 0,
-        failed: 0,
-        results: [],
-        message: '활동 가능한 계정이 없음 (비활동 시간대)',
-      };
-    }
-
     let jobsAdded = 0;
 
     // 계정별 딜레이 추적
@@ -158,10 +145,10 @@ export async function runAutoCommentAction(
 
       console.log(`[AUTO-COMMENT] ${i + 1}/${selectedArticles.length}: #${articleId} "${keyword}"`);
 
-      // 글쓴이 제외한 활동 가능한 계정
-      const otherAccounts = activeAccounts.filter((a) => a.id !== writerAccountId);
+      // 글쓴이 제외한 계정 (비활동 계정도 포함, delay로 처리)
+      const otherAccounts = accounts.filter((a) => a.id !== writerAccountId);
       if (otherAccounts.length === 0) {
-        console.log(`[AUTO-COMMENT] #${articleId} - 활동 가능한 계정 없음, 스킵`);
+        console.log(`[AUTO-COMMENT] #${articleId} - 사용 가능한 계정 없음, 스킵`);
         continue;
       }
 
@@ -192,7 +179,10 @@ export async function runAutoCommentAction(
           commentText = '좋은 정보 감사합니다!';
         }
 
-        const currentDelay = accountDelays.get(commenter.id) ?? 0;
+        // 활동시간까지 대기 시간 계산
+        const baseDelay = accountDelays.get(commenter.id) ?? 0;
+        const activityDelay = getNextActiveTime(commenter);
+        const currentDelay = Math.max(baseDelay, activityDelay);
         const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
         accountDelays.set(commenter.id, nextDelay);
 
@@ -253,7 +243,10 @@ export async function runAutoCommentAction(
           replyText = '저도 그렇게 생각해요!';
         }
 
-        const currentDelay = accountDelays.get(replyer.id) ?? replyBaseDelay;
+        // 활동시간까지 대기 시간 계산
+        const baseDelay = accountDelays.get(replyer.id) ?? replyBaseDelay;
+        const replyerActivityDelay = getNextActiveTime(replyer);
+        const currentDelay = Math.max(baseDelay, replyerActivityDelay);
         const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
         accountDelays.set(replyer.id, nextDelay);
 
