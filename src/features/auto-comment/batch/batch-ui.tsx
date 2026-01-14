@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { runBatchPostAction, runModifyBatchAction, getQueueStatusAction, type QueueStatusResult } from './batch-actions';
 import { PostOptionsUI } from './post-options-ui';
+import { QueueStatusUI } from './queue-status-ui';
 import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
 import type { PostOptions } from './types';
 import { DEFAULT_POST_OPTIONS } from './types';
@@ -310,44 +311,7 @@ export function BatchUI() {
 
           {/* 큐 진행 상황 */}
           {queueStatus && Object.keys(queueStatus).length > 0 && (
-            <div className={cn('mt-4 space-y-2')}>
-              <div className={cn('flex items-center justify-between')}>
-                <h4 className={cn('text-sm font-medium text-(--ink)')}>진행 상황</h4>
-                <button
-                  onClick={() => setIsPolling(false)}
-                  className={cn('text-xs px-2 py-1 rounded-lg bg-white/50 hover:bg-white/80 text-(--ink-muted)')}
-                >
-                  폴링 중지
-                </button>
-              </div>
-              {Object.entries(queueStatus).map(([accountId, status]) => {
-                const total = status.waiting + status.active + status.completed + status.failed;
-                if (total === 0) return null;
-                const progress = total > 0 ? ((status.completed + status.failed) / total) * 100 : 0;
-                return (
-                  <div key={accountId} className={cn('rounded-xl bg-white/50 p-2')}>
-                    <div className={cn('flex items-center justify-between text-xs mb-1')}>
-                      <span className={cn('font-medium text-(--ink)')}>{accountId}</span>
-                      <span className={cn('text-(--ink-muted)')}>
-                        {status.completed}/{total} 완료
-                        {status.failed > 0 && ` (${status.failed} 실패)`}
-                      </span>
-                    </div>
-                    <div className={cn('h-1.5 rounded-full bg-gray-200 overflow-hidden')}>
-                      <div
-                        className={cn('h-full bg-(--accent) transition-all')}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    {status.active > 0 && (
-                      <p className={cn('text-xs text-(--accent) mt-1')}>
-                        {status.active}개 처리 중...
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <QueueStatusUI status={queueStatus} onStopPolling={() => setIsPolling(false)} />
           )}
         </div>
       )}
