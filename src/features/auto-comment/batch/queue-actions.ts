@@ -19,6 +19,7 @@ export interface JobDetail {
   status: 'waiting' | 'active' | 'delayed' | 'completed' | 'failed';
   subject?: string; // post인 경우
   keyword?: string; // post인 경우
+  content?: string; // 댓글/대댓글 내용
   articleId?: number; // comment/reply인 경우
   commentIndex?: number; // reply인 경우
   delay?: number; // 남은 딜레이 (ms)
@@ -144,6 +145,7 @@ const jobToDetail = (
     detail.keyword = data.keyword;
   } else {
     detail.articleId = data.articleId;
+    detail.content = data.content;
     if (data.type === 'reply') {
       detail.commentIndex = data.commentIndex;
     }

@@ -66,7 +66,10 @@ export const changeNicknameInCafe = async (
     await page.waitForTimeout(2000);
 
     // "나의활동" 버튼 클릭
-    const myActivityButton = await page.$('button.gm-tcol-t:has-text("나의활동")');
+    let myActivityButton = await page.$('button[onclick*="showMyAction"]');
+    if (!myActivityButton) {
+      myActivityButton = await page.$('button:has-text("나의활동")');
+    }
     if (!myActivityButton) {
       return {
         success: false,
