@@ -2,6 +2,15 @@ const BASE_URL = process.env.COMMENT_GEN_API_URL || 'http://localhost:8000';
 
 interface GenerateCommentRequest {
   content: string;
+  author_name?: string;
+  persona_index?: number | null;
+}
+
+interface GenerateReplyRequest {
+  parent_comment: string;
+  content?: string;
+  author_name?: string;
+  parent_author?: string;
   persona_index?: number | null;
 }
 
@@ -13,12 +22,15 @@ interface GenerateCommentResponse {
   elapsed: number;
 }
 
+// 댓글 생성 (제3자 입장)
 export const generateComment = async (
   postContent: string,
-  personaIndex?: number | null
+  personaIndex?: number | null,
+  authorName?: string
 ): Promise<string> => {
   const body: GenerateCommentRequest = {
     content: postContent,
+    author_name: authorName,
     persona_index: personaIndex ?? null,
   };
 
@@ -39,16 +51,21 @@ export const generateComment = async (
   }
 
   return data.comment;
-}
+};
 
+// 대댓글 생성 (제3자 입장 - 원댓글 작성자에게 답글)
 export const generateReply = async (
   postContent: string,
   parentComment: string,
-  personaIndex?: number | null
+  personaIndex?: number | null,
+  authorName?: string,
+  parentAuthor?: string
 ): Promise<string> => {
-  const body = {
+  const body: GenerateReplyRequest = {
     parent_comment: parentComment,
     content: postContent,
+    author_name: authorName,
+    parent_author: parentAuthor,
     persona_index: personaIndex ?? null,
   };
 
@@ -69,20 +86,22 @@ export const generateReply = async (
   }
 
   return data.comment;
-}
+};
 
-// 글쓴이 대댓글 생성 (감사/친근한 톤 - 긍정 페르소나 사용)
+// 글쓴이 대댓글 생성 (글쓴이가 댓글에 답글)
 export const generateAuthorReply = async (
   postContent: string,
   parentComment: string,
-  personaIndex?: number | null
+  personaIndex?: number | null,
+  parentAuthor?: string
 ): Promise<string> => {
   // 글쓴이는 긍정적 페르소나(0~4) 중 랜덤 또는 지정값 사용
-  const authorPersona = personaIndex ?? Math.floor(Math.random() * 5); // 0~4
+  const authorPersona = personaIndex ?? Math.floor(Math.random() * 5);
 
-  const body = {
+  const body: GenerateReplyRequest = {
     parent_comment: parentComment,
     content: postContent,
+    parent_author: parentAuthor,
     persona_index: authorPersona,
   };
 
@@ -103,4 +122,4 @@ export const generateAuthorReply = async (
   }
 
   return data.comment;
-}
+};
