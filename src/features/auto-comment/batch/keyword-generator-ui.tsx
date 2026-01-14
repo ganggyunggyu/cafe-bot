@@ -109,9 +109,11 @@ export function KeywordGeneratorUI() {
             type="text"
             inputMode="numeric"
             value={count}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => {
-              const val = Number(e.target.value.replace(/\D/g, '')) || 1;
-              setCount(Math.max(1, Math.min(200, val)));
+              const cleaned = e.target.value.replace(/\D/g, '');
+              if (cleaned === '') return;
+              setCount(Math.max(1, Math.min(200, Number(cleaned))));
             }}
             className={inputClassName}
           />

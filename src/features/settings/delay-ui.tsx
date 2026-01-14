@@ -171,11 +171,14 @@ export function DelaySettingsUI() {
               type="text"
               inputMode="numeric"
               value={settings.retry.attempts}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
-                const val = Number(e.target.value.replace(/\D/g, '')) || 1;
+                const cleaned = e.target.value.replace(/\D/g, '');
+                if (cleaned === '') return;
+                const val = Math.max(1, Math.min(10, Number(cleaned)));
                 setSettings({
                   ...settings,
-                  retry: { ...settings.retry, attempts: Math.max(1, Math.min(10, val)) },
+                  retry: { ...settings.retry, attempts: val },
                 });
                 setHasChanges(true);
               }}
@@ -191,9 +194,12 @@ export function DelaySettingsUI() {
               type="text"
               inputMode="numeric"
               value={Math.floor(settings.timeout / 60000)}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
-                const val = Number(e.target.value.replace(/\D/g, '')) || 1;
-                setSettings({ ...settings, timeout: Math.max(1, Math.min(30, val)) * 60000 });
+                const cleaned = e.target.value.replace(/\D/g, '');
+                if (cleaned === '') return;
+                const val = Math.max(1, Math.min(30, Number(cleaned)));
+                setSettings({ ...settings, timeout: val * 60000 });
                 setHasChanges(true);
               }}
               className={cn(
