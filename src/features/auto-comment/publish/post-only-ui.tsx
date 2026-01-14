@@ -2,23 +2,39 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
+import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
 import { runPostOnlyAction, getPostQueueStatusAction, type QueueBatchResult, type QueueStatusResult } from './queue-actions';
 
-const cafes = getAllCafes();
-const defaultCafe = getDefaultCafe();
+interface CafeConfig {
+  cafeId: string;
+  name: string;
+  categories: string[];
+  isDefault?: boolean;
+}
 
 export function PostOnlyUI() {
   const [isPending, startTransition] = useTransition();
-  const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
+  const [cafes, setCafes] = useState<CafeConfig[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState('');
   const [keywordsText, setKeywordsText] = useState('');
   const [ref, setRef] = useState('');
   const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
   const [result, setResult] = useState<QueueBatchResult | null>(null);
   const [queueStatus, setQueueStatus] = useState<QueueStatusResult | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+
+  // 카페 데이터 로딩
+  useEffect(() => {
+    const loadCafes = async () => {
+      const data = await getCafesAction();
+      setCafes(data);
+      const defaultCafe = data.find((c) => c.isDefault) || data[0];
+      if (defaultCafe) setSelectedCafeId(defaultCafe.cafeId);
+    };
+    loadCafes();
+  }, []);
 
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 

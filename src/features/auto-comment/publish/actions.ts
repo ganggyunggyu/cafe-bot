@@ -8,7 +8,7 @@ import { generateComment, generateReply } from '@/shared/api/comment-gen-api';
 import { addTaskJob } from '@/shared/lib/queue';
 import { startAllTaskWorkers } from '@/shared/lib/queue/workers';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
-import { getPersonaIndex, getNextActiveTime } from '@/shared/lib/account-manager';
+import { getPersonaId, getNextActiveTime } from '@/shared/lib/account-manager';
 import type { CommentJobData, ReplyJobData } from '@/shared/lib/queue/types';
 import type {
   CommentOnlyFilter,
@@ -72,7 +72,7 @@ export async function runAutoCommentAction(
 ): Promise<CommentOnlyResult> {
   console.log('[AUTO-COMMENT] 시작 - cafeId:', cafeId, 'daysLimit:', daysLimit);
 
-  const accounts = getAllAccounts();
+  const accounts = await getAllAccounts();
   if (accounts.length < 2) {
     return {
       success: false,
@@ -102,7 +102,7 @@ export async function runAutoCommentAction(
     const settings = await getQueueSettings();
 
     // 워커 시작
-    startAllTaskWorkers();
+    await startAllTaskWorkers();
 
     // N일 이내 글 조회
     const cutoffDate = new Date();
@@ -170,11 +170,11 @@ export async function runAutoCommentAction(
       // 댓글 job 추가 (30%)
       for (let j = 0; j < commentCount; j++) {
         const commenter = otherAccounts[j % otherAccounts.length];
-        const personaIndex = getPersonaIndex(commenter);
+        const personaId = getPersonaId(commenter);
 
         let commentText: string;
         try {
-          commentText = await generateComment(keyword, personaIndex, writerNickname);
+          commentText = await generateComment(keyword, personaId, writerNickname);
         } catch {
           commentText = '좋은 정보 감사합니다!';
         }
@@ -202,43 +202,48 @@ export async function runAutoCommentAction(
         articleCommentAuthors.push({ id: commenter.id, nickname: commenterNickname });
       }
 
-      // 대댓글 job 추가 (70%)
+      // 대댓글 job 추가 (50%)
       // 댓글이 끝난 후 대댓글 시작
       const maxCommentDelay = Math.max(...Array.from(accountDelays.values()), 0);
       const replyBaseDelay = maxCommentDelay + getRandomDelay(settings.delays.afterPost);
 
+      // 새로 단 댓글에만 대댓글 달기 (기존 댓글 제외 - 작성자 정보 없음)
+      const availableCommentCount = articleCommentAuthors.length;
+      if (availableCommentCount === 0) {
+        console.log(`[AUTO-COMMENT] #${articleId} - 대댓글 달 댓글 없음, 스킵`);
+        continue;
+      }
+
       for (let j = 0; j < replyCount; j++) {
-        // 대댓글 타겟 인덱스
-        const targetCommentIndex = j % Math.max(1, commentCount + (article.commentCount ?? 0));
-
-        // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
-        let replyer = otherAccounts[(commentCount + j) % otherAccounts.length];
-
-        // 원댓글 작성자 정보
+        // 대댓글 타겟: 새로 단 댓글 중에서만 선택
+        const targetCommentIndex = j % availableCommentCount;
         const targetCommentAuthor = articleCommentAuthors[targetCommentIndex];
-        const parentAuthorNickname = targetCommentAuthor?.nickname;
 
-        // 새로 단 댓글에 대댓글 다는 경우, 자기 댓글인지 체크
-        if (targetCommentAuthor && replyer.id === targetCommentAuthor.id) {
-          // 다른 계정으로 변경
-          const alternativeReplyer = otherAccounts.find(
-            (a) => a.id !== targetCommentAuthor.id && a.id !== replyer.id
-          );
-          if (alternativeReplyer) {
-            replyer = alternativeReplyer;
-          } else {
-            // 대체 계정이 없으면 스킵
-            console.log(`[AUTO-COMMENT] #${articleId} 대댓글 ${j} - 자기 댓글에 대댓글 방지로 스킵`);
-            continue;
-          }
+        if (!targetCommentAuthor) {
+          console.log(`[AUTO-COMMENT] #${articleId} 대댓글 ${j} - 댓글 작성자 정보 없음, 스킵`);
+          continue;
         }
 
-        const replyerPersonaIndex = getPersonaIndex(replyer);
+        const parentAuthorNickname = targetCommentAuthor.nickname;
+
+        // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
+        // 댓글 작성자를 제외한 계정 목록에서 선택
+        const availableReplyers = otherAccounts.filter((a) => a.id !== targetCommentAuthor.id);
+
+        if (availableReplyers.length === 0) {
+          console.log(`[AUTO-COMMENT] #${articleId} 대댓글 ${j} - 자기 댓글 방지로 스킵 (댓글작성자: ${targetCommentAuthor.id})`);
+          continue;
+        }
+
+        const replyer = availableReplyers[j % availableReplyers.length];
+
+        const replyerPersonaId = getPersonaId(replyer);
+        const replyerNickname = replyer.nickname || replyer.id;
 
         let replyText: string;
         try {
-          // 글쓴이 닉네임 + 원댓글 작성자 닉네임 전달
-          replyText = await generateReply(keyword, '좋은 정보네요', replyerPersonaIndex, writerNickname, parentAuthorNickname);
+          // 글쓴이 닉네임 + 원댓글 작성자 닉네임 + 대댓글 작성자 닉네임 전달
+          replyText = await generateReply(keyword, '좋은 정보네요', replyerPersonaId, writerNickname, parentAuthorNickname, replyerNickname);
         } catch {
           replyText = '저도 그렇게 생각해요!';
         }

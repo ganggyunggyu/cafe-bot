@@ -1,20 +1,36 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { Fragment, useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
+import { getCafesAction } from '@/features/accounts/actions';
 import { runAutoCommentAction } from './actions';
 import type { CommentOnlyResult } from './types';
 
-const cafes = getAllCafes();
-const defaultCafe = getDefaultCafe();
+interface CafeConfig {
+  cafeId: string;
+  name: string;
+  isDefault?: boolean;
+}
 
 export function CommentOnlyUI() {
   const [isPending, startTransition] = useTransition();
-  const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
+  const [cafes, setCafes] = useState<CafeConfig[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState('');
+
+  // 카페 데이터 로딩
+  useEffect(() => {
+    const loadCafes = async () => {
+      const data = await getCafesAction();
+      setCafes(data);
+      const defaultCafe = data.find((c) => c.isDefault) || data[0];
+      if (defaultCafe) setSelectedCafeId(defaultCafe.cafeId);
+    };
+    loadCafes();
+  }, []);
   const [daysLimit, setDaysLimit] = useState<number | ''>(3);
   const [result, setResult] = useState<CommentOnlyResult | null>(null);
   const [phase, setPhase] = useState<'ready' | 'running' | 'done'>('ready');
+  const safeDaysLimit = daysLimit || 1;
 
   const inputClassName = cn(
     'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
@@ -24,7 +40,7 @@ export function CommentOnlyUI() {
     startTransition(async () => {
       setResult(null);
       setPhase('running');
-      const res = await runAutoCommentAction(selectedCafeId, daysLimit || 1);
+      const res = await runAutoCommentAction(selectedCafeId, safeDaysLimit);
       setResult(res);
       setPhase('done');
     });
@@ -33,6 +49,22 @@ export function CommentOnlyUI() {
   const handleReset = () => {
     setResult(null);
     setPhase('ready');
+  };
+
+  const handleDaysLimitChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned === '') {
+      setDaysLimit('');
+      return;
+    }
+
+    setDaysLimit(Math.min(30, Number(cleaned)));
+  };
+
+  const handleDaysLimitBlur = () => {
+    if (daysLimit === '' || daysLimit < 1) {
+      setDaysLimit(1);
+    }
   };
 
   return (
@@ -77,19 +109,8 @@ export function CommentOnlyUI() {
               inputMode="numeric"
               value={daysLimit}
               onFocus={(e) => e.target.select()}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned === '') {
-                  setDaysLimit('');
-                } else {
-                  setDaysLimit(Math.min(30, Number(cleaned)));
-                }
-              }}
-              onBlur={() => {
-                if (daysLimit === '' || daysLimit < 1) {
-                  setDaysLimit(1);
-                }
-              }}
+              onChange={(event) => handleDaysLimitChange(event.target.value)}
+              onBlur={handleDaysLimitBlur}
               className={inputClassName}
             />
           </div>
@@ -97,7 +118,7 @@ export function CommentOnlyUI() {
           <div className={cn('rounded-xl bg-white/50 px-4 py-3 space-y-2')}>
             <p className={cn('text-sm font-medium text-(--ink)')}>자동 선택 기준</p>
             <ul className={cn('text-xs text-(--ink-muted) space-y-1')}>
-              <li>• 최근 {daysLimit || 1}일 이내 글 중 랜덤 절반 선택</li>
+              <li>• 최근 {safeDaysLimit}일 이내 글 중 랜덤 절반 선택</li>
               <li>• 글당 3~15개 작성</li>
               <li>• 대댓글 50% / 댓글 50%</li>
             </ul>
@@ -130,7 +151,7 @@ export function CommentOnlyUI() {
       )}
 
       {phase === 'done' && result && (
-        <>
+        <Fragment>
           <div
             className={cn(
               'rounded-2xl border px-4 py-4',
@@ -204,7 +225,7 @@ export function CommentOnlyUI() {
           >
             새로 시작
           </button>
-        </>
+        </Fragment>
       )}
     </div>
   );

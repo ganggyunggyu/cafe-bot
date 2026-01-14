@@ -84,3 +84,30 @@ export interface ManuscriptUploadResult {
   jobsAdded: number;
   message: string;
 }
+
+// 원고 수정 업로드 (기존 글 수정)
+export type ManuscriptSortOrder = 'oldest' | 'newest' | 'random';
+
+export interface ManuscriptModifyInput {
+  manuscripts: ManuscriptFolder[];
+  cafeId?: string;
+  sortOrder?: ManuscriptSortOrder;
+  daysLimit?: number;
+}
+
+export interface ManuscriptModifyResult {
+  success: boolean;
+  totalArticles: number;
+  completed: number;
+  failed: number;
+  results: ManuscriptModifyArticleResult[];
+  message: string;
+}
+
+export interface ManuscriptModifyArticleResult {
+  articleId: number;
+  keyword: string;
+  manuscriptName: string;
+  success: boolean;
+  error?: string;
+}

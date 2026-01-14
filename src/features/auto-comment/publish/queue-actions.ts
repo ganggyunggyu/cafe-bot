@@ -33,7 +33,7 @@ export async function runPostOnlyAction(
     return {
       success: false,
       jobsAdded: 0,
-      message: 'Redis 연결 실패 - Redis 서버가 실행 중인지 확인해',
+      message: 'Redis 연결 실패 - Redis 서버가 실행 중인지 확인해주세요',
     };
   }
 }

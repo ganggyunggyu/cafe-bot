@@ -1,15 +1,28 @@
 'use client';
 
-import { useState, useTransition, useCallback, DragEvent } from 'react';
+import { useState, useTransition, useCallback, DragEvent, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getAllCafes, getDefaultCafe } from '@/shared/config/cafes';
+import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
-import { runManuscriptUploadAction } from './manuscript-actions';
-import type { ManuscriptFolder, ManuscriptImage, ManuscriptUploadResult } from './types';
+import { runManuscriptUploadAction, runManuscriptModifyAction } from './manuscript-actions';
+import type {
+  ManuscriptFolder,
+  ManuscriptImage,
+  ManuscriptUploadResult,
+  ManuscriptModifyResult,
+  ManuscriptSortOrder,
+} from './types';
 
-const cafes = getAllCafes();
-const defaultCafe = getDefaultCafe();
+interface CafeConfig {
+  cafeId: string;
+  menuId: string;
+  name: string;
+  categories: string[];
+  isDefault?: boolean;
+}
+
+type ManuscriptMode = 'publish' | 'modify';
 
 // 폴더명에서 이름과 카테고리 추출 (구분자: _)
 const parseFolderName = (folderName: string): { name: string; category?: string } => {
@@ -51,12 +64,28 @@ const fileToText = (file: File): Promise<string> => {
 
 export function ManuscriptUploadUI() {
   const [isPending, startTransition] = useTransition();
-  const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
+  const [mode, setMode] = useState<ManuscriptMode>('publish');
+  const [cafes, setCafes] = useState<CafeConfig[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState('');
   const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
   const [manuscripts, setManuscripts] = useState<ManuscriptFolder[]>([]);
-  const [result, setResult] = useState<ManuscriptUploadResult | null>(null);
+  const [result, setResult] = useState<ManuscriptUploadResult | ManuscriptModifyResult | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+  // 수정 모드 옵션
+  const [sortOrder, setSortOrder] = useState<ManuscriptSortOrder>('oldest');
+  const [daysLimit, setDaysLimit] = useState<number>(0);
+
+  // 카페 데이터 로딩
+  useEffect(() => {
+    const loadCafes = async () => {
+      const data = await getCafesAction();
+      setCafes(data);
+      const defaultCafe = data.find((c) => c.isDefault) || data[0];
+      if (defaultCafe) setSelectedCafeId(defaultCafe.cafeId);
+    };
+    loadCafes();
+  }, []);
 
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 
@@ -138,12 +167,12 @@ export function ManuscriptUploadUI() {
       }
 
       if (parsedManuscripts.length === 0) {
-        setParseError('유효한 원고 폴더가 없어. 각 폴더에 원고.txt가 있어야 해.');
+        setParseError('유효한 원고 폴더가 없습니다. 각 폴더에 원고.txt가 있어야 합니다.');
         return;
       }
 
       if (parsedManuscripts.length > 100) {
-        setParseError('최대 100개까지만 업로드 가능해.');
+        setParseError('최대 100개까지만 업로드 가능합니다.');
         parsedManuscripts.splice(100);
       }
 
@@ -169,12 +198,22 @@ export function ManuscriptUploadUI() {
 
     startTransition(async () => {
       setResult(null);
-      const res = await runManuscriptUploadAction({
-        manuscripts,
-        cafeId: selectedCafeId || undefined,
-        postOptions,
-      });
-      setResult(res);
+      if (mode === 'publish') {
+        const res = await runManuscriptUploadAction({
+          manuscripts,
+          cafeId: selectedCafeId || undefined,
+          postOptions,
+        });
+        setResult(res);
+      } else {
+        const res = await runManuscriptModifyAction({
+          manuscripts,
+          cafeId: selectedCafeId || undefined,
+          sortOrder,
+          daysLimit: daysLimit > 0 ? daysLimit : undefined,
+        });
+        setResult(res);
+      }
     });
   };
 
@@ -199,11 +238,39 @@ export function ManuscriptUploadUI() {
           Manuscript Upload
         </p>
         <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
-          원고 일괄 업로드
+          원고 일괄 {mode === 'publish' ? '발행' : '수정'}
         </h2>
         <p className={cn('text-sm text-(--ink-muted)')}>
-          폴더 드래그앤드랍으로 최대 100개 원고 업로드
+          {mode === 'publish'
+            ? '폴더 드래그앤드랍으로 최대 100개 원고 업로드'
+            : '기존 발행 글을 원고로 수정'}
         </p>
+      </div>
+
+      {/* 모드 토글 */}
+      <div className={cn('flex gap-2')}>
+        <button
+          onClick={() => { setMode('publish'); setResult(null); }}
+          className={cn(
+            'flex-1 rounded-xl py-2 text-sm font-medium transition',
+            mode === 'publish'
+              ? 'bg-(--accent) text-white'
+              : 'bg-white/50 border border-(--border) text-(--ink-muted) hover:bg-white/80'
+          )}
+        >
+          발행 (새 글)
+        </button>
+        <button
+          onClick={() => { setMode('modify'); setResult(null); }}
+          className={cn(
+            'flex-1 rounded-xl py-2 text-sm font-medium transition',
+            mode === 'modify'
+              ? 'bg-(--accent) text-white'
+              : 'bg-white/50 border border-(--border) text-(--ink-muted) hover:bg-white/80'
+          )}
+        >
+          수정 (기존 글)
+        </button>
       </div>
 
       <div className={cn('space-y-3')}>
@@ -309,9 +376,47 @@ export function ManuscriptUploadUI() {
           </div>
         )}
 
-        <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3')}>
-          <PostOptionsUI options={postOptions} onChange={setPostOptions} />
-        </div>
+        {/* 수정 모드 옵션 */}
+        {mode === 'modify' && (
+          <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3 space-y-3')}>
+            <p className={cn('text-xs font-medium text-(--ink-muted)')}>수정 옵션</p>
+            <div className={cn('grid grid-cols-2 gap-3')}>
+              <div className={cn('space-y-1')}>
+                <label className={cn('text-xs text-(--ink-muted)')}>정렬 순서</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as ManuscriptSortOrder)}
+                  className={inputClassName}
+                >
+                  <option value="oldest">오래된 순</option>
+                  <option value="newest">최신 순</option>
+                  <option value="random">랜덤</option>
+                </select>
+              </div>
+              <div className={cn('space-y-1')}>
+                <label className={cn('text-xs text-(--ink-muted)')}>기간 제한 (일)</label>
+                <input
+                  type="number"
+                  value={daysLimit}
+                  onChange={(e) => setDaysLimit(Number(e.target.value))}
+                  min={0}
+                  className={inputClassName}
+                  placeholder="0 = 전체"
+                />
+              </div>
+            </div>
+            <p className={cn('text-xs text-(--ink-muted)')}>
+              발행된 글 중 {daysLimit > 0 ? `${daysLimit}일 이내` : '전체'}에서 {sortOrder === 'oldest' ? '오래된' : sortOrder === 'newest' ? '최신' : '랜덤'} 순으로 {manuscripts.length}개 선택
+            </p>
+          </div>
+        )}
+
+        {/* 발행 모드 옵션 */}
+        {mode === 'publish' && (
+          <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3')}>
+            <PostOptionsUI options={postOptions} onChange={setPostOptions} />
+          </div>
+        )}
       </div>
 
       <button
@@ -323,7 +428,9 @@ export function ManuscriptUploadUI() {
           'disabled:cursor-not-allowed disabled:opacity-60'
         )}
       >
-        {isPending ? '업로드 중...' : `${manuscripts.length}개 원고 발행`}
+        {isPending
+          ? (mode === 'publish' ? '업로드 중...' : '수정 중...')
+          : `${manuscripts.length}개 원고 ${mode === 'publish' ? '발행' : '수정'}`}
       </button>
 
       {result && (
@@ -342,10 +449,12 @@ export function ManuscriptUploadUI() {
                 result.success ? 'text-(--success)' : 'text-(--danger)'
               )}
             >
-              {result.success ? '큐에 추가됨' : '실패'}
+              {result.success
+                ? (mode === 'publish' ? '큐에 추가됨' : '수정 완료')
+                : '실패'}
             </h3>
             <span className={cn('text-sm text-(--ink-muted)')}>
-              {result.jobsAdded}개 작업
+              {'jobsAdded' in result ? `${result.jobsAdded}개 작업` : `${result.completed}/${result.totalArticles}개 완료`}
             </span>
           </div>
           <p className={cn('text-sm text-(--ink-muted)')}>{result.message}</p>
