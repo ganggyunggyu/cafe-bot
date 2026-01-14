@@ -18,7 +18,7 @@ import {
 } from '@/features/auto-comment/comment-writer';
 import { generateComment, generateReply, generateAuthorReply } from '@/shared/api/comment-gen-api';
 import { getAllAccounts } from '@/shared/config/accounts';
-import { isAccountActive, getPersonaIndex, NaverAccount } from '@/shared/lib/account-manager';
+import { isAccountActive, getPersonaIndex, getNextActiveTime, NaverAccount } from '@/shared/lib/account-manager';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle, incrementTodayPostCount } from '@/shared/models';
@@ -44,10 +44,12 @@ const processTaskJob = async (job: Job<TaskJobData, JobResult>): Promise<JobResu
     return { success: false, error: `계정 없음: ${data.accountId}` };
   }
 
-  // 활동 시간대 체크 (비활동 시간에는 작업 스킵)
+  // 활동 시간대 체크 (비활동 시간에는 활동 시간까지 reschedule)
   if (!isAccountActive(account)) {
-    console.log(`[WORKER] 비활동 시간 - 작업 스킵: ${data.accountId}`);
-    return { success: false, error: '비활동 시간대' };
+    const nextActiveDelay = getNextActiveTime(account);
+    console.log(`[WORKER] 비활동 시간 - ${Math.round(nextActiveDelay / 60000)}분 뒤 재스케줄: ${data.accountId}`);
+    await addTaskJob(data.accountId, data, nextActiveDelay);
+    return { success: false, error: '비활동 시간대 - 재스케줄됨', willRetry: true };
   }
 
   switch (data.type) {
@@ -308,12 +310,16 @@ const handlePostSuccess = async (
     console.error('[WORKER] 원고 저장 실패:', dbError);
   }
 
-  // 2. 댓글 job 추가 (글쓴이 제외한 활동 가능한 계정만)
-  const commenterAccounts = accounts.filter((a) => a.id !== writerAccountId && isAccountActive(a));
+  // 2. 댓글 job 추가 (글쓴이 제외 - 비활동 계정도 포함, delay로 처리)
+  const commenterAccounts = accounts.filter((a) => a.id !== writerAccountId);
   if (commenterAccounts.length === 0) {
-    console.log('[WORKER] 활동 가능한 댓글 계정 없음 - 스킵');
+    console.log('[WORKER] 댓글 계정 없음 - 스킵');
     return;
   }
+
+  // 글쓴이 계정 정보 (닉네임 전달용)
+  const writerAccount = accounts.find((a) => a.id === writerAccountId);
+  const writerNickname = writerAccount?.nickname || writerAccountId;
 
   const postContent = rawContent || content;
 
@@ -329,8 +335,8 @@ const handlePostSuccess = async (
 
   console.log(`[WORKER] 댓글 ${commentCount}개 job 추가 예정 (계정당 최대 ${maxCommentsPerAccount}개, 계정 ${commenterAccounts.length}개)`);
 
-  // 댓글 작성자 추적 (자기 댓글에 대댓글 방지용)
-  const commentAuthors: string[] = [];
+  // 댓글 작성자 추적 (자기 댓글에 대댓글 방지용) - {accountId, nickname} 쌍으로 저장
+  const commentAuthors: Array<{ id: string; nickname: string }> = [];
   // 계정별 댓글 카운트
   const accountCommentCounts: Map<string, number> = new Map();
 
@@ -348,16 +354,18 @@ const handlePostSuccess = async (
     // 계정 댓글 카운트 증가
     accountCommentCounts.set(commenter.id, (accountCommentCounts.get(commenter.id) ?? 0) + 1);
 
-    // AI로 댓글 생성 (계정별 페르소나 적용)
+    // AI로 댓글 생성 (계정별 페르소나 적용 + 글쓴이 닉네임 전달)
     let commentText: string;
     try {
-      commentText = await generateComment(postContent, personaIndex);
+      commentText = await generateComment(postContent, personaIndex, writerNickname);
     } catch {
       commentText = '좋은 정보 감사합니다!';
     }
 
-    // 해당 계정의 현재 딜레이 가져오기
-    const currentDelay = commentDelays.get(commenter.id) ?? afterPostDelay;
+    // 해당 계정의 현재 딜레이 + 활동시간까지 대기 시간
+    const baseDelay = commentDelays.get(commenter.id) ?? afterPostDelay;
+    const activityDelay = getNextActiveTime(commenter);
+    const currentDelay = Math.max(baseDelay, activityDelay);
     const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
     commentDelays.set(commenter.id, nextDelay);
 
@@ -370,10 +378,14 @@ const handlePostSuccess = async (
     };
 
     await addTaskJob(commenter.id, commentJobData, currentDelay);
-    console.log(`[WORKER] 댓글 job 추가: ${commenter.id}, 딜레이: ${Math.round(currentDelay / 1000)}초`);
+    const delayInfo = activityDelay > 0
+      ? `${Math.round(currentDelay / 1000)}초 (활동시간까지 ${Math.round(activityDelay / 60000)}분)`
+      : `${Math.round(currentDelay / 1000)}초`;
+    console.log(`[WORKER] 댓글 job 추가: ${commenter.id}, 딜레이: ${delayInfo}`);
 
-    // 댓글 작성자 기록
-    commentAuthors.push(commenter.id);
+    // 댓글 작성자 기록 (닉네임 포함)
+    const commenterNickname = commenter.nickname || commenter.id;
+    commentAuthors.push({ id: commenter.id, nickname: commenterNickname });
   }
 
   // 3. 대댓글 job 추가 (글쓴이 + 다른 계정)
@@ -404,9 +416,10 @@ const handlePostSuccess = async (
   const repliedCommentIndices: Set<number> = new Set();
 
   // 글쓴이 대댓글 (자기 글에 달린 댓글에 응답 - 자연스러움)
-  const writerAccount = accounts.find((a) => a.id === writerAccountId);
-  if (writerAccount && isAccountActive(writerAccount)) {
+  if (writerAccount) {
     const writerPersonaIndex = getPersonaIndex(writerAccount);
+    const writerActivityDelay = getNextActiveTime(writerAccount);
+
     for (let i = 0; i < authorReplyCount; i++) {
       // 아직 대댓글 안 받은 댓글 중에서 선택
       let targetCommentIndex = i % actualCommentCount;
@@ -415,14 +428,19 @@ const handlePostSuccess = async (
       }
       repliedCommentIndices.add(targetCommentIndex);
 
+      // 원댓글 작성자 닉네임 가져오기
+      const targetCommentAuthor = commentAuthors[targetCommentIndex];
+      const parentAuthorNickname = targetCommentAuthor?.nickname;
+
       let replyText: string;
       try {
-        replyText = await generateAuthorReply(postContent, '댓글 감사합니다', writerPersonaIndex);
+        replyText = await generateAuthorReply(postContent, '댓글 감사합니다', writerPersonaIndex, parentAuthorNickname);
       } catch {
         replyText = '댓글 감사합니다!';
       }
 
-      const currentDelay = replyDelays.get(writerAccountId) ?? replyBaseDelay;
+      const baseDelay = replyDelays.get(writerAccountId) ?? replyBaseDelay;
+      const currentDelay = Math.max(baseDelay, writerActivityDelay);
       const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
       replyDelays.set(writerAccountId, nextDelay);
 
@@ -436,7 +454,10 @@ const handlePostSuccess = async (
       };
 
       await addTaskJob(writerAccountId, replyJobData, currentDelay);
-      console.log(`[WORKER] 글쓴이 대댓글 job 추가: ${writerAccountId} → 댓글[${targetCommentIndex}], 딜레이: ${Math.round(currentDelay / 1000)}초`);
+      const delayInfo = writerActivityDelay > 0
+        ? `${Math.round(currentDelay / 1000)}초 (활동시간까지 ${Math.round(writerActivityDelay / 60000)}분)`
+        : `${Math.round(currentDelay / 1000)}초`;
+      console.log(`[WORKER] 글쓴이 대댓글 job 추가: ${writerAccountId} → 댓글[${targetCommentIndex}], 딜레이: ${delayInfo}`);
     }
   }
 
@@ -459,10 +480,10 @@ const handlePostSuccess = async (
     }
 
     repliedCommentIndices.add(targetCommentIndex);
-    const commentAuthorId = commentAuthors[targetCommentIndex];
+    const targetCommentAuthor = commentAuthors[targetCommentIndex];
 
     // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
-    const availableReplyers = commenterAccounts.filter((a) => a.id !== commentAuthorId);
+    const availableReplyers = commenterAccounts.filter((a) => a.id !== targetCommentAuthor.id);
     if (availableReplyers.length === 0) {
       console.log(`[WORKER] 일반 대댓글 ${i} - 사용 가능한 계정 없어서 스킵`);
       continue;
@@ -473,12 +494,21 @@ const handlePostSuccess = async (
 
     let replyText: string;
     try {
-      replyText = await generateReply(postContent, '좋은 정보네요', replyerPersonaIndex);
+      // 글쓴이 닉네임 + 원댓글 작성자 닉네임 전달
+      replyText = await generateReply(
+        postContent,
+        '좋은 정보네요',
+        replyerPersonaIndex,
+        writerNickname,
+        targetCommentAuthor.nickname
+      );
     } catch {
       replyText = '저도 그렇게 생각해요!';
     }
 
-    const currentDelay = replyDelays.get(replyer.id) ?? replyBaseDelay;
+    const baseDelay = replyDelays.get(replyer.id) ?? replyBaseDelay;
+    const replyerActivityDelay = getNextActiveTime(replyer);
+    const currentDelay = Math.max(baseDelay, replyerActivityDelay);
     const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
     replyDelays.set(replyer.id, nextDelay);
 
@@ -492,7 +522,10 @@ const handlePostSuccess = async (
     };
 
     await addTaskJob(replyer.id, replyJobData, currentDelay);
-    console.log(`[WORKER] 일반 대댓글 job 추가: ${replyer.id} → 댓글[${targetCommentIndex}], 딜레이: ${Math.round(currentDelay / 1000)}초`);
+    const delayInfo = replyerActivityDelay > 0
+      ? `${Math.round(currentDelay / 1000)}초 (활동시간까지 ${Math.round(replyerActivityDelay / 60000)}분)`
+      : `${Math.round(currentDelay / 1000)}초`;
+    console.log(`[WORKER] 일반 대댓글 job 추가: ${replyer.id} → 댓글[${targetCommentIndex}], 딜레이: ${delayInfo}`);
   }
 
   console.log(`[WORKER] 체인 작업 완료: 댓글 ${actualCommentCount}개, 대댓글 ${totalReplyCount}개 job 추가됨`);

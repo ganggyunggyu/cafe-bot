@@ -176,3 +176,60 @@ export const isAccountActive = (account: NaverAccount): boolean => {
 export const getActiveAccounts = (): NaverAccount[] => {
   return getAccounts().filter(isAccountActive);
 };
+
+// 다음 활동 시작 시간까지 밀리초 계산
+// 현재 활동 중이면 0, 아니면 다음 활동 시작까지 대기 시간 반환
+export const getNextActiveTime = (account: NaverAccount): number => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentDay = now.getDay();
+
+  // 현재 활동 중이면 0
+  if (isAccountActive(account)) {
+    return 0;
+  }
+
+  // 활동 시간 설정이 없으면 0 (항상 활동)
+  if (!account.activityHours) {
+    return 0;
+  }
+
+  const { start, end } = account.activityHours;
+
+  // 다음 활동 시작 시간 계산
+  let targetDate = new Date(now);
+  targetDate.setMinutes(0, 0, 0); // 정각으로 맞춤
+
+  if (start > end) {
+    // 자정 넘는 경우 (예: 22시~6시)
+    if (currentHour < end) {
+      // 이미 활동 시간 (isAccountActive에서 걸러져야 하지만 안전장치)
+      return 0;
+    } else if (currentHour < start) {
+      // 오늘 start 시간까지 대기
+      targetDate.setHours(start);
+    } else {
+      // 이미 활동 시간
+      return 0;
+    }
+  } else {
+    // 일반적인 경우 (예: 10시~21시)
+    if (currentHour < start) {
+      // 오늘 start 시간까지 대기
+      targetDate.setHours(start);
+    } else {
+      // 오늘 활동 끝남 → 내일 start
+      targetDate.setDate(targetDate.getDate() + 1);
+      targetDate.setHours(start);
+    }
+  }
+
+  // 휴식일 체크 - 휴식일이면 다음 활동일 찾기
+  if (account.restDays) {
+    while (account.restDays.includes(targetDate.getDay())) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
+  }
+
+  return Math.max(0, targetDate.getTime() - now.getTime());
+};

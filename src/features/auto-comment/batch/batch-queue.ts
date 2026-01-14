@@ -7,6 +7,7 @@ import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings
 import { generateContent } from '@/shared/api/content-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { PostJobData } from '@/shared/lib/queue/types';
+import { getNextActiveTime } from '@/shared/lib/account-manager';
 import type { BatchJobInput } from './types';
 
 export interface QueueBatchResult {
@@ -73,14 +74,19 @@ export const addBatchToQueue = async (
         skipComments, // 글만 발행 모드
       };
 
-      await addTaskJob(writerAccount.id, jobData, globalDelay);
+      // 계정 활동 시간까지 대기 시간 계산
+      const activityDelay = getNextActiveTime(writerAccount);
+      const totalDelay = Math.max(globalDelay, activityDelay);
+
+      await addTaskJob(writerAccount.id, jobData, totalDelay);
       jobsAdded++;
 
       // 다음 글을 위한 딜레이 누적
       const randomDelay = getRandomDelay(settings.delays.betweenPosts);
-      console.log(
-        `[QUEUE-BATCH] Job 추가: ${keyword} → ${writerAccount.id}, 딜레이: ${Math.round(globalDelay / 1000)}초`
-      );
+      const delayInfo = activityDelay > 0
+        ? `${Math.round(totalDelay / 1000)}초 (활동시간까지 ${Math.round(activityDelay / 60000)}분)`
+        : `${Math.round(globalDelay / 1000)}초`;
+      console.log(`[QUEUE-BATCH] Job 추가: ${keyword} → ${writerAccount.id}, 딜레이: ${delayInfo}`);
       globalDelay += randomDelay;
     } catch (error) {
       console.error(`[QUEUE-BATCH] 에러: ${keyword}`, error);
