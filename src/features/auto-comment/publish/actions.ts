@@ -65,7 +65,7 @@ export async function fetchFilteredArticles(
 }
 
 // 자동 댓글 달기 (큐 기반)
-// N일 이내 글 중 랜덤 절반, 글당 3~5개, 대댓글 70% / 댓글 30%
+// N일 이내 글 중 랜덤 절반, 글당 3~15개, 대댓글 50% / 댓글 50%
 export async function runAutoCommentAction(
   cafeId: string,
   daysLimit: number = 3
@@ -152,9 +152,6 @@ export async function runAutoCommentAction(
     // 계정별 딜레이 추적
     const accountDelays: Map<string, number> = new Map();
 
-    // 댓글 작성자 추적 (자기 댓글에 대댓글 방지용)
-    const commentAuthors: Map<string, string[]> = new Map(); // articleId -> [accountId, ...]
-
     for (let i = 0; i < selectedArticles.length; i++) {
       const article = selectedArticles[i];
       const { articleId, keyword, writerAccountId } = article;
@@ -168,16 +165,20 @@ export async function runAutoCommentAction(
         continue;
       }
 
-      // 글당 3~5개 작성
-      const totalCount = Math.floor(Math.random() * 3) + 3; // 3~5
-      // 70% 대댓글, 30% 댓글
-      const replyCount = Math.round(totalCount * 0.7);
+      // 글쓴이 계정 정보 (닉네임 전달용)
+      const writerAccount = accounts.find((a) => a.id === writerAccountId);
+      const writerNickname = writerAccount?.nickname || writerAccountId;
+
+      // 글당 3~15개 작성
+      const totalCount = Math.floor(Math.random() * 13) + 3; // 3~15
+      // 50% 대댓글, 50% 댓글
+      const replyCount = Math.round(totalCount * 0.5);
       const commentCount = totalCount - replyCount;
 
       console.log(`[AUTO-COMMENT] #${articleId} - 댓글 ${commentCount}개, 대댓글 ${replyCount}개 job 추가`);
 
-      // 이 글의 댓글 작성자 추적 초기화
-      const articleCommentAuthors: string[] = [];
+      // 이 글의 댓글 작성자 추적 초기화 (닉네임 포함)
+      const articleCommentAuthors: Array<{ id: string; nickname: string }> = [];
 
       // 댓글 job 추가 (30%)
       for (let j = 0; j < commentCount; j++) {
@@ -186,7 +187,7 @@ export async function runAutoCommentAction(
 
         let commentText: string;
         try {
-          commentText = await generateComment(keyword, personaIndex);
+          commentText = await generateComment(keyword, personaIndex, writerNickname);
         } catch {
           commentText = '좋은 정보 감사합니다!';
         }
@@ -206,8 +207,9 @@ export async function runAutoCommentAction(
         await addTaskJob(commenter.id, commentJobData, currentDelay);
         jobsAdded++;
 
-        // 댓글 작성자 기록
-        articleCommentAuthors.push(commenter.id);
+        // 댓글 작성자 기록 (닉네임 포함)
+        const commenterNickname = commenter.nickname || commenter.id;
+        articleCommentAuthors.push({ id: commenter.id, nickname: commenterNickname });
       }
 
       // 대댓글 job 추가 (70%)
@@ -222,21 +224,22 @@ export async function runAutoCommentAction(
         // 자기 댓글에 대댓글 달지 않도록 다른 계정 선택
         let replyer = otherAccounts[(commentCount + j) % otherAccounts.length];
 
+        // 원댓글 작성자 정보
+        const targetCommentAuthor = articleCommentAuthors[targetCommentIndex];
+        const parentAuthorNickname = targetCommentAuthor?.nickname;
+
         // 새로 단 댓글에 대댓글 다는 경우, 자기 댓글인지 체크
-        if (targetCommentIndex < articleCommentAuthors.length) {
-          const commentAuthorId = articleCommentAuthors[targetCommentIndex];
-          if (replyer.id === commentAuthorId) {
-            // 다른 계정으로 변경
-            const alternativeReplyer = otherAccounts.find(
-              (a) => a.id !== commentAuthorId && a.id !== replyer.id
-            );
-            if (alternativeReplyer) {
-              replyer = alternativeReplyer;
-            } else {
-              // 대체 계정이 없으면 스킵
-              console.log(`[AUTO-COMMENT] #${articleId} 대댓글 ${j} - 자기 댓글에 대댓글 방지로 스킵`);
-              continue;
-            }
+        if (targetCommentAuthor && replyer.id === targetCommentAuthor.id) {
+          // 다른 계정으로 변경
+          const alternativeReplyer = otherAccounts.find(
+            (a) => a.id !== targetCommentAuthor.id && a.id !== replyer.id
+          );
+          if (alternativeReplyer) {
+            replyer = alternativeReplyer;
+          } else {
+            // 대체 계정이 없으면 스킵
+            console.log(`[AUTO-COMMENT] #${articleId} 대댓글 ${j} - 자기 댓글에 대댓글 방지로 스킵`);
+            continue;
           }
         }
 
@@ -244,7 +247,8 @@ export async function runAutoCommentAction(
 
         let replyText: string;
         try {
-          replyText = await generateReply(keyword, '이전 댓글', replyerPersonaIndex);
+          // 글쓴이 닉네임 + 원댓글 작성자 닉네임 전달
+          replyText = await generateReply(keyword, '좋은 정보네요', replyerPersonaIndex, writerNickname, parentAuthorNickname);
         } catch {
           replyText = '저도 그렇게 생각해요!';
         }
@@ -265,9 +269,6 @@ export async function runAutoCommentAction(
         await addTaskJob(replyer.id, replyJobData, currentDelay);
         jobsAdded++;
       }
-
-      // 댓글 작성자 저장
-      commentAuthors.set(String(articleId), articleCommentAuthors);
     }
 
     return {

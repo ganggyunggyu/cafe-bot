@@ -12,7 +12,7 @@ const defaultCafe = getDefaultCafe();
 export function CommentOnlyUI() {
   const [isPending, startTransition] = useTransition();
   const [selectedCafeId, setSelectedCafeId] = useState(defaultCafe?.cafeId || '');
-  const [daysLimit, setDaysLimit] = useState(3);
+  const [daysLimit, setDaysLimit] = useState<number | ''>(3);
   const [result, setResult] = useState<CommentOnlyResult | null>(null);
   const [phase, setPhase] = useState<'ready' | 'running' | 'done'>('ready');
 
@@ -24,7 +24,7 @@ export function CommentOnlyUI() {
     startTransition(async () => {
       setResult(null);
       setPhase('running');
-      const res = await runAutoCommentAction(selectedCafeId, daysLimit);
+      const res = await runAutoCommentAction(selectedCafeId, daysLimit || 1);
       setResult(res);
       setPhase('done');
     });
@@ -76,9 +76,19 @@ export function CommentOnlyUI() {
               type="text"
               inputMode="numeric"
               value={daysLimit}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
-                const val = Number(e.target.value.replace(/\D/g, '')) || 1;
-                setDaysLimit(Math.max(1, Math.min(30, val)));
+                const cleaned = e.target.value.replace(/\D/g, '');
+                if (cleaned === '') {
+                  setDaysLimit('');
+                } else {
+                  setDaysLimit(Math.min(30, Number(cleaned)));
+                }
+              }}
+              onBlur={() => {
+                if (daysLimit === '' || daysLimit < 1) {
+                  setDaysLimit(1);
+                }
               }}
               className={inputClassName}
             />
@@ -87,9 +97,9 @@ export function CommentOnlyUI() {
           <div className={cn('rounded-xl bg-white/50 px-4 py-3 space-y-2')}>
             <p className={cn('text-sm font-medium text-(--ink)')}>자동 선택 기준</p>
             <ul className={cn('text-xs text-(--ink-muted) space-y-1')}>
-              <li>• 최근 {daysLimit}일 이내 글 중 랜덤 절반 선택</li>
-              <li>• 글당 3~5개 작성</li>
-              <li>• 대댓글 70% / 댓글 30%</li>
+              <li>• 최근 {daysLimit || 1}일 이내 글 중 랜덤 절반 선택</li>
+              <li>• 글당 3~15개 작성</li>
+              <li>• 대댓글 50% / 댓글 50%</li>
             </ul>
           </div>
         </div>
