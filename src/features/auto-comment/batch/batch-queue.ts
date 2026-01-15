@@ -1,15 +1,14 @@
 import { getAllAccounts } from '@/shared/config/accounts';
-import { getCafeById, getDefaultCafe } from '@/shared/config/cafes';
-import { connectDB } from '@/shared/lib/mongodb';
 import { addTaskJob, getQueueStatus, closeAllQueues } from '@/shared/lib/queue';
-import { startAllTaskWorkers, closeAllWorkers } from '@/shared/lib/queue/workers';
-import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
+import { closeAllWorkers } from '@/shared/lib/queue/workers';
+import { getRandomDelay } from '@/shared/models/queue-settings';
 import { generateContent, generateContentWithPrompt } from '@/shared/api/content-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { PostJobData } from '@/shared/lib/queue/types';
 import { getNextActiveTime, getPersonaId } from '@/shared/lib/account-manager';
 import type { BatchJobInput } from './types';
 import { parseKeywordWithCategory } from './keyword-utils';
+import { initBatchContext, isBatchContextError } from './batch-helpers';
 
 export interface QueueBatchResult {
   success: boolean;
@@ -34,19 +33,12 @@ export const addBatchToQueue = async (
   const trimmedPrompt = contentPrompt?.trim() || '';
   const hasCustomPrompt = Boolean(trimmedPrompt);
 
-  const accounts = await getAllAccounts();
-  if (accounts.length < 2) {
-    return { success: false, jobsAdded: 0, message: '계정이 2개 이상 필요합니다' };
+  const ctx = await initBatchContext(inputCafeId, 2);
+  if (isBatchContextError(ctx)) {
+    return { success: false, jobsAdded: 0, message: ctx.error };
   }
 
-  const cafe = inputCafeId ? await getCafeById(inputCafeId) : await getDefaultCafe();
-  if (!cafe) {
-    return { success: false, jobsAdded: 0, message: '카페를 찾을 수 없습니다' };
-  }
-
-  await connectDB();
-  const settings = await getQueueSettings();
-  await startAllTaskWorkers();
+  const { accounts, cafe, settings } = ctx;
 
   let jobsAdded = 0;
   const accountDelays: Map<string, number> = new Map();

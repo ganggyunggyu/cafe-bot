@@ -18,6 +18,7 @@ export const KeywordGeneratorUI = () => {
   const [selectedCafeId, setSelectedCafeId] = useState('');
   const [count, setCount] = useState(60);
   const [shuffle, setShuffle] = useState(true);
+  const [note, setNote] = useState('');
   const [result, setResult] = useState<GeneratedKeyword[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -56,6 +57,7 @@ export const KeywordGeneratorUI = () => {
           categories,
           count,
           shuffle,
+          note: note.trim() || undefined,
         });
 
         setResult(res.keywords);
@@ -145,6 +147,19 @@ export const KeywordGeneratorUI = () => {
             <span className={cn('text-sm text-(--ink)')}>뒤죽박죽 섞기</span>
           </label>
         </div>
+      </div>
+
+      <div className={cn('space-y-1')}>
+        <label className={cn('text-xs font-medium text-(--ink-muted)')}>
+          추가 요청 (선택)
+        </label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="예: 봄철 관련 키워드 위주로, 초보자 타겟으로..."
+          rows={2}
+          className={cn(inputClassName, 'resize-none')}
+        />
       </div>
 
       <button
