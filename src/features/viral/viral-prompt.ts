@@ -1,27 +1,48 @@
+import { pickRandom, pickWeighted } from '@/shared/lib/random';
+
 export type KeywordType = 'own' | 'competitor';
 export type ContentType = 'problem' | 'review' | 'lifestyle';
+
+export interface ProductInfo {
+  name: string;
+  shortName: string;
+  effects: string[];
+}
 
 export interface ViralPromptInput {
   keyword: string;
   keywordType: KeywordType;
   contentType?: ContentType;
   personaNumber?: number;
+  productIndex?: number;
 }
 
-export const PRODUCT_INFO = {
-  name: '한려담원 흑염소진액',
-  shortName: '한려담원',
-  effects: [
-    '기력보충 / 원기회복',
-    '피로회복',
-    '면역력 향상',
-    '손발 따뜻하게 (혈액순환 개선)',
-    '허약 체질 개선',
-    '체력 증진',
-    '갱년기 증상 완화',
-    '산후조리 보양',
-  ],
+export const PRODUCTS: ProductInfo[] = [
+  {
+    name: '한려담원 흑염소진액',
+    shortName: '한려담원',
+    effects: [
+      '기력보충 / 원기회복',
+      '피로회복',
+      '면역력 향상',
+      '손발 따뜻하게 (혈액순환 개선)',
+      '허약 체질 개선',
+      '체력 증진',
+      '갱년기 증상 완화',
+      '산후조리 보양',
+    ],
+  },
+  // 추가 제품은 여기에
+];
+
+export const getRandomProduct = (): ProductInfo => pickRandom(PRODUCTS);
+
+export const getProductByIndex = (index: number): ProductInfo => {
+  return PRODUCTS[index % PRODUCTS.length];
 };
+
+// 하위 호환성을 위해 유지
+export const PRODUCT_INFO = PRODUCTS[0];
 
 export const detectKeywordType = (keyword: string): KeywordType => {
   const ownKeywords = [
@@ -52,13 +73,7 @@ export const detectKeywordType = (keyword: string): KeywordType => {
 export const getRandomContentType = (): ContentType => {
   const types: ContentType[] = ['problem', 'review', 'lifestyle'];
   const weights = [0.4, 0.35, 0.25]; // 고민형 40%, 후기형 35%, 일상형 25%
-  const random = Math.random();
-  let cumulative = 0;
-  for (let i = 0; i < types.length; i++) {
-    cumulative += weights[i];
-    if (random < cumulative) return types[i];
-  }
-  return 'problem';
+  return pickWeighted(types, weights);
 };
 
 const getContentTypeLabel = (type: ContentType): string => {
@@ -78,9 +93,13 @@ export const buildViralPrompt = (input: ViralPromptInput): string => {
     keywordType,
     contentType: inputContentType,
     personaNumber,
+    productIndex,
   } = input;
   const persona = personaNumber ?? Math.floor(Math.random() * 18) + 1;
   const contentType = inputContentType ?? getRandomContentType();
+  const product = productIndex !== undefined
+    ? getProductByIndex(productIndex)
+    : getRandomProduct();
 
   return `## 커뮤니티 바이럴 콘텐츠 작성 프롬프트 (${
     keywordType === 'own' ? '자사' : '타사'
@@ -97,7 +116,7 @@ export const buildViralPrompt = (input: ViralPromptInput): string => {
 
 ### [기본 정보 입력]
 - 키워드: ${keyword}
-- 제품명: ${PRODUCT_INFO.name}
+- 제품명: ${product.name}
 - 페르소나 번호: ${persona}
 - 콘텐츠 유형: ${getContentTypeLabel(contentType)}
 
@@ -282,7 +301,7 @@ ${
 
 ## PART 0-2: 제품 정보
 
-### **${PRODUCT_INFO.name} 효능**
+### **${product.name} 효능**
 - 기력보충 / 원기회복
 - 피로회복
 - 면역력 향상
@@ -477,7 +496,7 @@ ${contentType === 'problem' ? `
 
 예시:
 ---
-엄마가 ${PRODUCT_INFO.shortName} 추천해줘서
+엄마가 ${product.shortName} 추천해줘서
 한번 먹어보라고 하시더라고요
 
 처음엔 반신반의했는데
@@ -495,7 +514,7 @@ ${contentType === 'problem' ? `
 예시:
 ---
 요즘 아침마다 챙겨먹는 게 있어요
-시어머니가 ${PRODUCT_INFO.shortName} 보내주셨거든요
+시어머니가 ${product.shortName} 보내주셨거든요
 
 처음엔 그냥 건강식품인가 했는데
 남편이랑 같이 먹고 있어요
@@ -911,9 +930,9 @@ ${contentType === 'problem' ? `
 
 **4. 제품 추천형 ★핵심★ (60~100자)**
 "저는 ${
-    PRODUCT_INFO.shortName
+    product.shortName
   } 흑염소진액 먹고 있는데 기력이 좀 돌아오긴 했어요"
-"${PRODUCT_INFO.shortName} 먹는데 저한테는 맞는 것 같아요"
+"${product.shortName} 먹는데 저한테는 맞는 것 같아요"
 
 **5. 맞장구형 (10~30자)**
 "ㅇㅈ", "인정", "그쵸", "맞아요", "공감"
@@ -959,7 +978,7 @@ ${contentType === 'problem' ? `
 
 **20~30대 원글 작성자 버전**
 [댓글3] 저는 ${
-    PRODUCT_INFO.shortName
+    product.shortName
   } 흑염소진액 먹고 있는데 기력이 좀 돌아오긴 했어요
 [작성자-3] 오 그거 효과 있으셨어요? 얼마나 드셨어요?
 [댓글러-3] 한 달 정도 먹었는데 저한테는 맞는 것 같아요 온라인으로 샀어요
@@ -968,7 +987,7 @@ ${contentType === 'problem' ? `
 
 **50~60대 원글 작성자 버전**
 [댓글3] 저는 ${
-    PRODUCT_INFO.shortName
+    product.shortName
   } 흑염소진액 먹고 있는데 기력이 좀 돌아오긴 했어요
 [작성자-3] 효과가 있으셨는지요..? 얼마나 드셨읍니까
 [댓글러-3] 한 달 정도 먹었는데 저한테는 맞는 것 같아요 온라인으로 샀어요
