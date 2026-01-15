@@ -24,7 +24,7 @@ interface RangeSliderProps {
   onChange: (min: number, max: number) => void;
 }
 
-function RangeSlider({ label, min, max, minValue, maxValue, step, onChange }: RangeSliderProps) {
+const RangeSlider = ({ label, min, max, minValue, maxValue, step, onChange }: RangeSliderProps) => {
   return (
     <div className={cn('space-y-2')}>
       <div className={cn('flex justify-between items-center')}>
@@ -67,7 +67,7 @@ function RangeSlider({ label, min, max, minValue, maxValue, step, onChange }: Ra
   );
 }
 
-export function DelaySettingsUI() {
+export const DelaySettingsUI = () => {
   const [isPending, startTransition] = useTransition();
   const [settings, setSettings] = useState<QueueSettingsData | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -206,6 +206,52 @@ export function DelaySettingsUI() {
                 'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
               )}
             />
+          </div>
+        </div>
+      </div>
+
+      <div className={cn('space-y-4')}>
+        <h3 className={cn('text-sm font-semibold text-(--ink)')}>제한 설정</h3>
+
+        <div className={cn('space-y-3')}>
+          <label className={cn('flex items-center gap-3 cursor-pointer')}>
+            <input
+              type="checkbox"
+              checked={settings.limits?.enableDailyPostLimit ?? false}
+              onChange={(e) => {
+                setSettings({
+                  ...settings,
+                  limits: { ...settings.limits, enableDailyPostLimit: e.target.checked },
+                });
+                setHasChanges(true);
+              }}
+              className={cn('w-4 h-4 accent-(--accent)')}
+            />
+            <span className={cn('text-sm text-(--ink)')}>일일 글 제한 활성화</span>
+            <span className={cn('text-xs text-(--ink-muted)')}>(계정별 설정 적용)</span>
+          </label>
+
+          <div className={cn('flex items-center gap-3')}>
+            <span className={cn('text-sm text-(--ink)')}>계정당 댓글 수</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={settings.limits?.maxCommentsPerAccount ?? 1}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '');
+                const val = cleaned === '' ? 0 : Math.min(10, Number(cleaned));
+                setSettings({
+                  ...settings,
+                  limits: { ...settings.limits, maxCommentsPerAccount: val },
+                });
+                setHasChanges(true);
+              }}
+              className={cn(
+                'w-16 rounded-lg border border-(--border) bg-white/80 px-3 py-1.5 text-sm text-center'
+              )}
+            />
+            <span className={cn('text-xs text-(--ink-muted)')}>(0 = 무제한)</span>
           </div>
         </div>
       </div>

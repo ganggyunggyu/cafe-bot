@@ -18,41 +18,45 @@ export interface QueueSettingsData {
     attempts: number;
     backoffDelay: number;
   };
+  limits: {
+    enableDailyPostLimit: boolean;
+    maxCommentsPerAccount: number;
+  };
   timeout: number;
 }
 
-// 설정 조회
-export async function getSettingsAction(): Promise<QueueSettingsData> {
+export const getSettingsAction = async (): Promise<QueueSettingsData> => {
   await connectDB();
   const settings = await getQueueSettings();
 
   return {
     delays: settings.delays,
     retry: settings.retry,
+    limits: settings.limits || { enableDailyPostLimit: false, maxCommentsPerAccount: 1 },
     timeout: settings.timeout,
   };
-}
+};
 
-// 설정 업데이트
-export async function updateSettingsAction(data: Partial<QueueSettingsData>): Promise<QueueSettingsData> {
+export const updateSettingsAction = async (data: Partial<QueueSettingsData>): Promise<QueueSettingsData> => {
   await connectDB();
   const updated = await updateQueueSettings(data);
 
   return {
     delays: updated.delays,
     retry: updated.retry,
+    limits: updated.limits || { enableDailyPostLimit: true, maxCommentsPerAccount: 1 },
     timeout: updated.timeout,
   };
-}
+};
 
-// 기본값으로 초기화
-export async function resetSettingsAction(): Promise<QueueSettingsData> {
+export const resetSettingsAction = async (): Promise<QueueSettingsData> => {
   await connectDB();
   const updated = await updateQueueSettings(DEFAULT_QUEUE_SETTINGS);
 
   return {
     delays: updated.delays,
     retry: updated.retry,
+    limits: updated.limits || { enableDailyPostLimit: true, maxCommentsPerAccount: 1 },
     timeout: updated.timeout,
   };
-}
+};

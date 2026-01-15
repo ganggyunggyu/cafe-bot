@@ -43,7 +43,7 @@ interface CafeConfig {
 const parseLines = (value: string) =>
   value.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
 
-export function TestUI() {
+export const TestUI = () => {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<TestMode>('single');
   const [testType, setTestType] = useState<TestType>('comment');
@@ -238,7 +238,7 @@ export function TestUI() {
 }
 
 // 키워드 생성기 (배치 페이지와 동일)
-export function KeywordGeneratorUI() {
+export const KeywordGeneratorUI = () => {
   const [isPending, startTransition] = useTransition();
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState('');
@@ -430,7 +430,7 @@ export function KeywordGeneratorUI() {
 }
 
 // 단일 결과 UI
-function SingleResultUI({ result }: { result: TestResult }) {
+const SingleResultUI = ({ result }: { result: TestResult }) => {
   return (
     <div
       className={cn(
@@ -472,7 +472,7 @@ function SingleResultUI({ result }: { result: TestResult }) {
 }
 
 // 배치 결과 UI
-function BatchResultUI({ result }: { result: TestBatchResult }) {
+const BatchResultUI = ({ result }: { result: TestBatchResult }) => {
   return (
     <div
       className={cn(

@@ -55,7 +55,7 @@ const DEFAULT_MODEL_MAP: Record<TestType, ModelType> = {
 };
 
 // 단일 테스트 실행
-export async function runTestAction(request: TestRequest): Promise<TestResult> {
+export const runTestAction = async (request: TestRequest): Promise<TestResult> => {
   const { type, prompt, model } = request;
   const endpoint = ENDPOINT_MAP[type];
   const useModel = model || DEFAULT_MODEL_MAP[type];
@@ -106,7 +106,7 @@ export async function runTestAction(request: TestRequest): Promise<TestResult> {
 }
 
 // 배치 테스트 실행 (여러 프롬프트)
-export async function runTestBatchAction(request: TestBatchRequest): Promise<TestBatchResult> {
+export const runTestBatchAction = async (request: TestBatchRequest): Promise<TestBatchResult> => {
   const { type, prompts, model, personaId } = request;
   const useModel = model || DEFAULT_MODEL_MAP[type];
 
