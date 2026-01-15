@@ -15,6 +15,10 @@ export interface IQueueSettings extends Document {
     attempts: number; // 재시도 횟수
     backoffDelay: number; // 재시도 간격 (ms)
   };
+  limits: {
+    enableDailyPostLimit: boolean; // 일일 글 제한 활성화
+    maxCommentsPerAccount: number; // 계정당 댓글 수 (0=무제한)
+  };
   timeout: number; // 작업 타임아웃 (ms)
   updatedAt: Date;
 }
@@ -30,13 +34,26 @@ const DelayRangeSchema = new Schema<DelayRange>(
 const QueueSettingsSchema = new Schema<IQueueSettings>(
   {
     delays: {
-      betweenPosts: { type: DelayRangeSchema, default: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 } },
-      betweenComments: { type: DelayRangeSchema, default: { min: 30 * 1000, max: 2 * 60 * 1000 } },
-      afterPost: { type: DelayRangeSchema, default: { min: 30 * 1000, max: 60 * 1000 } },
+      betweenPosts: {
+        type: DelayRangeSchema,
+        default: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 },
+      },
+      betweenComments: {
+        type: DelayRangeSchema,
+        default: { min: 30 * 1000, max: 2 * 60 * 1000 },
+      },
+      afterPost: {
+        type: DelayRangeSchema,
+        default: { min: 30 * 1000, max: 60 * 1000 },
+      },
     },
     retry: {
       attempts: { type: Number, default: 3 },
       backoffDelay: { type: Number, default: 5000 },
+    },
+    limits: {
+      enableDailyPostLimit: { type: Boolean, default: false },
+      maxCommentsPerAccount: { type: Number, default: 1 },
     },
     timeout: { type: Number, default: 5 * 60 * 1000 },
   },
@@ -47,7 +64,6 @@ export const QueueSettings: Model<IQueueSettings> =
   mongoose.models.QueueSettings ||
   mongoose.model<IQueueSettings>('QueueSettings', QueueSettingsSchema);
 
-// 기본값
 export const DEFAULT_QUEUE_SETTINGS = {
   delays: {
     betweenPosts: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 }, // 3~8분
@@ -55,10 +71,11 @@ export const DEFAULT_QUEUE_SETTINGS = {
     afterPost: { min: 30 * 1000, max: 60 * 1000 }, // 30초~1분
   },
   retry: { attempts: 3, backoffDelay: 5000 },
+
+  limits: { enableDailyPostLimit: false, maxCommentsPerAccount: 1 },
   timeout: 5 * 60 * 1000,
 };
 
-// 설정 조회 (없으면 기본값 생성)
 export const getQueueSettings = async (): Promise<IQueueSettings> => {
   let settings = await QueueSettings.findOne().lean();
 
@@ -70,7 +87,6 @@ export const getQueueSettings = async (): Promise<IQueueSettings> => {
   return settings as IQueueSettings;
 };
 
-// 설정 업데이트
 export const updateQueueSettings = async (
   updates: Partial<Omit<IQueueSettings, '_id' | 'updatedAt'>>
 ): Promise<IQueueSettings> => {
@@ -82,7 +98,6 @@ export const updateQueueSettings = async (
   return settings as IQueueSettings;
 };
 
-// 랜덤 딜레이 계산
 export const getRandomDelay = (range: DelayRange): number => {
   return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
 };

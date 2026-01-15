@@ -31,13 +31,11 @@ export const DailyActivity: Model<IDailyActivity> =
   mongoose.models.DailyActivity ||
   mongoose.model<IDailyActivity>('DailyActivity', DailyActivitySchema);
 
-// 오늘 날짜 문자열 반환
 export const getTodayString = (): string => {
   const now = new Date();
   return now.toISOString().split('T')[0]; // "2025-01-12"
 };
 
-// 활동 기록 증가 (중복 키 에러 처리 포함)
 export const incrementActivity = async (
   accountId: string,
   cafeId: string,
@@ -56,7 +54,6 @@ export const incrementActivity = async (
     );
     console.log(`[ACTIVITY] ${accountId}@${cafeId} ${type} +1 (${today})`);
   } catch (error) {
-    // E11000 duplicate key error - 레이스 컨디션 발생 시 재시도
     if (error instanceof Error && error.message.includes('E11000')) {
       await DailyActivity.updateOne(
         { accountId, cafeId, date: today },
@@ -72,7 +69,6 @@ export const incrementActivity = async (
   }
 };
 
-// 오늘 활동 조회 (계정+카페)
 export const getTodayActivity = async (
   accountId: string,
   cafeId: string
@@ -81,7 +77,6 @@ export const getTodayActivity = async (
   return DailyActivity.findOne({ accountId, cafeId, date: today }).lean();
 };
 
-// 특정 카페의 오늘 활동 조회 (모든 계정)
 export const getCafeTodayActivities = async (
   cafeId: string
 ): Promise<IDailyActivity[]> => {
@@ -89,13 +84,11 @@ export const getCafeTodayActivities = async (
   return DailyActivity.find({ cafeId, date: today }).lean();
 };
 
-// 모든 오늘 활동 조회
 export const getAllTodayActivities = async (): Promise<IDailyActivity[]> => {
   const today = getTodayString();
   return DailyActivity.find({ date: today }).lean();
 };
 
-// 특정 기간 활동 조회
 export const getActivityRange = async (
   accountId: string,
   cafeId: string,
@@ -111,7 +104,6 @@ export const getActivityRange = async (
     .lean();
 };
 
-// 계정의 모든 카페 오늘 활동 합계
 export const getAccountTodayTotal = async (
   accountId: string
 ): Promise<{ posts: number; comments: number; replies: number; likes: number }> => {

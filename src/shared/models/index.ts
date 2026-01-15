@@ -6,6 +6,7 @@ export {
   addCommentToArticle,
   getArticleComments,
   getAccountCommentStats,
+  getArticleIdByKeyword,
 } from './published-article';
 export { ModifiedArticle, type IModifiedArticle } from './modified-article';
 export { BatchJobLog, type IBatchJobLog } from './batch-job-log';

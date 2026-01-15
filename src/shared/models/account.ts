@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-// 활동 시간대
 export interface ActivityHours {
   start: number; // 0-23
   end: number; // 0-23
@@ -11,12 +10,10 @@ export interface IAccount extends Document {
   password: string;
   nickname?: string;
   isMain?: boolean;
-  // 활동 설정
   activityHours?: ActivityHours;
-  restDays?: number[]; // 0=일, 6=토
+  restDays?: number[];
   dailyPostLimit?: number;
-  // 페르소나 설정
-  personaId?: string; // 페르소나 ID (null이면 랜덤)
+  personaId?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -36,12 +33,10 @@ const AccountSchema = new Schema<IAccount>(
     password: { type: String, required: true },
     nickname: { type: String },
     isMain: { type: Boolean, default: false },
-    // 활동 설정
     activityHours: { type: ActivityHoursSchema },
     restDays: { type: [Number] },
     dailyPostLimit: { type: Number },
-    // 페르소나 설정
-    personaId: { type: String }, // 페르소나 ID (null이면 랜덤)
+    personaId: { type: String },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-// 댓글/대댓글 정보
 export interface IArticleComment {
   accountId: string;
   nickname: string;
@@ -26,7 +25,6 @@ export interface IPublishedArticle extends Document {
   comments: IArticleComment[]; // 댓글/대댓글 목록
 }
 
-// 댓글 서브스키마
 const ArticleCommentSchema = new Schema<IArticleComment>(
   {
     accountId: { type: String, required: true },
@@ -64,9 +62,6 @@ export const PublishedArticle: Model<IPublishedArticle> =
   mongoose.models.PublishedArticle ||
   mongoose.model<IPublishedArticle>('PublishedArticle', PublishedArticleSchema);
 
-// ========== 헬퍼 함수 ==========
-
-// 계정이 해당 글에 댓글을 달았는지 확인
 export const hasCommented = async (
   cafeId: string,
   articleId: number,
@@ -85,7 +80,6 @@ export const hasCommented = async (
   );
 };
 
-// 댓글/대댓글 추가 (글 문서 없으면 새로 생성)
 export const addCommentToArticle = async (
   cafeId: string,
   articleId: number,
@@ -120,7 +114,6 @@ export const addCommentToArticle = async (
   return !!result;
 };
 
-// 글의 모든 댓글 가져오기
 export const getArticleComments = async (
   cafeId: string,
   articleId: number
@@ -133,7 +126,6 @@ export const getArticleComments = async (
   return article?.comments || [];
 };
 
-// 계정별 댓글 통계
 export const getAccountCommentStats = async (
   accountId: string
 ): Promise<{ comments: number; replies: number }> => {
@@ -155,4 +147,18 @@ export const getAccountCommentStats = async (
   }
 
   return stats;
+};
+
+export const getArticleIdByKeyword = async (
+  cafeId: string,
+  keyword: string
+): Promise<number | null> => {
+  const article = await PublishedArticle.findOne(
+    { cafeId, keyword },
+    { articleId: 1 }
+  )
+    .sort({ publishedAt: -1 })
+    .lean();
+
+  return article?.articleId ?? null;
 };
