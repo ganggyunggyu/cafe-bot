@@ -12,7 +12,7 @@ interface AccountInfo {
   isMain?: boolean;
 }
 
-export function AccountListUI() {
+export const AccountListUI = () => {
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [isPending, startTransition] = useTransition();
 
@@ -155,4 +155,4 @@ export function AccountListUI() {
       </ul>
     </div>
   );
-}
+};

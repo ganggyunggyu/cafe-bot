@@ -8,7 +8,7 @@ interface PostOptionsUIProps {
   onChange: (options: PostOptions) => void;
 }
 
-export function PostOptionsUI({ options, onChange }: PostOptionsUIProps) {
+export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
   const checkboxClassName = cn(
     'h-4 w-4 rounded border-gray-300 text-(--accent) focus:ring-(--accent)'
   );
@@ -115,4 +115,4 @@ export function PostOptionsUI({ options, onChange }: PostOptionsUIProps) {
       </div>
     </div>
   );
-}
+};

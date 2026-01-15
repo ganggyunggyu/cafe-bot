@@ -9,13 +9,13 @@ interface AccountManagerListProps {
   onRemove: (id: string) => void;
 }
 
-export function AccountManagerList({
+export const AccountManagerList = ({
   accounts,
   isPending,
   onLogin,
   onSetMain,
   onRemove,
-}: AccountManagerListProps) {
+}: AccountManagerListProps) => {
   const secondaryButtonClassName = cn(
     'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(31,111,103,0.35)] transition',
     'bg-(--teal) hover:brightness-105',
@@ -102,4 +102,4 @@ export function AccountManagerList({
       )}
     </div>
   );
-}
+};

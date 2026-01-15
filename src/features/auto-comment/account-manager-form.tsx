@@ -11,14 +11,14 @@ interface AccountManagerFormProps {
   onSubmit: () => void;
 }
 
-export function AccountManagerForm({
+export const AccountManagerForm = ({
   id,
   password,
   nickname,
   isPending,
   onFieldChange,
   onSubmit,
-}: AccountManagerFormProps) {
+}: AccountManagerFormProps) => {
   const sectionClassName = cn(
     'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
   );
@@ -69,4 +69,4 @@ export function AccountManagerForm({
       </div>
     </div>
   );
-}
+};

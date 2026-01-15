@@ -8,7 +8,7 @@ interface QueueStatusUIProps {
   onStopPolling: () => void;
 }
 
-export function QueueStatusUI({ status, onStopPolling }: QueueStatusUIProps) {
+export const QueueStatusUI = ({ status, onStopPolling }: QueueStatusUIProps) => {
   const entries = Object.entries(status);
   if (entries.length === 0) return null;
 
@@ -194,4 +194,4 @@ export function QueueStatusUI({ status, onStopPolling }: QueueStatusUIProps) {
       </details>
     </div>
   );
-}
+};

@@ -8,7 +8,7 @@ interface PageLayoutProps {
   description?: string;
 }
 
-export function PageLayout({ children, title, subtitle, description }: PageLayoutProps) {
+export const PageLayout = ({ children, title, subtitle, description }: PageLayoutProps) => {
   return (
     <div className={cn('min-h-screen relative overflow-hidden bg-(--surface)')}>
       <div

@@ -30,7 +30,7 @@ interface AutoPostFormProps {
   onSubmit: () => void;
 }
 
-export function AutoPostForm({
+export const AutoPostForm = ({
   mode,
   postInput,
   articleId,
@@ -44,7 +44,7 @@ export function AutoPostForm({
   onRemoveComment,
   onUpdateComment,
   onSubmit,
-}: AutoPostFormProps) {
+}: AutoPostFormProps) => {
   const sectionClassName = cn(
     'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
   );
@@ -234,4 +234,4 @@ export function AutoPostForm({
       ) : null}
     </div>
   );
-}
+};

@@ -9,7 +9,7 @@ import {
   type AutoPostResultState,
 } from './auto-post-form';
 
-export function AutoPostUI() {
+export const AutoPostUI = () => {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<AutoPostMode>('new');
 
@@ -126,4 +126,4 @@ export function AutoPostUI() {
       onSubmit={handleSubmit}
     />
   );
-}
+};

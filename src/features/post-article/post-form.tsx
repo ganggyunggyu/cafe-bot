@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { postArticle, type PostArticleResult } from './actions';
 
-export function PostForm() {
+export const PostForm = () => {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<PostArticleResult | null>(null);
 

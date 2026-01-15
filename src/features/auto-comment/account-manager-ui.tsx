@@ -13,7 +13,7 @@ import type { NaverAccount } from '@/shared/lib/account-manager';
 import { AccountManagerForm } from './account-manager-form';
 import { AccountManagerList } from './account-manager-list';
 
-export function AccountManagerUI() {
+export const AccountManagerUI = () => {
   const [accounts, setAccounts] = useState<NaverAccount[]>([]);
   const [isPending, startTransition] = useTransition();
   const [newAccount, setNewAccount] = useState({ id: '', password: '', nickname: '' });
@@ -142,4 +142,4 @@ export function AccountManagerUI() {
       />
     </div>
   );
-}
+};

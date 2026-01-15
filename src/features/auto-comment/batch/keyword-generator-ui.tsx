@@ -12,7 +12,7 @@ interface CafeConfig {
   isDefault?: boolean;
 }
 
-export function KeywordGeneratorUI() {
+export const KeywordGeneratorUI = () => {
   const [isPending, startTransition] = useTransition();
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState('');
@@ -218,4 +218,4 @@ export function KeywordGeneratorUI() {
       )}
     </div>
   );
-}
+};

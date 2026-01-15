@@ -376,9 +376,14 @@ const JobRow = ({ job }: { job: JobDetail }) => {
       );
     }
     return (
-      <div className={cn('text-(--ink)')}>
-        #{job.articleId}
-        {job.type === 'reply' && <span className={cn('text-(--ink-muted)')}> (댓글 {job.commentIndex})</span>}
+      <div>
+        <div className={cn('text-(--ink) truncate max-w-[200px]')} title={job.content}>
+          {job.content || '-'}
+        </div>
+        <div className={cn('text-xs text-(--ink-muted)')}>
+          #{job.articleId}
+          {job.type === 'reply' && ` (댓글 ${job.commentIndex})`}
+        </div>
       </div>
     );
   };

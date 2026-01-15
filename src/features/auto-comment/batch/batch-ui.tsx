@@ -20,7 +20,7 @@ const parseLines = (value: string) =>
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-export function BatchUI() {
+export const BatchUI = () => {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<JobMode>('publish');
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
@@ -268,7 +268,7 @@ export function BatchUI() {
       )}
     </div>
   );
-}
+};
 
 interface CafeSelectProps {
   cafes: CafeConfig[];
@@ -278,13 +278,13 @@ interface CafeSelectProps {
   onChange: (cafeId: string) => void;
 }
 
-function CafeSelect({
+const CafeSelect = ({
   cafes: cafeList,
   selectedCafeId,
   selectedCafe,
   inputClassName,
   onChange,
-}: CafeSelectProps) {
+}: CafeSelectProps) => {
   return (
     <div className={cn('flex flex-col gap-1')}>
       <label className={cn('text-xs font-medium text-(--ink-muted)')}>
@@ -321,7 +321,7 @@ function CafeSelect({
       )}
     </div>
   );
-}
+};
 
 interface PublishFieldsProps {
   keywordsText: string;
@@ -331,13 +331,13 @@ interface PublishFieldsProps {
   onPostOptionsChange: (options: PostOptions) => void;
 }
 
-function PublishFields({
+const PublishFields = ({
   keywordsText,
   postOptions,
   inputClassName,
   onKeywordsChange,
   onPostOptionsChange,
-}: PublishFieldsProps) {
+}: PublishFieldsProps) => {
   return (
     <Fragment>
       <textarea
@@ -355,7 +355,7 @@ function PublishFields({
       </div>
     </Fragment>
   );
-}
+};
 
 interface ModifyFieldsProps {
   adKeywordsText: string;
@@ -367,7 +367,7 @@ interface ModifyFieldsProps {
   onDaysLimitChange: (value: number | undefined) => void;
 }
 
-function ModifyFields({
+const ModifyFields = ({
   adKeywordsText,
   sortOrder,
   daysLimit,
@@ -375,7 +375,7 @@ function ModifyFields({
   onAdKeywordsChange,
   onSortOrderChange,
   onDaysLimitChange,
-}: ModifyFieldsProps) {
+}: ModifyFieldsProps) => {
   const handleDaysLimitChange = (value: string) => {
     onDaysLimitChange(value ? Number(value) : undefined);
   };
@@ -416,7 +416,7 @@ function ModifyFields({
       </p>
     </Fragment>
   );
-}
+};
 
 interface PublishResultProps {
   result: QueueBatchResult;
@@ -424,7 +424,7 @@ interface PublishResultProps {
   onStopPolling: () => void;
 }
 
-function PublishResult({ result, queueStatus, onStopPolling }: PublishResultProps) {
+const PublishResult = ({ result, queueStatus, onStopPolling }: PublishResultProps) => {
   return (
     <div
       className={cn(
@@ -454,14 +454,14 @@ function PublishResult({ result, queueStatus, onStopPolling }: PublishResultProp
       )}
     </div>
   );
-}
+};
 
 interface ModifyResultProps {
   result: ModifyBatchResult;
   selectedCafeId: string;
 }
 
-function ModifyResult({ result, selectedCafeId }: ModifyResultProps) {
+const ModifyResult = ({ result, selectedCafeId }: ModifyResultProps) => {
   return (
     <div
       className={cn(
@@ -527,4 +527,4 @@ function ModifyResult({ result, selectedCafeId }: ModifyResultProps) {
       )}
     </div>
   );
-}
+};
