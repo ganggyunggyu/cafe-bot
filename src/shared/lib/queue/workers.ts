@@ -10,7 +10,7 @@ import {
   CommentJobData,
   ReplyJobData,
 } from './types';
-import { addTaskJob } from './index';
+import { addTaskJob, createRescheduleToken } from './index';
 import { getAllAccounts } from '@/shared/config/accounts';
 import { isAccountActive, getNextActiveTime } from '@/shared/lib/account-manager';
 import { getQueueSettings } from '@/shared/models/queue-settings';
@@ -21,6 +21,10 @@ import { handleReplyJob } from './handlers/reply-handler';
 const taskWorkers: Map<string, Worker<TaskJobData, JobResult>> = new Map();
 
 let generateWorker: Worker<GenerateJobData, JobResult> | null = null;
+
+const WORKER_LOCK_DURATION = 10 * 60 * 1000;
+const WORKER_LOCK_RENEW_TIME = 60 * 1000;
+const WORKER_STALLED_INTERVAL = 60 * 1000;
 
 const processTaskJob = async (
   job: Job<TaskJobData, JobResult>
@@ -44,7 +48,11 @@ const processTaskJob = async (
         nextActiveDelay / 60000
       )}분 뒤 재스케줄: ${data.accountId}`
     );
-    await addTaskJob(data.accountId, data, nextActiveDelay);
+    await addTaskJob(
+      data.accountId,
+      { ...data, rescheduleToken: createRescheduleToken() },
+      nextActiveDelay
+    );
     return {
       success: false,
       error: '비활동 시간대 - 재스케줄됨',
@@ -79,6 +87,9 @@ export const createTaskWorker = (
   const worker = new Worker<TaskJobData, JobResult>(queueName, processTaskJob, {
     connection: getRedisConnection(),
     concurrency: 1,
+    lockDuration: WORKER_LOCK_DURATION,
+    lockRenewTime: WORKER_LOCK_RENEW_TIME,
+    stalledInterval: WORKER_STALLED_INTERVAL,
   });
 
   worker.on('completed', (job, result) => {
@@ -111,6 +122,9 @@ export const createGenerateWorker = (
     {
       connection: getRedisConnection(),
       concurrency: 3,
+      lockDuration: WORKER_LOCK_DURATION,
+      lockRenewTime: WORKER_LOCK_RENEW_TIME,
+      stalledInterval: WORKER_STALLED_INTERVAL,
     }
   );
 

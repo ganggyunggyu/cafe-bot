@@ -48,9 +48,12 @@ export const handlePostJob = async (
   }
 
   try {
-    if (result.articleId && !data.skipComments) {
+    if (result.articleId && data.viralComments?.comments.length) {
+      await saveArticleOnly(data, result.articleId);
+      await addViralCommentJobs(data, result.articleId, accounts);
+    } else if (result.articleId && !data.skipComments) {
       await handlePostSuccess(data, result.articleId, accounts, settings);
-    } else if (result.articleId && data.skipComments) {
+    } else if (result.articleId) {
       await saveArticleOnly(data, result.articleId);
     }
   } catch (chainError) {
@@ -96,6 +99,150 @@ const saveArticleOnly = async (
   } catch (dbError) {
     console.error('[WORKER] 원고 저장 실패:', dbError);
   }
+
+};
+
+const FIRST_COMMENT_DELAY = 30 * 1000; // 글 저장 후 첫 댓글까지 30초
+const BETWEEN_COMMENTS_DELAY = 45 * 1000; // 댓글 간 45초
+
+const addViralCommentJobs = async (
+  postData: PostJobData,
+  articleId: number,
+  accounts: NaverAccount[]
+): Promise<void> => {
+  const { cafeId, keyword, accountId: writerAccountId, viralComments } = postData;
+  if (!viralComments || viralComments.comments.length === 0) return;
+
+  const { comments } = viralComments;
+  const commenterAccounts = accounts.filter((a) => a.id !== writerAccountId);
+  if (commenterAccounts.length === 0) {
+    console.log('[WORKER] 댓글 계정 없음 - viral 댓글 스킵');
+    return;
+  }
+
+  const accountNicknameMap: Map<string, string> = new Map(
+    accounts.map((account) => [account.id, account.nickname || account.id])
+  );
+
+  const mainComments = comments.filter((c) => c.type === 'comment');
+  const commentIndexMap: Map<number, number> = new Map();
+  const commentAuthorMap: Map<number, string> = new Map();
+  const commentContentMap: Map<number, string> = new Map();
+
+  mainComments.forEach((comment, i) => {
+    const commenter = commenterAccounts[i % commenterAccounts.length];
+    commentIndexMap.set(comment.index, i);
+    commentAuthorMap.set(comment.index, commenter.id);
+    commentContentMap.set(comment.index, comment.content);
+  });
+
+  const sequenceId = `viral_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  let orderIndex = 0;
+  let commentCount = 0;
+  let replyCount = 0;
+  const lastReplyerByParent: Map<number, string> = new Map();
+
+  console.log(`[WORKER] viral 댓글/대댓글 ${comments.length}개 Job 추가 시작`);
+
+  for (const item of comments) {
+    const itemDelay = FIRST_COMMENT_DELAY + (orderIndex * BETWEEN_COMMENTS_DELAY);
+
+    if (item.type === 'comment') {
+      const commenterId = commentAuthorMap.get(item.index);
+      if (!commenterId) {
+        console.warn(`[WORKER] 댓글 작성자 없음: index=${item.index}`);
+        continue;
+      }
+      const commentOrder = commentIndexMap.get(item.index);
+
+      const commentJobData: CommentJobData = {
+        type: 'comment',
+        accountId: commenterId,
+        cafeId,
+        articleId,
+        content: item.content,
+        commentIndex: commentOrder,
+        keyword,
+        sequenceId,
+        sequenceIndex: orderIndex,
+      };
+
+      await addTaskJob(commenterId, commentJobData, itemDelay);
+      console.log(`[WORKER] [${orderIndex + 1}] 댓글 Job: ${commenterId}, 딜레이: ${Math.round(itemDelay / 1000)}초`);
+      commentCount++;
+      orderIndex++;
+      continue;
+    }
+
+    if (item.parentIndex === undefined) {
+      console.warn(`[WORKER] 대댓글 부모 없음: type=${item.type}`);
+      continue;
+    }
+
+    const parentCommentOrder = commentIndexMap.get(item.parentIndex);
+    if (parentCommentOrder === undefined) {
+      console.warn(`[WORKER] 부모 댓글 없음: index=${item.parentIndex}`);
+      continue;
+    }
+
+    const parentCommenterId = commentAuthorMap.get(item.parentIndex);
+    const lastReplyerId = lastReplyerByParent.get(item.parentIndex);
+
+    let replyerAccountId: string;
+
+    if (item.type === 'author_reply') {
+      replyerAccountId = writerAccountId;
+    } else if (item.type === 'commenter_reply') {
+      replyerAccountId = parentCommenterId || commenterAccounts[parentCommentOrder % commenterAccounts.length].id;
+    } else {
+      const excludeIds = new Set<string>();
+      if (parentCommenterId) excludeIds.add(parentCommenterId);
+      if (lastReplyerId) excludeIds.add(lastReplyerId);
+
+      const availableCommenters = commenterAccounts.filter((a) => !excludeIds.has(a.id));
+
+      if (availableCommenters.length === 0) {
+        const fallbackCommenters = commenterAccounts.filter((a) => a.id !== lastReplyerId);
+        if (fallbackCommenters.length === 0) {
+          replyerAccountId = commenterAccounts[Math.floor(Math.random() * commenterAccounts.length)].id;
+        } else {
+          replyerAccountId = fallbackCommenters[Math.floor(Math.random() * fallbackCommenters.length)].id;
+        }
+      } else {
+        replyerAccountId = availableCommenters[Math.floor(Math.random() * availableCommenters.length)].id;
+      }
+    }
+
+    if (replyerAccountId === lastReplyerId && commenterAccounts.length > 1) {
+      const alternativeAccounts = accounts.filter((a) => a.id !== lastReplyerId);
+      if (alternativeAccounts.length > 0) {
+        replyerAccountId = alternativeAccounts[Math.floor(Math.random() * alternativeAccounts.length)].id;
+      }
+    }
+
+    lastReplyerByParent.set(item.parentIndex, replyerAccountId);
+
+    const replyJobData: ReplyJobData = {
+      type: 'reply',
+      accountId: replyerAccountId,
+      cafeId,
+      articleId,
+      content: item.content,
+      commentIndex: parentCommentOrder,
+      parentComment: commentContentMap.get(item.parentIndex),
+      parentNickname: parentCommenterId ? accountNicknameMap.get(parentCommenterId) : undefined,
+      keyword,
+      sequenceId,
+      sequenceIndex: orderIndex,
+    };
+
+    await addTaskJob(replyerAccountId, replyJobData, itemDelay);
+    console.log(`[WORKER] [${orderIndex + 1}] 대댓글 Job (${item.type}): ${replyerAccountId} → 댓글[${parentCommentOrder}], 딜레이: ${Math.round(itemDelay / 1000)}초`);
+    replyCount++;
+    orderIndex++;
+  }
+
+  console.log(`[WORKER] viral 댓글 ${commentCount}개, 대댓글 ${replyCount}개 Job 추가 완료`);
 };
 
 const handlePostSuccess = async (
@@ -153,6 +300,7 @@ const handlePostSuccess = async (
 
   const commentDelays: Map<string, number> = new Map();
   const afterPostDelay = getRandomDelay(settings.delays.afterPost);
+  const commentBatchId = `batch_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
   const maxCommentsPerAccount = settings.limits?.maxCommentsPerAccount ?? 1;
   const commentCount = commenterAccounts.length;
@@ -185,12 +333,15 @@ const handlePostSuccess = async (
     const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
     commentDelays.set(commenter.id, nextDelay);
 
+    const commentIndex = commentAuthors.length;
     const commentJobData: CommentJobData = {
       type: 'comment',
       accountId: commenter.id,
       cafeId,
       articleId,
       content: commentText,
+      commentIndex,
+      sequenceId: commentBatchId,
     };
 
     await addTaskJob(commenter.id, commentJobData, currentDelay);
@@ -271,14 +422,17 @@ const handlePostSuccess = async (
       const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
       replyDelays.set(writerAccountId, nextDelay);
 
-      const replyJobData: ReplyJobData = {
-        type: 'reply',
-        accountId: writerAccountId,
-        cafeId,
-        articleId,
-        content: replyText,
-        commentIndex: targetCommentIndex,
-      };
+    const replyJobData: ReplyJobData = {
+      type: 'reply',
+      accountId: writerAccountId,
+      cafeId,
+      articleId,
+      content: replyText,
+      commentIndex: targetCommentIndex,
+      parentComment: parentCommentContent,
+      parentNickname: parentAuthorNickname,
+      sequenceId: commentBatchId,
+    };
 
       await addTaskJob(writerAccountId, replyJobData, currentDelay);
       const delayInfo = writerActivityDelay > 0
@@ -353,6 +507,9 @@ const handlePostSuccess = async (
       articleId,
       content: replyText,
       commentIndex: targetCommentIndex,
+      parentComment: parentCommentContent,
+      parentNickname: targetCommentAuthor.nickname,
+      sequenceId: commentBatchId,
     };
 
     await addTaskJob(replyer.id, replyJobData, currentDelay);

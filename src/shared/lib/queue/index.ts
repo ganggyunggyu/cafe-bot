@@ -15,6 +15,28 @@ const getContentHash = (str: string): string => {
   return createHash('md5').update(str).digest('hex').slice(0, 8);
 };
 
+const getSequenceSuffix = (data: { sequenceId?: string; sequenceIndex?: number }): string => {
+  if (!data.sequenceId || data.sequenceIndex === undefined) {
+    return '';
+  }
+
+  return `_seq_${data.sequenceId}_${data.sequenceIndex}`;
+};
+
+const getRescheduleSuffix = (data: { rescheduleToken?: string }): string => {
+  if (!data.rescheduleToken) {
+    return '';
+  }
+
+  return `_r${data.rescheduleToken}`;
+};
+
+export const createRescheduleToken = (): string => {
+  const now = Date.now().toString(36);
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${now}_${rand}`;
+};
+
 const taskQueues: Map<string, Queue<TaskJobData, JobResult>> = new Map();
 
 let generateQueue: Queue<GenerateJobData, JobResult> | null = null;
@@ -63,12 +85,18 @@ const generateJobId = (data: TaskJobData): string => {
     case 'post': {
       const postData = data as PostJobData;
       const hash = getContentHash(postData.subject);
-      return `post_${data.accountId}_${hash}`;
+      return `post_${data.accountId}_${hash}${getRescheduleSuffix(postData)}`;
     }
-    case 'comment':
-      return `comment_${data.accountId}_${data.articleId}_${getContentHash(data.content)}`;
-    case 'reply':
-      return `reply_${data.accountId}_${data.articleId}_${data.commentIndex}_${getContentHash(data.content)}`;
+    case 'comment': {
+      const sequenceSuffix = getSequenceSuffix(data);
+      const rescheduleSuffix = getRescheduleSuffix(data);
+      return `comment_${data.accountId}_${data.articleId}_${getContentHash(data.content)}${sequenceSuffix}${rescheduleSuffix}`;
+    }
+    case 'reply': {
+      const sequenceSuffix = getSequenceSuffix(data);
+      const rescheduleSuffix = getRescheduleSuffix(data);
+      return `reply_${data.accountId}_${data.articleId}_${data.commentIndex}_${getContentHash(data.content)}${sequenceSuffix}${rescheduleSuffix}`;
+    }
   }
 };
 

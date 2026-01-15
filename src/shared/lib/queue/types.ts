@@ -1,5 +1,16 @@
 import type { PostOptions } from '@/features/auto-comment/batch/types';
 
+export interface ViralCommentItem {
+  type: 'comment' | 'author_reply' | 'commenter_reply' | 'other_reply';
+  content: string;
+  index: number;
+  parentIndex?: number;
+}
+
+export interface ViralCommentsData {
+  comments: ViralCommentItem[];
+}
+
 export interface PostJobData {
   type: 'post';
   accountId: string;
@@ -13,6 +24,9 @@ export interface PostJobData {
   service?: string;
   rawContent?: string;
   skipComments?: boolean;
+  viralComments?: ViralCommentsData;
+  rescheduleToken?: string;
+  _retryCount?: number;
 }
 
 export interface CommentJobData {
@@ -21,7 +35,12 @@ export interface CommentJobData {
   cafeId: string;
   articleId: number;
   content: string;
+  commentIndex?: number;
   keyword?: string;
+  sequenceId?: string;
+  sequenceIndex?: number;
+  rescheduleToken?: string;
+  _retryCount?: number;
 }
 
 export interface ReplyJobData {
@@ -31,7 +50,14 @@ export interface ReplyJobData {
   articleId: number;
   content: string;
   commentIndex: number;
+  parentCommentId?: string;
+  parentComment?: string;
+  parentNickname?: string;
   keyword?: string;
+  sequenceId?: string;
+  sequenceIndex?: number;
+  rescheduleToken?: string;
+  _retryCount?: number;
 }
 
 export interface GenerateJobData {
