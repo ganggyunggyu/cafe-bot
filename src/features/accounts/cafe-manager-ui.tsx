@@ -59,7 +59,7 @@ const serializeCategoryMenuIds = (obj?: Record<string, string>): string => {
     .join(', ');
 };
 
-export function CafeManagerUI() {
+export const CafeManagerUI = () => {
   const [isPending, startTransition] = useTransition();
   const [cafes, setCafes] = useState<CafeData[]>([]);
   const [form, setForm] = useState<CafeFormData>(INITIAL_FORM);

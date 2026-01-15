@@ -40,7 +40,7 @@ export interface AccountData {
   fromConfig?: boolean;
 }
 
-export async function getAccountsAction(): Promise<AccountData[]> {
+export const getAccountsAction = async (): Promise<AccountData[]> => {
   await connectDB();
   const dbAccounts = await Account.find({ isActive: true }).sort({ isMain: -1, createdAt: 1 }).lean();
 
@@ -73,7 +73,7 @@ export async function getAccountsAction(): Promise<AccountData[]> {
   }));
 }
 
-export async function addAccountAction(input: AccountInput) {
+export const addAccountAction = async (input: AccountInput) => {
   await connectDB();
 
   const existing = await Account.findOne({ accountId: input.accountId });
@@ -94,9 +94,9 @@ export async function addAccountAction(input: AccountInput) {
 
   revalidatePath('/accounts');
   return { success: true };
-}
+};
 
-export async function updateAccountAction(accountId: string, input: Partial<AccountInput>) {
+export const updateAccountAction = async (accountId: string, input: Partial<AccountInput>) => {
   await connectDB();
 
   await Account.findOneAndUpdate(
@@ -106,9 +106,9 @@ export async function updateAccountAction(accountId: string, input: Partial<Acco
 
   revalidatePath('/accounts');
   return { success: true };
-}
+};
 
-export async function deleteAccountAction(accountId: string) {
+export const deleteAccountAction = async (accountId: string) => {
   try {
     await connectDB();
 
@@ -130,11 +130,11 @@ export async function deleteAccountAction(accountId: string) {
     console.error(`[DELETE] 에러:`, error);
     return { success: false, error: '삭제 중 오류 발생' };
   }
-}
+};
 
 // ========== 카페 CRUD ==========
 
-export async function getCafesAction() {
+export const getCafesAction = async () => {
   console.log('[CAFE-ACTION] getCafesAction 호출');
   console.log('[CAFE-ACTION] MONGODB_URI:', process.env.MONGODB_URI ? '설정됨' : '없음');
   try {
@@ -178,7 +178,7 @@ export async function getCafesAction() {
   });
 }
 
-export async function addCafeAction(input: CafeInput) {
+export const addCafeAction = async (input: CafeInput) => {
   await connectDB();
 
   const existing = await Cafe.findOne({ cafeId: input.cafeId });
@@ -202,9 +202,9 @@ export async function addCafeAction(input: CafeInput) {
 
   revalidatePath('/accounts');
   return { success: true };
-}
+};
 
-export async function updateCafeAction(cafeId: string, input: Partial<CafeInput>) {
+export const updateCafeAction = async (cafeId: string, input: Partial<CafeInput>) => {
   await connectDB();
 
   // 기본 카페로 설정하면 기존 기본 카페 해제
@@ -219,9 +219,9 @@ export async function updateCafeAction(cafeId: string, input: Partial<CafeInput>
 
   revalidatePath('/accounts');
   return { success: true };
-}
+};
 
-export async function deleteCafeAction(cafeId: string) {
+export const deleteCafeAction = async (cafeId: string) => {
   await connectDB();
 
   await Cafe.findOneAndUpdate(
@@ -231,11 +231,11 @@ export async function deleteCafeAction(cafeId: string) {
 
   revalidatePath('/accounts');
   return { success: true };
-}
+};
 
 // ========== 초기 데이터 마이그레이션 ==========
 
-export async function migrateFromConfigAction() {
+export const migrateFromConfigAction = async () => {
   await connectDB();
 
   // 기존 하드코딩된 계정 가져오기
@@ -281,4 +281,4 @@ export async function migrateFromConfigAction() {
 
   revalidatePath('/accounts');
   return { success: true, accountsAdded, cafesAdded };
-}
+};

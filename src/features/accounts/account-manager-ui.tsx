@@ -152,7 +152,7 @@ const defaultFormData: AccountFormData = {
   personaId: '',
 };
 
-export function AccountManagerUI() {
+export const AccountManagerUI = () => {
   const [isPending, startTransition] = useTransition();
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [loginStatus, setLoginStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/shared/lib/mongodb';
 import { Cafe } from '@/shared/models';
 
-export async function GET() {
+export const GET = async () => {
   try {
     await connectDB();
     const cafes = await Cafe.find({ isActive: true })
