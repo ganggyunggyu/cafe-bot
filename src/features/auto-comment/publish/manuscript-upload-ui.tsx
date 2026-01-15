@@ -62,7 +62,7 @@ const fileToText = (file: File): Promise<string> => {
   });
 };
 
-export function ManuscriptUploadUI() {
+export const ManuscriptUploadUI = () => {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<ManuscriptMode>('publish');
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
@@ -462,4 +462,4 @@ export function ManuscriptUploadUI() {
       )}
     </div>
   );
-}
+};

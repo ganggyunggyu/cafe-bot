@@ -20,7 +20,6 @@ import type {
   ManuscriptModifyArticleResult,
 } from './types';
 
-// 원고 일괄 업로드 (큐 기반)
 export const runManuscriptUploadAction = async (
   input: ManuscriptUploadInput
 ): Promise<ManuscriptUploadResult> => {
@@ -40,47 +39,46 @@ export const runManuscriptUploadAction = async (
 
   await connectDB();
   const settings = await getQueueSettings();
-
-  // 워커 시작
+  const enableDailyPostLimit = settings.limits?.enableDailyPostLimit ?? true;
   await startAllTaskWorkers();
 
   let jobsAdded = 0;
   let skipped = 0;
-
-  // 글로벌 딜레이 (모든 계정 통합 - 동시 발행 방지)
   let globalDelay = 0;
 
-  // 계정별 남은 포스트 수 추적
   const accountRemainingPosts: Map<string, number> = new Map();
-  for (const account of accounts) {
-    const remaining = await getRemainingPostsToday(account.id, account.dailyPostLimit);
-    accountRemainingPosts.set(account.id, remaining);
+  if (enableDailyPostLimit) {
+    for (const account of accounts) {
+      const remaining = await getRemainingPostsToday(account.id, account.dailyPostLimit);
+      accountRemainingPosts.set(account.id, remaining);
+    }
   }
 
   for (let i = 0; i < manuscripts.length; i++) {
     const manuscript = manuscripts[i];
     const writerAccount = accounts[i % accounts.length];
 
-    // 활동 시간대 체크
     if (!isAccountActive(writerAccount)) {
       console.log(`[MANUSCRIPT] ${writerAccount.id} 비활동 시간대 - 스킵`);
       skipped++;
       continue;
     }
 
-    // 일일 포스트 제한 체크
-    const remaining = accountRemainingPosts.get(writerAccount.id) ?? 0;
-    if (remaining <= 0) {
-      console.log(`[MANUSCRIPT] ${writerAccount.id} 일일 포스트 제한 도달 - 스킵`);
-      skipped++;
-      continue;
+    if (enableDailyPostLimit) {
+      const remaining = accountRemainingPosts.get(writerAccount.id) ?? 0;
+      if (remaining <= 0) {
+        console.log(`[MANUSCRIPT] ${writerAccount.id} 일일 포스트 제한 도달 - 스킵`);
+        skipped++;
+        continue;
+      }
     }
 
-    // 남은 포스트 수 감소
-    accountRemainingPosts.set(writerAccount.id, remaining - 1);
+    if (enableDailyPostLimit) {
+      const remaining = accountRemainingPosts.get(writerAccount.id) ?? 0;
+      accountRemainingPosts.set(writerAccount.id, remaining - 1);
+    }
 
     try {
-      // 카테고리 → menuId 매핑
       let menuId = cafe.menuId;
       if (manuscript.category && cafe.categoryMenuIds) {
         const mappedMenuId = cafe.categoryMenuIds[manuscript.category];
@@ -89,14 +87,12 @@ export const runManuscriptUploadAction = async (
         }
       }
 
-      // 원고 내용을 HTML로 변환
       const { title, htmlContent } = buildCafePostContentFromManuscript(
         manuscript.content,
         manuscript.name,
         manuscript.images
       );
 
-      // Task Job 추가 (분리발행은 글만 발행, 댓글 없음)
       const jobData: PostJobData = {
         type: 'post',
         accountId: writerAccount.id,
@@ -118,7 +114,6 @@ export const runManuscriptUploadAction = async (
         `[MANUSCRIPT] Job 추가: ${manuscript.name} (${manuscript.category || '미지정'}) → ${writerAccount.id}, 딜레이: ${Math.round(globalDelay / 1000)}초`
       );
 
-      // 다음 글을 위한 딜레이 누적
       const randomDelay = getRandomDelay(settings.delays.betweenPosts);
       globalDelay += randomDelay;
     } catch (error) {
@@ -134,7 +129,6 @@ export const runManuscriptUploadAction = async (
   };
 };
 
-// 원고로 기존 글 수정 (직접 실행)
 export const runManuscriptModifyAction = async (
   input: ManuscriptModifyInput
 ): Promise<ManuscriptModifyResult> => {
@@ -168,7 +162,6 @@ export const runManuscriptModifyAction = async (
 
   await connectDB();
 
-  // 수정 대상 글 조회 (원고 개수만큼)
   const baseFilter = buildBaseFilter(cafe.cafeId, daysLimit);
   const articlesToModify = await fetchArticlesToModify(sortOrder, manuscripts.length, baseFilter);
 
@@ -193,8 +186,6 @@ export const runManuscriptModifyAction = async (
     const article = articlesToModify[i];
     const manuscript = manuscripts[i];
     const { articleId, writerAccountId, keyword } = article;
-
-    // 글 작성자 계정 찾기
     const writerAccount = accounts.find((a) => a.id === writerAccountId);
 
     if (!writerAccount) {
@@ -211,14 +202,12 @@ export const runManuscriptModifyAction = async (
     }
 
     try {
-      // 원고 → HTML 변환
       const { title: newTitle, htmlContent: newContent } = buildCafePostContentFromManuscript(
         manuscript.content,
         manuscript.name,
         manuscript.images
       );
 
-      // 글 수정 실행
       const modifyResult = await modifyArticleWithAccount(writerAccount, {
         cafeId: cafe.cafeId,
         articleId,
@@ -239,7 +228,6 @@ export const runManuscriptModifyAction = async (
         continue;
       }
 
-      // ModifiedArticle 저장
       await ModifiedArticle.create({
         originalArticleId: article._id,
         articleId,
@@ -251,7 +239,6 @@ export const runManuscriptModifyAction = async (
         modifiedBy: writerAccountId,
       });
 
-      // PublishedArticle에서 제거
       await PublishedArticle.deleteOne({ _id: article._id });
 
       results.push({
@@ -266,7 +253,6 @@ export const runManuscriptModifyAction = async (
         `[MANUSCRIPT MODIFY] 수정 완료: ${manuscript.name} → ${articleId} (${i + 1}/${articlesToModify.length})`
       );
 
-      // 다음 글 수정 전 대기 (30초)
       if (i < articlesToModify.length - 1) {
         console.log('[MANUSCRIPT MODIFY] 다음 글 수정 전 30초 대기...');
         await new Promise((resolve) => setTimeout(resolve, 30000));

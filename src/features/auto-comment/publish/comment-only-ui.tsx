@@ -12,7 +12,7 @@ interface CafeConfig {
   isDefault?: boolean;
 }
 
-export function CommentOnlyUI() {
+export const CommentOnlyUI = () => {
   const [isPending, startTransition] = useTransition();
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState('');
@@ -229,4 +229,4 @@ export function CommentOnlyUI() {
       )}
     </div>
   );
-}
+};

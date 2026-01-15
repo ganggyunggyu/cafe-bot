@@ -11,9 +11,9 @@ export interface QueueBatchResult {
 export type QueueStatusResult = Record<string, { waiting: number; active: number; completed: number; failed: number }>;
 
 // 글만 발행 (큐 기반) - Redis 필요
-export async function runPostOnlyAction(
+export const runPostOnlyAction = async (
   input: PostOnlyInput
-): Promise<QueueBatchResult> {
+): Promise<QueueBatchResult> => {
   const { keywords, ref, cafeId, postOptions } = input;
 
   console.log('[POST-ONLY] 큐 추가 시작:', keywords.length, '개 키워드');
@@ -36,10 +36,10 @@ export async function runPostOnlyAction(
       message: 'Redis 연결 실패 - Redis 서버가 실행 중인지 확인해주세요',
     };
   }
-}
+};
 
 // 큐 상태 조회 - Redis 필요
-export async function getPostQueueStatusAction(): Promise<QueueStatusResult> {
+export const getPostQueueStatusAction = async (): Promise<QueueStatusResult> => {
   try {
     const { getBatchQueueStatus } = await import('../batch/batch-queue');
     return await getBatchQueueStatus();
@@ -47,4 +47,4 @@ export async function getPostQueueStatusAction(): Promise<QueueStatusResult> {
     console.error('[POST-ONLY QUEUE STATUS] Redis 연결 실패:', error);
     return {};
   }
-}
+};

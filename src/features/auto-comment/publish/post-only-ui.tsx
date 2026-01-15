@@ -14,7 +14,7 @@ interface CafeConfig {
   isDefault?: boolean;
 }
 
-export function PostOnlyUI() {
+export const PostOnlyUI = () => {
   const [isPending, startTransition] = useTransition();
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState('');
@@ -218,4 +218,4 @@ export function PostOnlyUI() {
       )}
     </div>
   );
-}
+};

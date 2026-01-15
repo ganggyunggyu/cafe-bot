@@ -17,9 +17,9 @@ import type {
 } from './types';
 
 // 필터링된 발행원고 조회
-export async function fetchFilteredArticles(
+export const fetchFilteredArticles = async (
   filter: CommentOnlyFilter
-): Promise<CommentTargetArticle[]> {
+): Promise<CommentTargetArticle[]> => {
   const { cafeId, minDaysOld, maxComments, articleCount } = filter;
 
   console.log('[COMMENT-ONLY] 필터링 조회:', filter);
@@ -62,14 +62,14 @@ export async function fetchFilteredArticles(
     console.error('[COMMENT-ONLY] 조회 오류:', error);
     return [];
   }
-}
+};
 
 // 자동 댓글 달기 (큐 기반)
 // N일 이내 글 중 랜덤 절반, 글당 3~15개, 대댓글 50% / 댓글 50%
-export async function runAutoCommentAction(
+export const runAutoCommentAction = async (
   cafeId: string,
   daysLimit: number = 3
-): Promise<CommentOnlyResult> {
+): Promise<CommentOnlyResult> => {
   console.log('[AUTO-COMMENT] 시작 - cafeId:', cafeId, 'daysLimit:', daysLimit);
 
   const accounts = await getAllAccounts();
@@ -289,4 +289,4 @@ export async function runAutoCommentAction(
       message: errorMessage,
     };
   }
-}
+};
