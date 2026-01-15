@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3007",
+    "dev": "concurrently \"next dev --port 3007\" \"npx tsx scripts/bull-board.ts\"",
+    "dev:next": "next dev --port 3007",
     "build": "next build",
     "start": "next start --port 3007",
     "lint": "eslint",
@@ -30,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
