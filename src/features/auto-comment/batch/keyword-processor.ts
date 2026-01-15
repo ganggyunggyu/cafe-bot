@@ -226,6 +226,7 @@ export const processKeyword = async ({
     const commentResults: CommentResult[] = [];
     const commentTexts: string[] = [];
     const commentAuthors: Array<{ id: string; nickname: string }> = [];
+    const commentIds: Array<string | undefined> = [];
     const commentCount = getRandomCommentCount();
     const postContent = generated.content;
 
@@ -256,6 +257,7 @@ export const processKeyword = async ({
       if (result.success) {
         commentTexts.push(commentText);
         commentAuthors.push({ id: commenter.id, nickname: commenter.nickname || commenter.id });
+        commentIds.push(result.commentId);
       }
 
       if (j < commentCount - 1) {
@@ -302,7 +304,12 @@ export const processKeyword = async ({
           cafeId,
           postResult.articleId,
           replyText,
-          task.targetCommentIndex
+          task.targetCommentIndex,
+          {
+            parentCommentId: commentIds[task.targetCommentIndex],
+            parentComment,
+            parentNickname: parentAuthor.nickname,
+          }
         );
 
         replyResults.push({

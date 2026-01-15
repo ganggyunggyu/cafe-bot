@@ -1,4 +1,4 @@
-import type { Page } from 'playwright';
+import type { ElementHandle, Frame, Page } from 'playwright';
 import {
   getPageForAccount,
   saveCookiesForAccount,
@@ -16,6 +16,7 @@ export interface WriteCommentResult {
   accountId: string;
   success: boolean;
   error?: string;
+  commentId?: string;
 }
 
 const ensureLoggedIn = async (
@@ -67,6 +68,67 @@ const checkErrorPopup = async (page: Page): Promise<string | null> => {
   return null;
 };
 
+const waitForCommentItem = async (
+  root: Page | Frame,
+  timeout: number
+): Promise<boolean> => {
+  try {
+    await root.waitForSelector('.CommentItem', { timeout });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getCommentRoot = async (page: Page): Promise<Page | Frame> => {
+  const frameHandle = await page.$('iframe#cafe_main');
+  const frame = await frameHandle?.contentFrame();
+  if (frame) {
+    const frameReady = await waitForCommentItem(frame, 5000);
+    if (frameReady) return frame;
+  }
+
+  await waitForCommentItem(page, 3000);
+  return page;
+};
+
+const getClosestCommentItem = async (
+  node: ElementHandle<Element>
+): Promise<ElementHandle<HTMLElement> | null> => {
+  const handle = await node.evaluateHandle((el) => el.closest('.CommentItem'));
+  const element = handle.asElement();
+  return element ? (element as ElementHandle<HTMLElement>) : null;
+};
+
+const findCommentItemById = async (
+  root: Page | Frame,
+  commentId: string
+): Promise<ElementHandle<HTMLElement> | null> => {
+  const safeId = commentId.replace(/"/g, '\\"');
+  const direct = await root.$(`li[id="${safeId}"]`);
+  if (direct) return direct as ElementHandle<HTMLElement>;
+
+  const dataId = await root.$(`[data-comment-id="${safeId}"]`);
+  if (dataId) {
+    const closest = await getClosestCommentItem(dataId);
+    if (closest) return closest;
+  }
+
+  const likeCid = await root.$(`[data-cid$="-${safeId}"]`);
+  if (likeCid) {
+    const closest = await getClosestCommentItem(likeCid);
+    if (closest) return closest;
+  }
+
+  const buttonNode = await root.$(`button#commentItem${safeId}`);
+  if (buttonNode) {
+    const closest = await getClosestCommentItem(buttonNode);
+    if (closest) return closest;
+  }
+
+  return null;
+};
+
 export const writeCommentWithAccount = async (
   account: NaverAccount,
   cafeId: string,
@@ -96,19 +158,24 @@ export const writeCommentWithAccount = async (
       return { accountId: id, success: false, error: 'ARTICLE_NOT_READY:글이 아직 처리 중이거나 삭제됨' };
     }
 
-    let commentInput = null;
-    try {
-      commentInput = await page.waitForSelector('textarea.comment_inbox_text', { timeout: 10000 });
-    } catch {
-      const frameHandle = await page.$('iframe#cafe_main');
-      if (frameHandle) {
-        const frame = await frameHandle.contentFrame();
-        if (frame) {
-          try {
-            commentInput = await frame.waitForSelector('textarea.comment_inbox_text', { timeout: 5000 });
-          } catch {}
-        }
-      }
+    const root = await getCommentRoot(page);
+
+    // 대댓글 입력창이 열려있으면 닫기 (취소 버튼 클릭)
+    const openReplyCancel = await root.$('.CommentWriter:has(.btn_cancel) a.btn_cancel');
+    if (openReplyCancel) {
+      console.log(`[COMMENT] ${id} 열린 대댓글 입력창 닫기`);
+      await openReplyCancel.click();
+      await page.waitForTimeout(500);
+    }
+
+    // 댓글 입력창 셀렉터: btn_cancel이 없는 CommentWriter (대댓글 제외)
+    const commentInputSelector = '.CommentWriter:not(:has(.btn_cancel)) textarea.comment_inbox_text';
+    let commentInput = await root.$(commentInputSelector);
+
+    if (!commentInput) {
+      try {
+        commentInput = await root.waitForSelector(commentInputSelector, { timeout: 5000 });
+      } catch {}
     }
 
     if (!commentInput) {
@@ -121,16 +188,9 @@ export const writeCommentWithAccount = async (
     await commentInput.fill(content);
     await page.waitForTimeout(500);
 
-    let submitButton = await page.$('a.btn_register');
-    if (!submitButton) {
-      const frameHandle = await page.$('iframe#cafe_main');
-      if (frameHandle) {
-        const frame = await frameHandle.contentFrame();
-        if (frame) {
-          submitButton = await frame.$('a.btn_register');
-        }
-      }
-    }
+    // 댓글 등록 버튼 셀렉터: btn_cancel이 없는 CommentWriter (대댓글 제외)
+    const submitButtonSelector = '.CommentWriter:not(:has(.btn_cancel)) a.btn_register';
+    const submitButton = await root.$(submitButtonSelector);
 
     if (!submitButton) {
       return { accountId: id, success: false, error: '등록 버튼(a.btn_register)을 찾을 수 없습니다.' };
@@ -144,16 +204,61 @@ export const writeCommentWithAccount = async (
       return { accountId: id, success: false, error: errorMessage };
     }
 
-    const commentAreas = await page.$$('.comment_area');
-    const contentPreview = content.slice(0, 15);
-    let found = false;
-
-    for (const area of commentAreas) {
-      const text = await area.textContent();
-      if (text?.includes(contentPreview)) {
-        found = true;
-        break;
+    const normalizeText = (value: string | null | undefined): string =>
+      (value ?? '').replace(/\s+/g, ' ').trim();
+    const getItemText = async (
+      item: ElementHandle<SVGElement | HTMLElement>,
+      selector: string
+    ): Promise<string> => {
+      try {
+        return await item.$eval(selector, (el) => el.textContent || '');
+      } catch {
+        return '';
       }
+    };
+    const getCommentIdFromItem = async (
+      item: ElementHandle<HTMLElement>
+    ): Promise<string | undefined> => {
+      const idAttr = await item.getAttribute('id');
+      if (idAttr) return idAttr;
+
+      const dataId = await item.getAttribute('data-comment-id');
+      if (dataId) return dataId;
+
+      try {
+        const buttonId = await item.$eval('button[id^="commentItem"]', (el) => el.id);
+        if (buttonId) return buttonId.replace('commentItem', '');
+      } catch {}
+
+      try {
+        const cid = await item.$eval('[data-cid]', (el) => el.getAttribute('data-cid'));
+        if (cid) {
+          const parts = cid.split('-');
+          return parts[parts.length - 1] || cid;
+        }
+      } catch {}
+
+      return undefined;
+    };
+
+    const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
+    const contentPreview = normalizeText(content).slice(0, 30);
+    const commenterNickname = normalizeText(account.nickname || account.id);
+    let found = false;
+    let commentId: string | undefined;
+
+    for (const item of commentItems) {
+      const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
+      if (!commentText.includes(contentPreview)) continue;
+
+      if (commenterNickname) {
+        const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
+        if (commentNickname && commentNickname !== commenterNickname) continue;
+      }
+
+      found = true;
+      commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
+      break;
     }
 
     if (!found) {
@@ -163,7 +268,7 @@ export const writeCommentWithAccount = async (
     await saveCookiesForAccount(id);
     await incrementActivity(id, cafeId, 'comments');
 
-    return { accountId: id, success: true };
+    return { accountId: id, success: true, commentId };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
     return { accountId: id, success: false, error: errorMsg };
@@ -177,7 +282,12 @@ export const writeReplyWithAccount = async (
   cafeId: string,
   articleId: number,
   content: string,
-  commentIndex: number = 0
+  commentIndex: number = 0,
+  options?: {
+    parentCommentId?: string;
+    parentComment?: string;
+    parentNickname?: string;
+  }
 ): Promise<WriteCommentResult> => {
   const { id, password } = account;
 
@@ -199,22 +309,83 @@ export const writeReplyWithAccount = async (
 
     await page.waitForTimeout(1500);
 
-    const replyButtons = await page.$$('a.comment_info_button');
-    if (replyButtons.length === 0) {
-      console.log(`[REPLY] ${id} 답글쓰기 버튼 없음 - URL: ${page.url()}`);
-      return { accountId: id, success: false, error: 'ARTICLE_NOT_READY:답글쓰기 버튼을 찾을 수 없습니다. 댓글이 아직 없을 수 있습니다.' };
+    const { parentCommentId, parentComment, parentNickname } = options ?? {};
+    const normalizeText = (value: string | null | undefined): string =>
+      (value ?? '').replace(/\s+/g, ' ').trim();
+    const getItemText = async (
+      item: ElementHandle<SVGElement | HTMLElement>,
+      selector: string
+    ): Promise<string> => {
+      try {
+        return await item.$eval(selector, (el) => el.textContent || '');
+      } catch {
+        return '';
+      }
+    };
+
+    const root = await getCommentRoot(page);
+    let targetItem: ElementHandle<HTMLElement> | null = null;
+    let targetIndex = -1;
+
+    if (parentCommentId) {
+      targetItem = await findCommentItemById(root, parentCommentId);
     }
 
-    let targetIndex = commentIndex;
-    if (targetIndex >= replyButtons.length) {
-      console.log(`[REPLY] ${id} 대댓글 인덱스 ${targetIndex} → ${replyButtons.length - 1}로 조정 (총 ${replyButtons.length}개 댓글)`);
-      targetIndex = replyButtons.length - 1;
+    if (!targetItem) {
+      const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
+      if (commentItems.length === 0) {
+        console.log(`[REPLY] ${id} 답글쓰기 버튼 없음 - URL: ${page.url()}`);
+        return { accountId: id, success: false, error: 'ARTICLE_NOT_READY:답글쓰기 버튼을 찾을 수 없습니다. 댓글이 아직 없을 수 있습니다.' };
+      }
+
+      console.log(`[REPLY] ${id} 메인 댓글 ${commentItems.length}개 발견, 타겟 인덱스: ${commentIndex}`);
+
+      const targetCommentText = normalizeText(parentComment);
+      const targetCommentPreview = targetCommentText ? targetCommentText.slice(0, 40) : '';
+      const targetNickname = normalizeText(parentNickname);
+
+      if (!targetCommentPreview && targetNickname && commentIndex >= 0 && commentIndex < commentItems.length) {
+        const indexedNickname = normalizeText(await getItemText(commentItems[commentIndex], '.comment_nickname'));
+        if (indexedNickname === targetNickname) {
+          targetIndex = commentIndex;
+        }
+      }
+
+      if (targetIndex < 0 && (targetCommentPreview || targetNickname)) {
+        for (let i = 0; i < commentItems.length; i++) {
+          const item = commentItems[i];
+          const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
+          const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
+          const textMatches = targetCommentPreview ? commentText.includes(targetCommentPreview) : true;
+          const nicknameMatches = targetNickname ? commentNickname === targetNickname : true;
+
+          if (textMatches && nicknameMatches) {
+            targetIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (targetIndex < 0) {
+        targetIndex = commentIndex;
+        if (targetIndex >= commentItems.length) {
+          console.log(`[REPLY] ${id} 대댓글 인덱스 ${targetIndex} → ${commentItems.length - 1}로 조정`);
+          targetIndex = commentItems.length - 1;
+        }
+      }
+
+      targetItem = commentItems[targetIndex] as ElementHandle<HTMLElement>;
     }
 
-    await replyButtons[targetIndex].click();
+    const replyButton = await targetItem?.$('a.comment_info_button');
+    if (!replyButton) {
+      return { accountId: id, success: false, error: '답글쓰기 버튼을 찾을 수 없습니다.' };
+    }
+
+    await replyButton.click();
     await page.waitForTimeout(1000);
 
-    const replyInput = await page.$('.CommentWriter:has(.btn_cancel) textarea.comment_inbox_text');
+    const replyInput = await root.$('.CommentWriter:has(.btn_cancel) textarea.comment_inbox_text');
     if (!replyInput) {
       return { accountId: id, success: false, error: 'ARTICLE_NOT_READY:대댓글 입력창을 찾을 수 없습니다.' };
     }
@@ -224,7 +395,7 @@ export const writeReplyWithAccount = async (
     await replyInput.fill(content);
     await page.waitForTimeout(500);
 
-    const submitButton = await page.$('.CommentWriter:has(.btn_cancel) a.btn_register');
+    const submitButton = await root.$('.CommentWriter:has(.btn_cancel) a.btn_register');
     if (!submitButton) {
       return { accountId: id, success: false, error: '대댓글 등록 버튼을 찾을 수 없습니다.' };
     }
@@ -237,13 +408,13 @@ export const writeReplyWithAccount = async (
       return { accountId: id, success: false, error: errorMessage };
     }
 
-    const replyInputAfter = await page.$('.CommentWriter:has(.btn_cancel) textarea.comment_inbox_text');
+    const replyInputAfter = await root.$('.CommentWriter:has(.btn_cancel) textarea.comment_inbox_text');
     const inputClosed = !replyInputAfter;
     const contentPreview = content.slice(0, 15);
 
     if (!inputClosed) {
       let replyFound = false;
-      const replyAreas = await page.$$('.comment_area');
+      const replyAreas = await root.$$('.comment_area');
       for (const area of replyAreas) {
         const text = await area.textContent();
         if (text?.includes(contentPreview)) {
@@ -254,7 +425,7 @@ export const writeReplyWithAccount = async (
 
       if (!replyFound) {
         await page.waitForTimeout(2000);
-        const replyAreasRetry = await page.$$('.comment_area');
+        const replyAreasRetry = await root.$$('.comment_area');
         for (const area of replyAreasRetry) {
           const text = await area.textContent();
           if (text?.includes(contentPreview)) {
@@ -269,22 +440,25 @@ export const writeReplyWithAccount = async (
       }
     }
 
-    const commentAreas = await page.$$('.comment_area');
-    if (commentAreas[targetIndex]) {
-      const commentLikeButton = await commentAreas[targetIndex].$('a.u_likeit_list_btn._button');
+    if (targetItem) {
+      const commentLikeButton = await targetItem.$('a.u_likeit_list_btn._button');
       if (commentLikeButton) {
         const isCommentLiked = await commentLikeButton.evaluate(
           (el) => el.classList.contains('on') || el.getAttribute('aria-pressed') === 'true'
         );
         if (!isCommentLiked) {
           await commentLikeButton.click();
-          console.log(`[DEBUG] ${id} 댓글 좋아요 클릭 (index: ${targetIndex})`);
+          const indexLabel = targetIndex >= 0 ? ` (index: ${targetIndex})` : '';
+          console.log(`[DEBUG] ${id} 댓글 좋아요 클릭${indexLabel}`);
           await page.waitForTimeout(500);
         }
       }
     }
 
-    const likeButton = await page.$('a.u_likeit_list_btn._button[data-type="like"]');
+    let likeButton = await root.$('a.u_likeit_list_btn._button[data-type="like"]');
+    if (!likeButton) {
+      likeButton = await page.$('a.u_likeit_list_btn._button[data-type="like"]');
+    }
     if (likeButton) {
       const isLiked = await likeButton.evaluate(
         (el) => el.classList.contains('on') || el.getAttribute('aria-pressed') === 'true'

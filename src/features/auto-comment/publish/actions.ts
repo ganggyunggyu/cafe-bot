@@ -164,6 +164,7 @@ export const runAutoCommentAction = async (
 
       console.log(`[AUTO-COMMENT] #${articleId} - 댓글 ${commentCount}개, 대댓글 ${replyCount}개 job 추가`);
 
+      const commentBatchId = `batch_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
       // 이 글의 댓글 작성자 추적 초기화 (닉네임 포함)
       const articleCommentAuthors: Array<{ id: string; nickname: string }> = [];
 
@@ -186,12 +187,15 @@ export const runAutoCommentAction = async (
         const nextDelay = currentDelay + getRandomDelay(settings.delays.betweenComments);
         accountDelays.set(commenter.id, nextDelay);
 
+        const commentIndex = articleCommentAuthors.length;
         const commentJobData: CommentJobData = {
           type: 'comment',
           accountId: commenter.id,
           cafeId,
           articleId,
           content: commentText,
+          commentIndex,
+          sequenceId: commentBatchId,
         };
 
         await addTaskJob(commenter.id, commentJobData, currentDelay);
@@ -262,6 +266,8 @@ export const runAutoCommentAction = async (
           articleId,
           content: replyText,
           commentIndex: targetCommentIndex,
+          parentNickname: parentAuthorNickname,
+          sequenceId: commentBatchId,
         };
 
         await addTaskJob(replyer.id, replyJobData, currentDelay);

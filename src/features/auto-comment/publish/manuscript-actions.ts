@@ -4,14 +4,14 @@ import { getAllAccounts } from '@/shared/config/accounts';
 import { getCafeById, getDefaultCafe } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { addTaskJob } from '@/shared/lib/queue';
-import { startAllTaskWorkers } from '@/shared/lib/queue/workers';
-import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
+import { getRandomDelay } from '@/shared/models/queue-settings';
 import { getRemainingPostsToday, PublishedArticle, ModifiedArticle } from '@/shared/models';
 import { buildCafePostContentFromManuscript } from '@/shared/lib/cafe-content';
 import { isAccountActive } from '@/shared/lib/account-manager';
 import { PostJobData } from '@/shared/lib/queue/types';
 import { modifyArticleWithAccount } from '../batch/article-modifier';
 import { buildBaseFilter, fetchArticlesToModify } from '../batch/modify-query-utils';
+import { initBatchContext, isBatchContextError } from '../batch/batch-helpers';
 import type {
   ManuscriptUploadInput,
   ManuscriptUploadResult,
@@ -27,20 +27,13 @@ export const runManuscriptUploadAction = async (
 
   console.log('[MANUSCRIPT] 업로드 시작:', manuscripts.length, '개 원고');
 
-  const accounts = await getAllAccounts();
-  if (accounts.length < 1) {
-    return { success: false, jobsAdded: 0, message: '계정이 필요합니다' };
+  const ctx = await initBatchContext(inputCafeId, 1);
+  if (isBatchContextError(ctx)) {
+    return { success: false, jobsAdded: 0, message: ctx.error };
   }
 
-  const cafe = inputCafeId ? await getCafeById(inputCafeId) : await getDefaultCafe();
-  if (!cafe) {
-    return { success: false, jobsAdded: 0, message: '카페를 찾을 수 없습니다' };
-  }
-
-  await connectDB();
-  const settings = await getQueueSettings();
+  const { accounts, cafe, settings } = ctx;
   const enableDailyPostLimit = settings.limits?.enableDailyPostLimit ?? true;
-  await startAllTaskWorkers();
 
   let jobsAdded = 0;
   let skipped = 0;
