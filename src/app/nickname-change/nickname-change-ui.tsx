@@ -26,7 +26,7 @@ interface Cafe {
   isDefault?: boolean;
 }
 
-export function NicknameChangeUI() {
+export const NicknameChangeUI = () => {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<BatchNicknameResult | null>(null);
   const [mode, setMode] = useState<NicknameChangeMode>('all');

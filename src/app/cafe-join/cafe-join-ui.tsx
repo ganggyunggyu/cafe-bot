@@ -17,7 +17,7 @@ interface CafeInfo {
   isDefault?: boolean;
 }
 
-export function CafeJoinUI() {
+export const CafeJoinUI = () => {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<BatchJoinResult | null>(null);
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
