@@ -2,7 +2,6 @@ import { connectDB } from '@/shared/lib/mongodb';
 import { Account } from '@/shared/models';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 
-// MongoDB에서 계정 데이터 가져오기
 export const getAllAccounts = async (): Promise<NaverAccount[]> => {
   try {
     await connectDB();

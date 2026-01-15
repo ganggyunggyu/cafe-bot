@@ -7,22 +7,18 @@ const SESSION_DIR = join(process.cwd(), '.playwright-session');
 let browser: Browser | null = null;
 const contexts: Map<string, BrowserContext> = new Map();
 
-// 계정별 락 관리 (동시 접근 방지)
 const accountLocks: Map<string, Promise<void>> = new Map();
 const lockResolvers: Map<string, () => void> = new Map();
 
-// 로그인 상태 캐시 (TTL: 30분)
 const loginStatusCache: Map<string, number> = new Map();
-const LOGIN_CACHE_TTL = 30 * 60 * 1000; // 30분
+const LOGIN_CACHE_TTL = 30 * 60 * 1000;
 
 export const acquireAccountLock = async (accountId: string): Promise<void> => {
-  // 이전 락이 있으면 대기
   while (accountLocks.has(accountId)) {
     console.log(`[LOCK] ${accountId} 락 대기 중...`);
     await accountLocks.get(accountId);
   }
 
-  // 새 락 생성
   let resolver: () => void;
   const lockPromise = new Promise<void>((resolve) => {
     resolver = resolve;
@@ -42,13 +38,11 @@ export const releaseAccountLock = (accountId: string): void => {
   }
 };
 
-// 로그인 캐시 무효화 (세션 만료 감지 시 호출)
 export const invalidateLoginCache = (accountId: string): void => {
   loginStatusCache.delete(accountId);
   console.log(`[LOGIN] ${accountId} 캐시 무효화됨`);
 };
 
-// 로그인 페이지로 리다이렉트됐는지 확인
 export const isLoginRedirect = (url: string): boolean => {
   return url.includes('nidlogin.login') || url.includes('nid.naver.com/nidlogin');
 };
@@ -139,7 +133,6 @@ export const closeContextForAccount = async (accountId: string): Promise<void> =
     await context.close();
     contexts.delete(accountId);
   }
-  // 캐시도 무효화
   loginStatusCache.delete(accountId);
 }
 
@@ -158,7 +151,6 @@ export const closeAllContexts = async (): Promise<void> => {
 }
 
 export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => {
-  // 캐시 확인 (TTL 내면 페이지 이동 없이 true 반환)
   const cachedTime = loginStatusCache.get(accountId);
   if (cachedTime && Date.now() - cachedTime < LOGIN_CACHE_TTL) {
     console.log(`[LOGIN] ${accountId} 캐시 히트 (${Math.round((Date.now() - cachedTime) / 1000)}초 전 확인)`);
@@ -180,7 +172,6 @@ export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => 
       loginStatusCache.set(accountId, Date.now());
       console.log(`[LOGIN] ${accountId} 로그인 상태 캐시됨`);
     } else {
-      // 로그아웃 상태면 캐시 무효화
       loginStatusCache.delete(accountId);
     }
 
@@ -215,7 +206,6 @@ export const loginAccount = async (
 
     await saveCookiesForAccount(accountId);
 
-    // 로그인 성공 시 캐시 갱신
     loginStatusCache.set(accountId, Date.now());
     console.log(`[LOGIN] ${accountId} 로그인 완료, 캐시 갱신`);
 

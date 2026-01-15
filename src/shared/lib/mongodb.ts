@@ -19,12 +19,10 @@ if (!global.mongooseCache) {
 }
 
 export const connectDB = async (): Promise<typeof mongoose> => {
-  // 이미 연결된 경우
   if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  // 연결이 끊겼으면 캐시 초기화
   if (cached.promise && mongoose.connection.readyState === 0) {
     console.log('[MongoDB] 이전 연결 끊김, 캐시 초기화');
     cached.promise = null;
@@ -43,7 +41,6 @@ export const connectDB = async (): Promise<typeof mongoose> => {
   try {
     cached.conn = await cached.promise;
 
-    // 연결 완료 대기 (readyState가 1이 될 때까지)
     if (mongoose.connection.readyState !== 1) {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {

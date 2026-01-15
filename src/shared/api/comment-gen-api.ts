@@ -24,10 +24,8 @@ interface GenerateCommentResponse {
   elapsed: number;
 }
 
-// 긍정 페르소나 ID 목록 (글쓴이 대댓글용)
 const POSITIVE_PERSONA_IDS = ['cute_f', 'warm_f', 'enthusiast', 'grateful', 'supporter'];
 
-// 댓글 생성 (제3자 입장)
 export const generateComment = async (
   postContent: string,
   personaId?: string | null,
@@ -58,7 +56,6 @@ export const generateComment = async (
   return data.comment;
 };
 
-// 대댓글 생성 (제3자 입장 - 원댓글 작성자에게 답글)
 export const generateReply = async (
   postContent: string,
   parentComment: string,
@@ -95,7 +92,6 @@ export const generateReply = async (
   return data.comment;
 };
 
-// 글쓴이 대댓글 생성 (글쓴이가 댓글에 답글)
 export const generateAuthorReply = async (
   postContent: string,
   parentComment: string,
@@ -103,7 +99,6 @@ export const generateAuthorReply = async (
   parentAuthor?: string,
   commenterName?: string
 ): Promise<string> => {
-  // 글쓴이는 긍정적 페르소나 중 랜덤 또는 지정값 사용
   const authorPersonaId = personaId ?? POSITIVE_PERSONA_IDS[Math.floor(Math.random() * POSITIVE_PERSONA_IDS.length)];
 
   const body: GenerateReplyRequest = {

@@ -2,7 +2,6 @@ import type { CafeConfig } from '@/entities/cafe';
 import { connectDB } from '@/shared/lib/mongodb';
 import { Cafe } from '@/shared/models';
 
-// MongoDB에서 카페 데이터 가져오기
 export const getAllCafes = async (): Promise<CafeConfig[]> => {
   try {
     await connectDB();
@@ -41,7 +40,6 @@ export const getCafeById = async (cafeId: string): Promise<CafeConfig | undefine
   return cafes.find((c) => c.cafeId === cafeId);
 };
 
-// 하위 호환성을 위한 동기 버전 (빈 배열 반환, 사용 자제)
 export const CAFE_LIST: CafeConfig[] = [];
 
 export type { CafeConfig } from '@/entities/cafe';
