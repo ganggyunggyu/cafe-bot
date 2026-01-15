@@ -53,7 +53,7 @@ const QueueSettingsSchema = new Schema<IQueueSettings>(
     },
     limits: {
       enableDailyPostLimit: { type: Boolean, default: false },
-      maxCommentsPerAccount: { type: Number, default: 1 },
+      maxCommentsPerAccount: { type: Number, default: 0 },
     },
     timeout: { type: Number, default: 5 * 60 * 1000 },
   },
@@ -72,7 +72,7 @@ export const DEFAULT_QUEUE_SETTINGS = {
   },
   retry: { attempts: 3, backoffDelay: 5000 },
 
-  limits: { enableDailyPostLimit: false, maxCommentsPerAccount: 1 },
+  limits: { enableDailyPostLimit: false, maxCommentsPerAccount: 0 },
   timeout: 5 * 60 * 1000,
 };
 

@@ -6,6 +6,9 @@ export interface IArticleComment {
   content: string;
   type: 'comment' | 'reply';
   parentIndex?: number; // 대댓글인 경우 원댓글 인덱스
+  commentId?: string;
+  commentIndex?: number;
+  sequenceId?: string;
   createdAt: Date;
 }
 
@@ -32,6 +35,9 @@ const ArticleCommentSchema = new Schema<IArticleComment>(
     content: { type: String, required: true },
     type: { type: String, enum: ['comment', 'reply'], required: true },
     parentIndex: { type: Number },
+    commentId: { type: String },
+    commentIndex: { type: Number },
+    sequenceId: { type: String },
     createdAt: { type: Date, default: Date.now },
   },
   { _id: false }
