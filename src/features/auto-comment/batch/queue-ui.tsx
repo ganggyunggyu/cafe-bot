@@ -2,19 +2,25 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getAllQueueStatus, clearAccountQueue, clearAllQueues, type AllQueueStatus } from './queue-actions';
+import { getAllQueueStatus, clearAccountQueue, clearAllQueues, getDetailedJobs, type AllQueueStatus, type JobDetail } from './queue-actions';
 
 export const QueueStatusUI = () => {
   const [status, setStatus] = useState<AllQueueStatus | null>(null);
+  const [jobs, setJobs] = useState<JobDetail[]>([]);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showJobList, setShowJobList] = useState(true);
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getAllQueueStatus();
+      const [data, jobsData] = await Promise.all([
+        getAllQueueStatus(),
+        getDetailedJobs({ status: 'all' }, 1, 50),
+      ]);
       setStatus(data);
+      setJobs(jobsData.jobs);
     } catch (error) {
       console.error('큐 상태 조회 실패:', error);
     } finally {
@@ -363,6 +369,83 @@ export const QueueStatusUI = () => {
         </div>
       )}
 
+      {/* Job 목록 테이블 */}
+      {jobs.length > 0 && (
+        <div className={cn('rounded-2xl border border-slate-200/50 overflow-hidden')}>
+          <button
+            onClick={() => setShowJobList(!showJobList)}
+            className={cn(
+              'w-full flex items-center justify-between px-4 py-3',
+              'bg-gradient-to-r from-slate-50 to-white',
+              'hover:from-slate-100 hover:to-slate-50 transition-all'
+            )}
+          >
+            <span className={cn('flex items-center gap-2 text-sm font-medium text-slate-600')}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              작업 목록
+              <span className={cn('px-2 py-0.5 rounded-full bg-slate-200 text-xs')}>
+                {jobs.length}
+              </span>
+            </span>
+            <svg
+              className={cn('w-5 h-5 text-slate-400 transition-transform', showJobList && 'rotate-180')}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showJobList && (
+            <div className={cn('overflow-x-auto')}>
+              <table className={cn('w-full text-xs')}>
+                <thead className={cn('bg-slate-50 border-b border-slate-200')}>
+                  <tr>
+                    <th className={cn('px-3 py-2 text-left font-medium text-slate-500')}>상태</th>
+                    <th className={cn('px-3 py-2 text-left font-medium text-slate-500')}>타입</th>
+                    <th className={cn('px-3 py-2 text-left font-medium text-slate-500')}>계정</th>
+                    <th className={cn('px-3 py-2 text-left font-medium text-slate-500')}>카페</th>
+                    <th className={cn('px-3 py-2 text-left font-medium text-slate-500')}>내용</th>
+                    <th className={cn('px-3 py-2 text-left font-medium text-slate-500')}>예정/시간</th>
+                  </tr>
+                </thead>
+                <tbody className={cn('divide-y divide-slate-100')}>
+                  {jobs.map((job) => (
+                    <tr key={job.id} className={cn('hover:bg-slate-50/50')}>
+                      <td className={cn('px-3 py-2')}>
+                        <StatusBadge status={job.status} />
+                      </td>
+                      <td className={cn('px-3 py-2')}>
+                        <TypeBadge type={job.type} />
+                      </td>
+                      <td className={cn('px-3 py-2 font-mono text-slate-600')}>{job.accountId}</td>
+                      <td className={cn('px-3 py-2')}>
+                        <span className={cn('text-slate-700')}>{job.cafeName || job.cafeId}</span>
+                        {job.articleId && (
+                          <span className={cn('ml-1 text-slate-400')}>#{job.articleId}</span>
+                        )}
+                      </td>
+                      <td className={cn('px-3 py-2 max-w-[200px]')}>
+                        <span className={cn('text-slate-600 truncate block')} title={job.content || job.subject || job.keyword || '-'}>
+                          {job.content?.slice(0, 30) || job.subject?.slice(0, 30) || job.keyword || '-'}
+                          {(job.content?.length || 0) > 30 && '...'}
+                        </span>
+                      </td>
+                      <td className={cn('px-3 py-2 text-slate-500')}>
+                        {job.delay ? formatDelay(job.delay) : job.finishedOn ? formatTime(job.finishedOn) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {!status && !loading && (
         <div className={cn('text-center py-8')}>
           <svg className={cn('w-12 h-12 mx-auto text-slate-300 mb-3')} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -417,7 +500,7 @@ const colorMap = {
   },
 };
 
-function StatCard({ label, value, color, icon, pulse }: StatCardProps) {
+const StatCard = ({ label, value, color, icon, pulse }: StatCardProps) => {
   const colors = colorMap[color];
 
   return (
@@ -439,4 +522,70 @@ function StatCard({ label, value, color, icon, pulse }: StatCardProps) {
       <p className={cn('text-2xl font-bold', colors.value)}>{value}</p>
     </div>
   );
-}
+};
+
+// 상태 뱃지
+const StatusBadge = ({ status }: { status: JobDetail['status'] }) => {
+  const styles: Record<JobDetail['status'], string> = {
+    delayed: 'bg-violet-100 text-violet-700',
+    waiting: 'bg-amber-100 text-amber-700',
+    active: 'bg-blue-100 text-blue-700',
+    completed: 'bg-emerald-100 text-emerald-700',
+    failed: 'bg-rose-100 text-rose-700',
+  };
+  const labels: Record<JobDetail['status'], string> = {
+    delayed: '예약',
+    waiting: '대기',
+    active: '진행',
+    completed: '완료',
+    failed: '실패',
+  };
+  return (
+    <span className={cn('px-1.5 py-0.5 rounded text-xs font-medium', styles[status])}>
+      {labels[status]}
+    </span>
+  );
+};
+
+// 타입 뱃지
+const TypeBadge = ({ type }: { type: 'post' | 'comment' | 'reply' }) => {
+  const styles: Record<string, string> = {
+    post: 'bg-indigo-100 text-indigo-700',
+    comment: 'bg-cyan-100 text-cyan-700',
+    reply: 'bg-pink-100 text-pink-700',
+  };
+  const labels: Record<string, string> = {
+    post: '글',
+    comment: '댓글',
+    reply: '대댓글',
+  };
+  return (
+    <span className={cn('px-1.5 py-0.5 rounded text-xs font-medium', styles[type])}>
+      {labels[type]}
+    </span>
+  );
+};
+
+// 딜레이 포맷
+const formatDelay = (ms: number): string => {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}시간 ${minutes % 60}분 후`;
+  }
+  if (minutes > 0) {
+    return `${minutes}분 후`;
+  }
+  return `${seconds}초 후`;
+};
+
+// 시간 포맷
+const formatTime = (timestamp: number): string => {
+  return new Date(timestamp).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};

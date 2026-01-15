@@ -4,6 +4,7 @@ import { getAllAccounts } from '@/shared/config/accounts';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { BatchJobLog, type IBatchJobLog, canPostToday } from '@/shared/models';
+import { getQueueSettings } from '@/shared/models/queue-settings';
 import { isAccountActive } from '@/shared/lib/account-manager';
 import {
   type BatchJobInput,
@@ -64,7 +65,6 @@ export const runBatchJob = async (
   const { cafeId, menuId, name: cafeName } = cafe;
   console.log(`[BATCH] 카페: ${cafeName} (${cafeId})`)
 
-  // MongoDB 연결 (실패해도 배치는 진행)
   let jobLog: HydratedDocument<IBatchJobLog> | null = null;
   let dbConnected = false;
 
@@ -125,20 +125,21 @@ export const runBatchJob = async (
     }
   }
 
+  const queueSettings = dbConnected ? await getQueueSettings() : null;
+  const enableDailyPostLimit = queueSettings?.limits?.enableDailyPostLimit ?? true;
+
   try {
     for (let i = 0; i < keywords.length; i++) {
       const rawKeyword = keywords[i];
       const writerAccount = getWriterAccount(accounts, i);
 
-      // 활동 시간대 체크
       if (!isAccountActive(writerAccount)) {
         console.log(`[BATCH] ${writerAccount.id} 비활동 시간대 - 스킵`);
         await recordUnexpectedFailure(rawKeyword, writerAccount.id, new Error('비활동 시간대'));
         continue;
       }
 
-      // 일일 포스트 제한 체크
-      if (dbConnected) {
+      if (dbConnected && enableDailyPostLimit) {
         const canPost = await canPostToday(writerAccount.id, writerAccount.dailyPostLimit);
         if (!canPost) {
           console.log(`[BATCH] ${writerAccount.id} 일일 포스트 제한 도달 - 스킵`);
@@ -195,7 +196,6 @@ export const runBatchJob = async (
       }
     }
 
-    // 배치 완료
     console.log('[BATCH] 배치 완료 - completed:', completed, 'failed:', failed);
     if (jobLog) {
       jobLog.status = failed === 0 ? 'completed' : 'failed';

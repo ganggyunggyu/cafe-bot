@@ -66,8 +66,7 @@ const buildReplyTasks = (
   const replyTasks: ReplyTask[] = [];
   const availableIndices = commentTexts.map((_, idx) => idx);
 
-  // 글쓴이 대댓글: 2~3개
-  const authorReplyCount = Math.floor(Math.random() * 2) + 2; // 2~3개
+  const authorReplyCount = Math.floor(Math.random() * 2) + 2;
   for (let k = 0; k < authorReplyCount && availableIndices.length > 0; k++) {
     const randIdx = Math.floor(Math.random() * availableIndices.length);
     const targetIdx = availableIndices.splice(randIdx, 1)[0];
@@ -78,17 +77,14 @@ const buildReplyTasks = (
     });
   }
 
-  // 일반 대댓글: 2~4개 (자기 댓글에 대댓글 방지)
   const normalReplyCount = Math.min(
-    Math.floor(Math.random() * 3) + 2, // 2~4개
+    Math.floor(Math.random() * 3) + 2,
     availableIndices.length
   );
   for (let k = 0; k < normalReplyCount && availableIndices.length > 0; k++) {
-    // 자기 댓글이 아닌 타겟 찾기
     let targetIdx = -1;
     let replyer = commenterAccounts[k % commenterAccounts.length];
 
-    // 자기가 쓴 댓글이 아닌 것 중에서 랜덤 선택
     const validIndices = availableIndices.filter(
       (idx) => commentAuthors[idx].id !== replyer.id
     );
@@ -98,7 +94,6 @@ const buildReplyTasks = (
       targetIdx = validIndices[randIdx];
       availableIndices.splice(availableIndices.indexOf(targetIdx), 1);
     } else {
-      // 자기 댓글만 남았으면 다른 계정으로 시도
       const otherAccountIdx = (k + 1) % commenterAccounts.length;
       replyer = commenterAccounts[otherAccountIdx];
       const retryIndices = availableIndices.filter(
@@ -112,7 +107,7 @@ const buildReplyTasks = (
     }
 
     if (targetIdx === -1) {
-      continue; // 적합한 타겟 없으면 스킵
+      continue;
     }
     replyTasks.push({
       targetCommentIndex: targetIdx,
@@ -121,7 +116,6 @@ const buildReplyTasks = (
     });
   }
 
-  // 작업 순서 섞기 (Fisher-Yates shuffle)
   for (let k = replyTasks.length - 1; k > 0; k--) {
     const randIdx = Math.floor(Math.random() * (k + 1));
     [replyTasks[k], replyTasks[randIdx]] = [replyTasks[randIdx], replyTasks[k]];
@@ -161,15 +155,14 @@ export const processKeyword = async ({
       message: `${progressLabel} - ${writerAccount.id}로 글 작성 중...`,
     });
 
-    // 1. AI 콘텐츠 생성 (카테고리가 있으면 키워드에 포함)
     const keywordWithCategory = category ? `${keyword} (카테고리: ${category})` : keyword;
     const personaId = getPersonaId(writerAccount);
     console.log('[BATCH] AI 콘텐츠 생성 요청...');
     const generated = await generateContent({ service, keyword: keywordWithCategory, ref, personaId });
     console.log('[BATCH] AI 콘텐츠 생성 완료');
     const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
+    const postContext = `${title}\n\n${generated.content}`;
 
-    // 2. 글 작성
     const postResult = await writePostWithAccount(writerAccount, {
       cafeId,
       menuId,
@@ -200,7 +193,6 @@ export const processKeyword = async ({
       };
     }
 
-    // 발행원고 저장 (DB 연결 시)
     let publishedArticle: HydratedDocument<IPublishedArticle> | null = null;
     if (dbConnected) {
       const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${postResult.articleId}`;
@@ -218,13 +210,11 @@ export const processKeyword = async ({
         replyCount: 0,
       });
 
-      // 일일 포스트 카운트 증가
       await incrementTodayPostCount(writerAccount.id);
     }
 
     await sleep(delays.afterPost);
 
-    // 3. 댓글 작성
     onProgress?.({
       currentKeyword: keyword,
       keywordIndex,
@@ -234,20 +224,19 @@ export const processKeyword = async ({
     });
 
     const commentResults: CommentResult[] = [];
-    const commentTexts: string[] = []; // 대댓글용 저장
-    const commentAuthors: Array<{ id: string; nickname: string }> = []; // 댓글 작성자 추적 (자기 댓글에 대댓글 방지)
-    const commentCount = getRandomCommentCount(); // 5~10개 랜덤
-    const postContent = generated.content; // 글 내용 (API용)
+    const commentTexts: string[] = [];
+    const commentAuthors: Array<{ id: string; nickname: string }> = [];
+    const commentCount = getRandomCommentCount();
+    const postContent = generated.content;
 
     for (let j = 0; j < commentCount; j++) {
       const commenter = commenterAccounts[j % commenterAccounts.length];
 
-      // AI로 댓글 생성
       let commentText: string;
       try {
-        commentText = await generateComment(postContent);
+        commentText = await generateComment(postContext);
       } catch {
-        commentText = '좋은 정보 감사합니다!'; // 폴백
+        commentText = '좋은 정보 감사합니다!';
       }
 
       const result = await writeCommentWithAccount(
@@ -265,8 +254,8 @@ export const processKeyword = async ({
       });
 
       if (result.success) {
-        commentTexts.push(commentText); // 성공한 댓글 저장
-        commentAuthors.push({ id: commenter.id, nickname: commenter.nickname || commenter.id }); // 작성자 정보 저장
+        commentTexts.push(commentText);
+        commentAuthors.push({ id: commenter.id, nickname: commenter.nickname || commenter.id });
       }
 
       if (j < commentCount - 1) {
@@ -276,7 +265,6 @@ export const processKeyword = async ({
 
     await sleep(delays.beforeReplies);
 
-    // 4. 대댓글 체인 (글쓴이 + 일반 계정 섞기)
     onProgress?.({
       currentKeyword: keyword,
       keywordIndex,
@@ -292,20 +280,18 @@ export const processKeyword = async ({
       const replyTasks = buildReplyTasks(writerAccount, commenterAccounts, commentAuthors, commentTexts);
       const writerNickname = writerAccount.nickname || writerAccount.id;
 
-      // 대댓글 작성 실행
       for (let j = 0; j < replyTasks.length; j++) {
         const task = replyTasks[j];
         const parentComment = commentTexts[task.targetCommentIndex];
         const parentAuthor = commentAuthors[task.targetCommentIndex];
         const commenterNickname = task.account.nickname || task.account.id;
 
-        // AI로 대댓글 생성
         let replyText: string;
         try {
           if (task.isAuthor) {
-            replyText = await generateAuthorReply(postContent, parentComment, undefined, parentAuthor.nickname, writerNickname);
+            replyText = await generateAuthorReply(postContext, parentComment, undefined, parentAuthor.nickname, writerNickname);
           } else {
-            replyText = await generateReply(postContent, parentComment, undefined, writerNickname, parentAuthor.nickname, commenterNickname);
+            replyText = await generateReply(postContext, parentComment, undefined, writerNickname, parentAuthor.nickname, commenterNickname);
           }
         } catch {
           replyText = task.isAuthor ? '댓글 감사합니다!' : '저도 그렇게 생각해요!';
@@ -337,11 +323,9 @@ export const processKeyword = async ({
       }
     }
 
-    // 댓글/대댓글 수 집계
     const successCommentCount = commentResults.filter((c) => c.success).length;
     const successReplyCount = replyResults.filter((r) => r.success).length;
 
-    // 발행원고 업데이트 (DB 연결 시)
     if (publishedArticle) {
       publishedArticle.commentCount = successCommentCount;
       publishedArticle.replyCount = successReplyCount;

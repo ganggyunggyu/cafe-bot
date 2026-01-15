@@ -1,7 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { runBatchPostAction } from './batch-actions';
+import { PostOptionsUI } from './post-options-ui';
+import { DEFAULT_POST_OPTIONS, type PostOptions } from './types';
+import type { QueueBatchResult } from './batch-queue';
+import { getCafesAction } from '@/features/accounts/actions';
+import type { CafeConfig } from '@/entities/cafe';
 
 type TestType = 'comment' | 'recomment' | 'cafe-daily';
 
@@ -33,8 +39,9 @@ const TABS: { key: TestType; label: string; endpoint: string; defaultModel: stri
   { key: 'recomment', label: '대댓글', endpoint: '/generate/test/recomment', defaultModel: 'chatgpt-4o-latest' },
 ];
 
-export function ApiTestUI() {
+export const ApiTestUI = () => {
   const [isPending, startTransition] = useTransition();
+  const [isPublishPending, startPublishTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<TestType>('cafe-daily');
   const [results, setResults] = useState<TestResult[]>([]);
 
@@ -48,6 +55,11 @@ export function ApiTestUI() {
 
   // 모델 선택
   const [model, setModel] = useState('');
+  const [cafes, setCafes] = useState<CafeConfig[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState('');
+  const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
+  const [ref, setRef] = useState('');
+  const [publishResult, setPublishResult] = useState<QueueBatchResult | null>(null);
 
   const getPrompt = () => {
     if (activeTab === 'cafe-daily') return { prompt: dailyPrompt, setPrompt: setDailyPrompt };
@@ -57,12 +69,26 @@ export function ApiTestUI() {
 
   const { prompt, setPrompt } = getPrompt();
   const currentTab = TABS.find((t) => t.key === activeTab)!;
+  const selectedCafe = cafes.find((cafe) => cafe.cafeId === selectedCafeId);
 
   const inputClassName = cn(
     'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm',
     'placeholder:text-(--ink-muted) shadow-sm transition',
     'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/20'
   );
+
+  useEffect(() => {
+    const loadCafes = async () => {
+      const data = await getCafesAction();
+      setCafes(data);
+      const defaultCafe = data.find((c) => c.isDefault) || data[0];
+      if (defaultCafe) {
+        setSelectedCafeId(defaultCafe.cafeId);
+      }
+    };
+
+    loadCafes();
+  }, []);
 
   // 키워드 파싱 (키워드:카테고리 형식)
   const parseKeywords = () => {
@@ -122,7 +148,43 @@ export function ApiTestUI() {
     });
   };
 
+  const handlePublish = () => {
+    const parsedKeywords = parseKeywords();
+    if (parsedKeywords.length === 0 || !dailyPrompt.trim()) return;
+
+    startPublishTransition(async () => {
+      setPublishResult(null);
+      try {
+        const keywordsForQueue = parsedKeywords.map(({ keyword, category }) =>
+          category ? `${keyword}:${category}` : keyword
+        );
+
+        const res = await runBatchPostAction({
+          service: '일반',
+          keywords: keywordsForQueue,
+          ref: ref || undefined,
+          cafeId: selectedCafeId || undefined,
+          postOptions,
+          contentPrompt: dailyPrompt,
+          contentModel: model || undefined,
+        });
+
+        setPublishResult(res);
+      } catch (error) {
+        setPublishResult({
+          success: false,
+          jobsAdded: 0,
+          message: error instanceof Error ? error.message : '배치 발행 실패',
+        });
+      }
+    });
+  };
+
   const keywordCount = parseKeywords().length;
+  const isPublishDisabled =
+    isPublishPending ||
+    keywordCount === 0 ||
+    !dailyPrompt.trim();
 
   return (
     <div className={cn('space-y-4')}>
@@ -205,6 +267,91 @@ export function ApiTestUI() {
         </select>
       </div>
 
+      {/* 실제 배치 발행 */}
+      <div className={cn('rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm space-y-3')}>
+        <div className={cn('space-y-1')}>
+          <p className={cn('text-xs uppercase tracking-[0.2em] text-(--ink-muted)')}>Batch Publish</p>
+          <h3 className={cn('text-sm font-semibold text-(--ink)')}>커스텀 프롬프트로 배치 발행</h3>
+          <p className={cn('text-xs text-(--ink-muted)')}>
+            원고 프롬프트(원고 탭)와 키워드 그대로 큐에 추가합니다.
+          </p>
+        </div>
+
+        <div className={cn('space-y-2')}>
+          <div className={cn('space-y-1')}>
+            <label className={cn('text-xs font-medium text-(--ink-muted)')}>카페 선택</label>
+            <select
+              value={selectedCafeId}
+              onChange={(e) => setSelectedCafeId(e.target.value)}
+              className={inputClassName}
+            >
+              {cafes.map((cafe) => (
+                <option key={cafe.cafeId} value={cafe.cafeId}>
+                  {cafe.name} {cafe.isDefault ? '(기본)' : ''}
+                </option>
+              ))}
+            </select>
+            {selectedCafe && (
+              <p className={cn('text-xs text-(--ink-muted)')}>
+                카테고리: {selectedCafe.categories.join(', ')}
+              </p>
+            )}
+          </div>
+
+          <div className={cn('space-y-1')}>
+            <label className={cn('text-xs font-medium text-(--ink-muted)')}>참고 URL (선택)</label>
+            <input
+              type="text"
+              value={ref}
+              onChange={(e) => setRef(e.target.value)}
+              placeholder="레퍼런스 URL을 넣어주세요"
+              className={inputClassName}
+            />
+          </div>
+
+          <div className={cn('space-y-2')}>
+            <div className={cn('flex items-center justify-between')}>
+              <span className={cn('text-xs font-medium text-(--ink-muted)')}>게시 옵션</span>
+              <span className={cn('text-[11px] text-(--ink-muted)')}>
+                원고 프롬프트만 사용, 댓글/대댓글은 기본 로직
+              </span>
+            </div>
+            <div className={cn('rounded-xl border border-(--border) bg-white/80 p-3')}>
+              <PostOptionsUI options={postOptions} onChange={setPostOptions} />
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handlePublish}
+          disabled={isPublishDisabled}
+          className={cn(
+            'w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition',
+            'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
+            'disabled:opacity-60 disabled:cursor-not-allowed'
+          )}
+        >
+          {isPublishPending ? '큐에 추가 중...' : `배치 발행 (키워드 ${keywordCount}개)`}
+        </button>
+
+        {publishResult && (
+          <div
+            className={cn(
+              'rounded-xl border px-3 py-3',
+              publishResult.success ? 'border-(--success) bg-(--success-soft)' : 'border-(--danger) bg-(--danger-soft)'
+            )}
+          >
+            <div className={cn('flex items-center justify-between')}>
+              <h4 className={cn('text-sm font-semibold', publishResult.success ? 'text-(--success)' : 'text-(--danger)')}>
+                {publishResult.success ? '큐에 추가됨' : '추가 실패'}
+              </h4>
+              <span className={cn('text-xs text-(--ink-muted)')}>{publishResult.jobsAdded}개 작업</span>
+            </div>
+            <p className={cn('text-xs text-(--ink-muted) mt-1')}>{publishResult.message}</p>
+          </div>
+        )}
+      </div>
+
       {/* 테스트 버튼 */}
       <button
         onClick={handleTest}
@@ -263,4 +410,4 @@ export function ApiTestUI() {
       )}
     </div>
   );
-}
+};

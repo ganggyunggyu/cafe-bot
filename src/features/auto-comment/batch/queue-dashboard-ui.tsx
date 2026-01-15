@@ -40,25 +40,25 @@ const TYPE_COLORS: Record<string, string> = {
   reply: 'bg-pink-100 text-pink-700',
 };
 
-function formatDelay(ms: number): string {
+const formatDelay = (ms: number): string => {
   if (ms < 60000) return `${Math.round(ms / 1000)}초`;
   if (ms < 3600000) return `${Math.round(ms / 60000)}분`;
   return `${Math.round(ms / 3600000)}시간`;
-}
+};
 
-function formatTime(timestamp: number): string {
+const formatTime = (timestamp: number): string => {
   return new Date(timestamp).toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
   });
-}
+};
 
 interface QueueDashboardUIProps {
   onClose?: () => void;
 }
 
-export function QueueDashboardUI({ onClose }: QueueDashboardUIProps) {
+export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
   const [isPending, startTransition] = useTransition();
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
@@ -152,7 +152,7 @@ export function QueueDashboardUI({ onClose }: QueueDashboardUIProps) {
           <div className={cardClassName}>
             <h3 className={cn('text-xs font-medium text-(--ink-muted) mb-3')}>전체 상태</h3>
             <div className={cn('grid grid-cols-5 gap-2')}>
-              {(['delayed', 'waiting', 'active', 'completed', 'failed'] as const).map((status) => (
+              {(['failed', 'active', 'delayed', 'waiting', 'completed'] as const).map((status) => (
                 <div key={status} className={cn('text-center')}>
                   <div className={cn('text-lg font-bold text-(--ink)')}>
                     {summary.total[status]}
@@ -359,9 +359,9 @@ export function QueueDashboardUI({ onClose }: QueueDashboardUIProps) {
       </div>
     </div>
   );
-}
+};
 
-function JobRow({ job }: { job: JobDetail }) {
+const JobRow = ({ job }: { job: JobDetail }) => {
   const getContentDisplay = () => {
     if (job.type === 'post') {
       return (
@@ -422,4 +422,4 @@ function JobRow({ job }: { job: JobDetail }) {
       <td className={cn('px-4 py-3')}>{getTimeDisplay()}</td>
     </tr>
   );
-}
+};
