@@ -28,16 +28,27 @@ FSD (Feature-Sliced Design) 기반 구조
 src/
 ├── app/                  # Next.js App Router
 │   ├── accounts/         # 계정 관리 페이지
-│   ├── api/auth/         # 인증 API 라우트
+│   ├── api/              # API 라우트
+│   │   ├── auth/         # 인증 API
+│   │   ├── accounts/     # 계정 API
+│   │   └── cafes/        # 카페 API
 │   ├── batch/            # 배치 작업 페이지
 │   ├── cafe-join/        # 카페 가입 페이지
 │   ├── comment-test/     # 댓글 테스트
 │   ├── login/            # 로그인 페이지
 │   ├── manuscript/       # 원고 관리
+│   ├── nickname-change/  # 닉네임 변경
 │   ├── publish/          # 발행 페이지
-│   └── settings/         # 설정 페이지
+│   ├── queue/            # 큐 관리 페이지
+│   ├── settings/         # 설정 페이지
+│   ├── test/             # 테스트 페이지
+│   └── viral/            # 바이럴 마케팅
+│       └── debug/        # 바이럴 디버그
 │
 ├── entities/             # 비즈니스 엔티티
+│   ├── account/          # 계정 엔티티
+│   ├── cafe/             # 카페 엔티티
+│   └── queue/            # 큐 엔티티
 │
 ├── features/             # 기능 모듈
 │   ├── accounts/         # 계정 관리 기능
@@ -46,13 +57,20 @@ src/
 │   │   └── publish/      # 발행 기능
 │   ├── comment/          # 댓글 기능
 │   ├── post-article/     # 글 발행 기능
-│   └── settings/         # 설정 기능
+│   ├── settings/         # 설정 기능
+│   ├── test/             # 테스트 기능
+│   └── viral/            # 바이럴 마케팅 기능
 │
 ├── shared/               # 공유 모듈
 │   ├── api/              # API 클라이언트
 │   ├── config/           # 설정 파일
 │   ├── lib/              # 유틸리티
 │   │   ├── queue/        # BullMQ 큐 관리
+│   │   │   ├── handlers/ # 작업 핸들러
+│   │   │   ├── index.ts  # 큐 생성/관리
+│   │   │   ├── workers.ts # 워커 관리
+│   │   │   ├── sequence.ts # 시퀀스 처리
+│   │   │   └── types.ts  # 큐 타입 정의
 │   │   ├── account-manager.ts
 │   │   ├── multi-session.ts
 │   │   ├── playwright.ts
@@ -100,20 +118,23 @@ import { something } from "@/shared/lib/..."
 ## 실행 명령어
 
 ```bash
-# 개발 서버 (port 3007)
-pnpm dev
+# 개발 서버 (port 3007) + Bull Board 동시 실행
+npm run dev
+
+# Next.js만 실행
+npm run dev:next
 
 # 빌드
-pnpm build
+npm run build
 
 # 프로덕션 서버
-pnpm start
+npm run start
 
 # 린트
-pnpm lint
+npm run lint
 
 # Bull Board (큐 모니터링)
-pnpm bull-board
+npm run bull-board
 ```
 
 ## 환경 변수
@@ -155,5 +176,14 @@ CONTENT_API_URL=
 
 ### 4. 큐 시스템
 - BullMQ 기반 작업 큐
-- 작업 상태 모니터링
-- 재시도 로직
+- 계정별 Task 큐 분리
+- 작업 타입: post, comment, reply, generate
+- 시퀀스 처리 지원 (순차 작업)
+- 중복 Job 방지 (jobId 기반)
+- 재시도 로직 (exponential backoff)
+- Bull Board로 모니터링
+
+### 5. 바이럴 마케팅
+- 네이버 인기글 파싱
+- AI 기반 콘텐츠 생성
+- 배치 작업 처리

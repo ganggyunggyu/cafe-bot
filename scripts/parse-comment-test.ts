@@ -7,11 +7,21 @@ interface ParsedComment {
   content: string;
 }
 
+// 새 포맷: [태그] 형식
 const COMMENT_PATTERNS = {
-  comment: /^댓글(\d+)\s+(.+)$/,           // 일반 댓글
-  authorReply: /^☆댓글(\d+)\s+(.+)$/,      // 글쓴이 대댓글
-  commenterReply: /^★댓글(\d+)\s+(.+)$/,   // 댓글 작성자 답변
-  otherReply: /^○댓글(\d+)\s+(.+)$/,       // 제3자 대댓글
+  comment: /^\[댓글(\d+)\]\s+(.+)$/,           // [댓글1] 내용
+  authorReply: /^\[작성자-(\d+)\]\s+(.+)$/,    // [작성자-1] 내용
+  commenterReply: /^\[댓글러-(\d+)\]\s+(.+)$/, // [댓글러-1] 내용
+  otherReply: /^\[제3자-(\d+)\]\s+(.+)$/,      // [제3자-1] 내용
+};
+
+// 레거시 포맷 (하위 호환)
+const LEGACY_PATTERNS = {
+  comment: /^댓글\s*(\d+)\s+(.+)$/,
+  authorReply: /^[☆]\s*댓글\s*(\d+)\s+(.+)$/,
+  commenterReply: /^[★]\s*댓글\s*(\d+)\s+(.+)$/,
+  otherReply: /^[○◯〇]\s*댓글\s*(\d+)\s+(.+)$/,
+  markerComment: /^[☆★○◯〇]\s*댓글\s+(.+)$/,
 };
 
 function parseCommentResponse(response: string): ParsedComment[] {
@@ -21,7 +31,7 @@ function parseCommentResponse(response: string): ParsedComment[] {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // 일반 댓글
+    // 1. 새 포맷: [댓글N] 내용
     const commentMatch = trimmed.match(COMMENT_PATTERNS.comment);
     if (commentMatch) {
       results.push({
@@ -32,7 +42,7 @@ function parseCommentResponse(response: string): ParsedComment[] {
       continue;
     }
 
-    // 글쓴이 대댓글
+    // 2. 새 포맷: [작성자-N] 내용
     const authorMatch = trimmed.match(COMMENT_PATTERNS.authorReply);
     if (authorMatch) {
       results.push({
@@ -44,7 +54,7 @@ function parseCommentResponse(response: string): ParsedComment[] {
       continue;
     }
 
-    // 댓글 작성자 답변
+    // 3. 새 포맷: [댓글러-N] 내용
     const commenterMatch = trimmed.match(COMMENT_PATTERNS.commenterReply);
     if (commenterMatch) {
       results.push({
@@ -56,7 +66,7 @@ function parseCommentResponse(response: string): ParsedComment[] {
       continue;
     }
 
-    // 제3자 대댓글
+    // 4. 새 포맷: [제3자-N] 내용
     const otherMatch = trimmed.match(COMMENT_PATTERNS.otherReply);
     if (otherMatch) {
       results.push({
@@ -64,6 +74,76 @@ function parseCommentResponse(response: string): ParsedComment[] {
         type: 'other_reply',
         parentIndex: parseInt(otherMatch[1]),
         content: otherMatch[2],
+      });
+      continue;
+    }
+
+    // === 레거시 포맷 하위 호환 ===
+
+    const legacyCommentMatch = trimmed.match(LEGACY_PATTERNS.comment);
+    if (legacyCommentMatch) {
+      results.push({
+        index: parseInt(legacyCommentMatch[1]),
+        type: 'comment',
+        content: legacyCommentMatch[2],
+      });
+      continue;
+    }
+
+    const legacyAuthorMatch = trimmed.match(LEGACY_PATTERNS.authorReply);
+    if (legacyAuthorMatch) {
+      results.push({
+        index: results.length + 1,
+        type: 'author_reply',
+        parentIndex: parseInt(legacyAuthorMatch[1]),
+        content: legacyAuthorMatch[2],
+      });
+      continue;
+    }
+
+    const legacyCommenterMatch = trimmed.match(LEGACY_PATTERNS.commenterReply);
+    if (legacyCommenterMatch) {
+      results.push({
+        index: results.length + 1,
+        type: 'commenter_reply',
+        parentIndex: parseInt(legacyCommenterMatch[1]),
+        content: legacyCommenterMatch[2],
+      });
+      continue;
+    }
+
+    const legacyOtherMatch = trimmed.match(LEGACY_PATTERNS.otherReply);
+    if (legacyOtherMatch) {
+      results.push({
+        index: results.length + 1,
+        type: 'other_reply',
+        parentIndex: parseInt(legacyOtherMatch[1]),
+        content: legacyOtherMatch[2],
+      });
+      continue;
+    }
+
+    const markerCommentMatch = trimmed.match(LEGACY_PATTERNS.markerComment);
+    if (markerCommentMatch) {
+      results.push({
+        index: results.length + 1,
+        type: 'comment',
+        content: markerCommentMatch[1],
+      });
+      continue;
+    }
+
+    // === Fallback ===
+    if (trimmed === '댓글' || trimmed === '') {
+      continue;
+    }
+
+    const numberedMatch = trimmed.match(/^(\d+)[.\s]\s*(.+)$/);
+    if (numberedMatch) {
+      results.push({
+        index: parseInt(numberedMatch[1]),
+        type: 'comment',
+        content: numberedMatch[2],
       });
       continue;
     }
