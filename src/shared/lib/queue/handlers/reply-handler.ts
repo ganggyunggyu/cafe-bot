@@ -24,6 +24,20 @@ export const handleReplyJob = async (
     if (turn === 'skipped') {
       return { success: true };
     }
+    if (turn === 'pending') {
+      const retryDelay = 10 * 1000;
+      console.log(`[WORKER] 순서 대기 - ${retryDelay / 1000}초 뒤 재스케줄: ${data.sequenceId}#${data.sequenceIndex}`);
+      await addTaskJob(
+        data.accountId,
+        { ...data, rescheduleToken: createRescheduleToken() },
+        retryDelay
+      );
+      return {
+        success: false,
+        error: '순서 대기 - 재스케줄됨',
+        willRetry: true,
+      };
+    }
   }
 
   const advanceIfNeeded = async (): Promise<void> => {
@@ -37,10 +51,14 @@ export const handleReplyJob = async (
   if (articleId === 0 && data.keyword) {
     const foundId = await getArticleIdByKeyword(data.cafeId, data.keyword);
     if (!foundId) {
-      console.log(`[WORKER] 글 미발행 - 5분 뒤 재시도: ${data.keyword}`);
+      console.log(`[WORKER] 글 미발행 - 5분 뒤 재시도 (시퀀스 진행): ${data.keyword}`);
+      // 시퀀스 advance해서 다음 작업 진행
+      await advanceIfNeeded();
+      // 리스케줄 시 시퀀스 정보 제거 (독립 실행)
+      const { sequenceId, sequenceIndex, ...dataWithoutSequence } = data;
       await addTaskJob(
         data.accountId,
-        { ...data, rescheduleToken: createRescheduleToken() },
+        { ...dataWithoutSequence, rescheduleToken: createRescheduleToken() },
         5 * 60 * 1000
       );
       return {
@@ -105,13 +123,17 @@ export const handleReplyJob = async (
     ),
   ]);
 
-  // ARTICLE_NOT_READY 에러: 5분 뒤 재시도
+  // ARTICLE_NOT_READY 에러: 5분 뒤 재시도 (시퀀스 없이)
   if (!result.success && result.error?.startsWith('ARTICLE_NOT_READY:')) {
     const retryDelay = 5 * 60 * 1000;
-    console.log(`[WORKER] 글/댓글 미준비 - 5분 뒤 재시도: ${articleId}`);
+    console.log(`[WORKER] 글/댓글 미준비 - 5분 뒤 재시도 (시퀀스 진행): ${articleId}`);
+    // 시퀀스 advance해서 다음 작업 진행
+    await advanceIfNeeded();
+    // 리스케줄 시 시퀀스 정보 제거 (독립 실행)
+    const { sequenceId, sequenceIndex, ...dataWithoutSequence } = data;
     await addTaskJob(
       data.accountId,
-      { ...data, rescheduleToken: createRescheduleToken() },
+      { ...dataWithoutSequence, rescheduleToken: createRescheduleToken() },
       retryDelay
     );
     return { success: false, error: result.error, willRetry: true };

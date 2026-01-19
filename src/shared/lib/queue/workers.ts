@@ -18,13 +18,25 @@ import { handlePostJob } from './handlers/post-handler';
 import { handleCommentJob } from './handlers/comment-handler';
 import { handleReplyJob } from './handlers/reply-handler';
 
-const taskWorkers: Map<string, Worker<TaskJobData, JobResult>> = new Map();
+declare global {
+  var __taskWorkers: Map<string, Worker<TaskJobData, JobResult>> | undefined;
+  var __generateWorker: Worker<GenerateJobData, JobResult> | null | undefined;
+}
 
-let generateWorker: Worker<GenerateJobData, JobResult> | null = null;
+const taskWorkers: Map<string, Worker<TaskJobData, JobResult>> =
+  globalThis.__taskWorkers ?? new Map();
+
+if (!globalThis.__taskWorkers) {
+  globalThis.__taskWorkers = taskWorkers;
+}
+
+let generateWorker: Worker<GenerateJobData, JobResult> | null =
+  globalThis.__generateWorker ?? null;
 
 const WORKER_LOCK_DURATION = 10 * 60 * 1000;
-const WORKER_LOCK_RENEW_TIME = 60 * 1000;
-const WORKER_STALLED_INTERVAL = 60 * 1000;
+const WORKER_LOCK_RENEW_TIME = 30 * 1000;
+const WORKER_STALLED_INTERVAL = 2 * 60 * 1000;
+const WORKER_MAX_STALLED_COUNT = 3;
 
 const processTaskJob = async (
   job: Job<TaskJobData, JobResult>
@@ -90,6 +102,7 @@ export const createTaskWorker = (
     lockDuration: WORKER_LOCK_DURATION,
     lockRenewTime: WORKER_LOCK_RENEW_TIME,
     stalledInterval: WORKER_STALLED_INTERVAL,
+    maxStalledCount: WORKER_MAX_STALLED_COUNT,
   });
 
   worker.on('completed', (job, result) => {
@@ -125,8 +138,10 @@ export const createGenerateWorker = (
       lockDuration: WORKER_LOCK_DURATION,
       lockRenewTime: WORKER_LOCK_RENEW_TIME,
       stalledInterval: WORKER_STALLED_INTERVAL,
+      maxStalledCount: WORKER_MAX_STALLED_COUNT,
     }
   );
+  globalThis.__generateWorker = generateWorker;
 
   generateWorker.on('completed', (job, result) => {
     console.log(
@@ -154,6 +169,7 @@ export const closeAllWorkers = async (): Promise<void> => {
   if (generateWorker) {
     await generateWorker.close();
     generateWorker = null;
+    globalThis.__generateWorker = null;
     console.log('[WORKER] Generate 워커 종료');
   }
 };

@@ -24,6 +24,20 @@ export const handleCommentJob = async (
     if (turn === 'skipped') {
       return { success: true };
     }
+    if (turn === 'pending') {
+      const retryDelay = 10 * 1000;
+      console.log(`[WORKER] 순서 대기 - ${retryDelay / 1000}초 뒤 재스케줄: ${data.sequenceId}#${data.sequenceIndex}`);
+      await addTaskJob(
+        data.accountId,
+        { ...data, rescheduleToken: createRescheduleToken() },
+        retryDelay
+      );
+      return {
+        success: false,
+        error: '순서 대기 - 재스케줄됨',
+        willRetry: true,
+      };
+    }
   }
 
   const advanceIfNeeded = async (): Promise<void> => {
@@ -43,13 +57,18 @@ export const handleCommentJob = async (
       const retryCount = data._retryCount ?? 0;
       if (retryCount >= 3) {
         console.error(`[WORKER] 글 조회 실패 (최대 재시도 초과): ${keyword}`);
+        await advanceIfNeeded();
         return { success: false, error: '글 조회 실패 - 최대 재시도 초과' };
       }
 
-      console.log(`[WORKER] 글 미발행 - 2분 뒤 재시도 (${retryCount + 1}/3): ${keyword}`);
+      console.log(`[WORKER] 글 미발행 - 2분 뒤 재시도 (시퀀스 진행) (${retryCount + 1}/3): ${keyword}`);
+      // 시퀀스 advance해서 다음 작업 진행
+      await advanceIfNeeded();
+      // 리스케줄 시 시퀀스 정보 제거 (독립 실행)
+      const { sequenceId, sequenceIndex, ...dataWithoutSequence } = data;
       await addTaskJob(
         data.accountId,
-        { ...data, _retryCount: retryCount + 1, rescheduleToken: createRescheduleToken() },
+        { ...dataWithoutSequence, _retryCount: retryCount + 1, rescheduleToken: createRescheduleToken() },
         2 * 60 * 1000
       );
       return {
@@ -64,6 +83,7 @@ export const handleCommentJob = async (
 
   if (articleId === 0) {
     console.error(`[WORKER] articleId가 0 - keyword 없음, 댓글 스킵`);
+    await advanceIfNeeded();
     return { success: false, error: 'articleId가 0이고 keyword도 없음' };
   }
 
@@ -82,13 +102,17 @@ export const handleCommentJob = async (
     ),
   ]);
 
-  // ARTICLE_NOT_READY 에러: 5분 뒤 재시도
+  // ARTICLE_NOT_READY 에러: 5분 뒤 재시도 (시퀀스 없이)
   if (!result.success && result.error?.startsWith('ARTICLE_NOT_READY:')) {
     const retryDelay = 5 * 60 * 1000;
-    console.log(`[WORKER] 글 미준비 - 5분 뒤 재시도: ${articleId}`);
+    console.log(`[WORKER] 글 미준비 - 5분 뒤 재시도 (시퀀스 진행): ${articleId}`);
+    // 시퀀스 advance해서 다음 작업 진행
+    await advanceIfNeeded();
+    // 리스케줄 시 시퀀스 정보 제거 (독립 실행)
+    const { sequenceId, sequenceIndex, ...dataWithoutSequence } = data;
     await addTaskJob(
       data.accountId,
-      { ...data, rescheduleToken: createRescheduleToken() },
+      { ...dataWithoutSequence, rescheduleToken: createRescheduleToken() },
       retryDelay
     );
     return { success: false, error: result.error, willRetry: true };

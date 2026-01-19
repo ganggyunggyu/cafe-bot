@@ -197,7 +197,7 @@ export const writeCommentWithAccount = async (
     }
 
     await submitButton.click();
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2000);
 
     const errorMessage = await checkErrorPopup(page);
     if (errorMessage) {
@@ -241,24 +241,36 @@ export const writeCommentWithAccount = async (
       return undefined;
     };
 
-    const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
     const contentPreview = normalizeText(content).slice(0, 30);
     const commenterNickname = normalizeText(account.nickname || account.id);
     let found = false;
     let commentId: string | undefined;
 
-    for (const item of commentItems) {
-      const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
-      if (!commentText.includes(contentPreview)) continue;
+    // 댓글 등록 확인 재시도 (최대 3회, 각 1초 간격)
+    for (let retry = 0; retry < 3; retry++) {
+      const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
 
-      if (commenterNickname) {
-        const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
-        if (commentNickname && commentNickname !== commenterNickname) continue;
+      for (const item of commentItems) {
+        const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
+        if (!commentText.includes(contentPreview)) continue;
+
+        if (commenterNickname) {
+          const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
+          if (commentNickname && commentNickname !== commenterNickname) continue;
+        }
+
+        found = true;
+        commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
+        break;
       }
 
-      found = true;
-      commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
-      break;
+      if (found) break;
+
+      // 못 찾으면 1초 대기 후 재시도
+      if (retry < 2) {
+        console.log(`[COMMENT] ${id} 댓글 확인 재시도 ${retry + 1}/3...`);
+        await page.waitForTimeout(1000);
+      }
     }
 
     if (!found) {
