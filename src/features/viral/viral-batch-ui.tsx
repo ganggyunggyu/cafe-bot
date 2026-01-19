@@ -29,6 +29,10 @@ export const ViralBatchUI = () => {
   const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
   const [result, setResult] = useState<ViralBatchResult | null>(null);
 
+  // 이미지 생성 옵션
+  const [enableImage, setEnableImage] = useState(false);
+  const [imageCount, setImageCount] = useState(1);
+
   const inputClassName = cn(
     'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm',
     'placeholder:text-(--ink-muted) shadow-sm transition',
@@ -66,6 +70,8 @@ export const ViralBatchUI = () => {
           cafeId: selectedCafeId || undefined,
           postOptions,
           model: model || undefined,
+          enableImage,
+          imageCount: enableImage ? imageCount : 0,
         });
         setResult(res);
       } catch (error) {
@@ -154,6 +160,38 @@ export const ViralBatchUI = () => {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* 이미지 생성 옵션 */}
+        <div className={cn('space-y-2')}>
+          <div className={cn('flex items-center gap-2')}>
+            <input
+              type="checkbox"
+              id="enableImage"
+              checked={enableImage}
+              onChange={(e) => setEnableImage(e.target.checked)}
+              className={cn('rounded border-gray-300')}
+            />
+            <label htmlFor="enableImage" className={cn('text-xs font-medium text-(--ink-muted)')}>
+              이미지 생성
+            </label>
+          </div>
+          {enableImage && (
+            <div className={cn('flex items-center gap-2 pl-5')}>
+              <label className={cn('text-xs text-(--ink-muted)')}>장수:</label>
+              <select
+                value={imageCount}
+                onChange={(e) => setImageCount(Number(e.target.value))}
+                className={cn(inputClassName, 'w-20')}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={n}>
+                    {n}장
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* 게시 옵션 */}

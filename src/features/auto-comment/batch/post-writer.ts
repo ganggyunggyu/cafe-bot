@@ -13,6 +13,7 @@ import type { Page } from 'playwright';
 import type { PostResult, PostOptions } from './types';
 import { DEFAULT_POST_OPTIONS } from './types';
 import { incrementActivity } from '@/shared/models/daily-activity';
+import { uploadImages } from './image-uploader';
 
 // 체크박스 상태 설정 헬퍼
 const setCheckbox = async (page: Page, selector: string, checked: boolean) => {
@@ -162,6 +163,7 @@ export interface WritePostInput {
   content: string;
   category?: string; // 게시판명 (미지정 시 첫 번째 게시판)
   postOptions?: PostOptions;
+  images?: string[]; // Base64 이미지 배열
 }
 
 export const writePostWithAccount = async (
@@ -169,7 +171,7 @@ export const writePostWithAccount = async (
   input: WritePostInput
 ): Promise<PostResult> => {
   const { id, password } = account;
-  const { cafeId, menuId, subject, content, category, postOptions = DEFAULT_POST_OPTIONS } = input;
+  const { cafeId, menuId, subject, content, category, postOptions = DEFAULT_POST_OPTIONS, images } = input;
 
   // 계정 락 획득 (동시 접근 방지)
   await acquireAccountLock(id);
@@ -222,6 +224,8 @@ export const writePostWithAccount = async (
 
     await page.waitForTimeout(3000);
 
+    console.log(`[POST] ${id} 카테고리 지정: "${category || '없음'}"`);
+
     // 게시판 선택 (드롭다운 클릭 → 카테고리 선택)
     const boardSelectButton = await page.$('.FormSelectButton button.button');
     if (boardSelectButton) {
@@ -231,21 +235,24 @@ export const writePostWithAccount = async (
       if (category) {
         // 특정 카테고리명으로 선택
         const options = await page.$$('ul.option_list li.item button.option');
+        console.log(`[DEBUG] 게시판 옵션 ${options.length}개 발견`);
         let found = false;
 
         for (const option of options) {
           const text = await option.textContent();
-          if (text?.trim() === category) {
+          const trimmedText = text?.trim();
+          console.log(`[DEBUG] 게시판 옵션: "${trimmedText}"`);
+          if (trimmedText === category) {
             await option.click();
             found = true;
-            console.log(`[DEBUG] 카테고리 "${category}" 선택됨`);
+            console.log(`[POST] ${id} 카테고리 "${category}" 선택 성공`);
             break;
           }
         }
 
         if (!found) {
           // 카테고리를 찾지 못하면 첫 번째 선택
-          console.log(`[DEBUG] 카테고리 "${category}" 없음, 첫 번째 선택`);
+          console.log(`[POST] ${id} 카테고리 "${category}" 없음 - 첫 번째 게시판 선택`);
           const firstOption = await page.$('ul.option_list li.item button.option');
           if (firstOption) {
             await firstOption.click();
@@ -253,6 +260,7 @@ export const writePostWithAccount = async (
         }
       } else {
         // 카테고리 미지정 시 첫 번째 게시판 선택
+        console.log(`[POST] ${id} 카테고리 미지정 - 첫 번째 게시판 선택`);
         const firstBoardOption = await page.$('ul.option_list li.item button.option');
         if (firstBoardOption) {
           await firstBoardOption.click();
@@ -260,6 +268,8 @@ export const writePostWithAccount = async (
       }
 
       await page.waitForTimeout(500);
+    } else {
+      console.log(`[POST] ${id} 게시판 선택 버튼 없음`);
     }
 
     // 제목 입력 (.FlexableTextArea textarea.textarea_input)
@@ -309,6 +319,18 @@ export const writePostWithAccount = async (
     }
 
     await page.waitForTimeout(500);
+
+    // 이미지 업로드 (있는 경우)
+    if (images && images.length > 0) {
+      console.log(`[POST] ${id} 이미지 ${images.length}장 업로드 시작`);
+      const uploadSuccess = await uploadImages(page, images);
+      if (uploadSuccess) {
+        console.log(`[POST] ${id} 이미지 업로드 완료`);
+      } else {
+        console.warn(`[POST] ${id} 이미지 업로드 실패 - 글 작성은 계속 진행`);
+      }
+      await page.waitForTimeout(1000);
+    }
 
     // 게시 옵션 설정 (체크박스 조작)
     await applyPostOptions(page, postOptions);

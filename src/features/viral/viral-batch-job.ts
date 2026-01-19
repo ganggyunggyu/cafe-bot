@@ -5,7 +5,7 @@ import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
 import { isAccountActive, getNextActiveTime, type NaverAccount } from '@/shared/lib/account-manager';
-import { generateViralContent } from '@/shared/api/content-api';
+import { generateViralContent, generateImages } from '@/shared/api/content-api';
 import { buildViralPrompt, detectKeywordType, type KeywordType } from './viral-prompt';
 import { parseViralResponse, validateParsedContent } from './viral-parser';
 import { saveViralDebug } from './viral-debug';
@@ -18,6 +18,8 @@ export interface ViralBatchInput {
   cafeId?: string;
   postOptions?: PostOptions;
   model?: string;
+  enableImage?: boolean;
+  imageCount?: number;
 }
 
 export interface ViralKeywordResult {
@@ -53,7 +55,7 @@ export const runViralBatch = async (
   input: ViralBatchInput,
   onProgress?: ProgressCallback
 ): Promise<ViralBatchResult> => {
-  const { keywords, cafeId: inputCafeId, postOptions, model } = input;
+  const { keywords, cafeId: inputCafeId, postOptions, model, enableImage, imageCount } = input;
 
   console.log('[VIRAL] runViralBatch 시작');
   console.log('[VIRAL] 키워드 수:', keywords.length);
@@ -184,6 +186,35 @@ export const runViralBatch = async (
       const commentCount = parsed.comments.filter(c => c.type === 'comment').length;
       const replyCount = parsed.comments.length - commentCount;
 
+      // 이미지 생성 (옵션이 활성화된 경우)
+      let images: string[] | undefined;
+      if (enableImage && imageCount && imageCount > 0) {
+        onProgress?.({
+          currentKeyword: keyword,
+          keywordIndex: i,
+          totalKeywords: keywords.length,
+          phase: 'post',
+          message: `[${i + 1}/${keywords.length}] ${keyword} 이미지 ${imageCount}장 생성 중...`,
+        });
+
+        try {
+          const imageResult = await generateImages({
+            keyword,
+            category,
+            count: imageCount,
+          });
+
+          if (imageResult.success && imageResult.images?.length) {
+            images = imageResult.images;
+            console.log(`[VIRAL] 이미지 ${images.length}장 생성 완료: ${keyword}`);
+          } else {
+            console.warn(`[VIRAL] 이미지 생성 실패: ${keyword}`, imageResult.error);
+          }
+        } catch (imgError) {
+          console.warn(`[VIRAL] 이미지 생성 오류: ${keyword}`, imgError);
+        }
+      }
+
       const postJobData: PostJobData = {
         type: 'post',
         accountId: writerAccount.id,
@@ -192,15 +223,20 @@ export const runViralBatch = async (
         subject: parsed.title,
         content: htmlContent,
         rawContent: parsed.body,
+        category,
         keyword,
         postOptions,
         skipComments: true,
         viralComments,
+        images,
       };
 
       await addTaskJob(writerAccount.id, postJobData, postDelay);
-      console.log(`[VIRAL] 글 발행 Job 추가: ${keyword}, 딜레이: ${Math.round(postDelay / 1000)}초`);
-      console.log(`[VIRAL] 댓글 ${commentCount}개, 대댓글 ${replyCount}개 데이터 포함`);
+      console.log(`[VIRAL] 글 발행 Job 추가: ${keyword}`);
+      console.log(`[VIRAL]   - 카테고리: ${category || '기본'}`);
+      console.log(`[VIRAL]   - 이미지: ${images?.length || 0}장`);
+      console.log(`[VIRAL]   - 댓글: ${commentCount}개, 대댓글: ${replyCount}개`);
+      console.log(`[VIRAL]   - 딜레이: ${Math.round(postDelay / 1000)}초`);
 
       globalDelay = postDelay + getRandomDelay(settings.delays.betweenPosts);
 

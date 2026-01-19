@@ -29,6 +29,10 @@ export const handlePostJob = async (
 ): Promise<JobResult> => {
   const { account, accounts, settings } = ctx;
 
+  console.log(`[WORKER] Post 처리: ${data.keyword || data.subject}`);
+  console.log(`[WORKER]   - 카테고리: ${data.category || '없음'}`);
+  console.log(`[WORKER]   - 이미지: ${data.images?.length || 0}장`);
+
   const result = await Promise.race([
     writePostWithAccount(account, {
       cafeId: data.cafeId,
@@ -37,6 +41,7 @@ export const handlePostJob = async (
       content: data.content,
       category: data.category,
       postOptions: data.postOptions,
+      images: data.images,
     }),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('타임아웃')), settings.timeout)

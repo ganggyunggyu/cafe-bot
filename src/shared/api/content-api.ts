@@ -94,3 +94,83 @@ export const generateViralContent = async (
 
   return response.json();
 };
+
+// 이미지 생성 API
+interface ImageGenerateRequest {
+  keyword: string;
+  category?: string;
+  count?: number;
+}
+
+interface ImageGenerateResponse {
+  success: boolean;
+  images?: string[]; // Base64 또는 URL 배열
+  error?: string;
+}
+
+// URL에서 이미지를 다운로드하여 base64로 변환
+const downloadImageAsBase64 = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error('[IMAGE API] 이미지 다운로드 실패:', url, response.status);
+      return null;
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
+    // MIME 타입 추정 (URL 확장자 기반)
+    const ext = url.split('.').pop()?.toLowerCase() || 'png';
+    const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('[IMAGE API] 이미지 다운로드 오류:', url, error);
+    return null;
+  }
+};
+
+export const generateImages = async (
+  request: ImageGenerateRequest
+): Promise<ImageGenerateResponse> => {
+  const response = await fetch(`${CONTENT_API_URL}/generate/image`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      keyword: request.keyword,
+      category: request.category || '',
+      count: request.count || 1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[IMAGE API] 이미지 생성 실패:', response.status, errorText);
+    return { success: false, error: `이미지 생성 실패: ${response.status}` };
+  }
+
+  const data = await response.json();
+  const rawImages = data.images || [];
+
+  // URL만 추출 (base64로 변환하지 않음 - Job 크기 제한 때문)
+  const imageUrls: string[] = [];
+  for (const img of rawImages) {
+    if (typeof img === 'object' && img !== null && 'url' in img) {
+      imageUrls.push((img as { url: string }).url);
+      console.log(`[IMAGE API] 이미지 URL: ${(img as { url: string }).url}`);
+    } else if (typeof img === 'string' && img.startsWith('http')) {
+      imageUrls.push(img);
+      console.log(`[IMAGE API] 이미지 URL: ${img}`);
+    }
+  }
+
+  return {
+    success: imageUrls.length > 0,
+    images: imageUrls, // URL 반환 (base64 아님)
+    error: imageUrls.length === 0 ? '이미지 URL 추출 실패' : undefined,
+  };
+};
+
+// 이미지 URL을 다운로드하여 base64로 변환 (업로드 시점에 사용)
+export { downloadImageAsBase64 };

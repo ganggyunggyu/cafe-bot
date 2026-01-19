@@ -25,6 +25,7 @@ export interface PostJobData {
   rawContent?: string;
   skipComments?: boolean;
   viralComments?: ViralCommentsData;
+  images?: string[]; // Base64 이미지 배열
   rescheduleToken?: string;
   _retryCount?: number;
 }
