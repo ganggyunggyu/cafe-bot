@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ICafe extends Document {
   cafeId: string;
+  cafeUrl: string;
   menuId: string;
   name: string;
   categories: string[];
@@ -15,6 +16,7 @@ export interface ICafe extends Document {
 const CafeSchema = new Schema<ICafe>(
   {
     cafeId: { type: String, required: true, unique: true },
+    cafeUrl: { type: String, required: true },
     menuId: { type: String, required: true },
     name: { type: String, required: true },
     categories: { type: [String], default: [] },
@@ -26,4 +28,4 @@ const CafeSchema = new Schema<ICafe>(
 );
 
 export const Cafe: Model<ICafe> =
-  mongoose.models.Cafe || mongoose.model<ICafe>('Cafe', CafeSchema);
+  mongoose.models.Cafe || mongoose.model<ICafe>('Cafe', CafeSchema, 'caves');
