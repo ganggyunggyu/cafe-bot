@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { cn } from '@/shared/lib/cn';
 import { PageLayout } from '@/shared/ui';
 import { ViralBatchUI } from '@/features/viral/viral-batch-ui';
-import { QueueStatusUI } from '@/features/auto-comment/batch';
+import { KeywordGeneratorUI } from '@/features/auto-comment/batch';
 
 export default function ViralPage() {
   return (
@@ -102,19 +102,19 @@ export default function ViralPage() {
           <div className={cn('mb-4 flex items-center justify-between')}>
             <div>
               <p className={cn('text-xs uppercase tracking-[0.25em] text-(--ink-muted)')}>
-                Queue Radar
+                Keyword Generator
               </p>
-              <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>큐 상태 모니터</h3>
+              <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>키워드 생성</h3>
             </div>
             <span
               className={cn(
                 'rounded-full border border-(--border) bg-white/70 px-3 py-1 text-xs text-(--ink-muted)'
               )}
             >
-              Live
+              Step 01
             </span>
           </div>
-          <QueueStatusUI />
+          <KeywordGeneratorUI />
         </div>
       </section>
 
