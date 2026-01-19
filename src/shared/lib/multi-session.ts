@@ -53,9 +53,11 @@ const getSessionFile = (accountId: string): string => {
 
 export const getBrowser = async (): Promise<Browser> => {
   if (!browser) {
+    const isHeadless = process.env.PLAYWRIGHT_HEADLESS !== 'false';
+    console.log(`[BROWSER] 브라우저 시작 (headless: ${isHeadless})`);
     browser = await chromium.launch({
-      headless: true,
-      slowMo: 0,
+      headless: isHeadless,
+      slowMo: isHeadless ? 0 : 100,
     });
   }
   return browser;
