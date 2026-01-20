@@ -1,11 +1,15 @@
-export interface CafeConfig {
-  cafeId: string;
-  cafeUrl: string;
-  menuId: string;
-  name: string;
-  categories: string[];
-  isDefault?: boolean;
-  categoryMenuIds?: Record<string, string>;
-}
+// Model (Types)
+export type {
+  CafeConfig,
+  CafeCategoryMap,
+  CafeData,
+  CafeInput,
+} from './model';
 
-export type CafeCategoryMap = Record<string, string>;
+// API (Server Actions)
+export {
+  getCafesAction,
+  addCafeAction,
+  updateCafeAction,
+  deleteCafeAction,
+} from './api';

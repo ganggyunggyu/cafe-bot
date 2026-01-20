@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
@@ -25,7 +26,6 @@ export const PostOnlyUI = () => {
   const [queueStatus, setQueueStatus] = useState<QueueStatusResult | null>(null);
   const [isPolling, setIsPolling] = useState(false);
 
-  // 카페 데이터 로딩
   useEffect(() => {
     const loadCafes = async () => {
       const data = await getCafesAction();
@@ -38,7 +38,6 @@ export const PostOnlyUI = () => {
 
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 
-  // 큐 상태 폴링
   useEffect(() => {
     if (!isPolling) return;
 
@@ -53,8 +52,13 @@ export const PostOnlyUI = () => {
   }, [isPolling]);
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
+    'placeholder:text-(--ink-tertiary) transition-all',
+    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
   );
+
+  const labelClassName = cn('text-sm font-medium text-(--ink)');
+  const helperClassName = cn('text-xs text-(--ink-muted) mt-1');
 
   const handleSubmit = () => {
     const keywords = keywordsText
@@ -80,59 +84,42 @@ export const PostOnlyUI = () => {
   };
 
   return (
-    <div className={cn('space-y-4')}>
-      <div className={cn('space-y-1')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
-          Post Only Mode
-        </p>
-        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
-          글만 발행
-        </h2>
-        <p className={cn('text-sm text-(--ink-muted)')}>
-          댓글 없이 글만 발행 (원고 축적용)
-        </p>
-      </div>
-
+    <div className={cn('space-y-6')}>
       <div className={cn('space-y-3')}>
-        <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-(--ink-muted)')}>
-            카페 선택
-          </label>
-          <select
-            value={selectedCafeId}
-            onChange={(e) => setSelectedCafeId(e.target.value)}
-            className={inputClassName}
-          >
-            {cafes.map((cafe) => (
-              <option key={cafe.cafeId} value={cafe.cafeId}>
-                {cafe.name} {cafe.isDefault ? '(기본)' : ''}
-              </option>
-            ))}
-          </select>
-          {selectedCafe && (
-            <p className={cn('text-xs text-(--ink-muted)')}>
-              카테고리: {selectedCafe.categories.join(', ')}
-            </p>
-          )}
+        <Select
+          label="카페 선택"
+          value={selectedCafeId}
+          onChange={(e) => setSelectedCafeId(e.target.value)}
+          options={cafes.map((cafe) => ({
+            value: cafe.cafeId,
+            label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
+          }))}
+          helperText={selectedCafe && `카테고리: ${selectedCafe.categories.join(', ')}`}
+        />
+
+        <div className={cn('space-y-2')}>
+          <label className={labelClassName}>키워드 목록</label>
+          <textarea
+            placeholder={`키워드 목록 (한 줄에 하나씩)\n카테고리 지정: 키워드:카테고리\n예:\n제주도 맛집\n서울 카페:일상`}
+            value={keywordsText}
+            onChange={(e) => setKeywordsText(e.target.value)}
+            className={cn(inputClassName, 'min-h-28 resize-none')}
+            rows={4}
+          />
         </div>
 
-        <textarea
-          placeholder="키워드 목록 (한 줄에 하나씩)&#10;카테고리 지정: 키워드:카테고리&#10;예:&#10;제주도 맛집&#10;서울 카페:일상"
-          value={keywordsText}
-          onChange={(e) => setKeywordsText(e.target.value)}
-          className={cn(inputClassName, 'min-h-[100px] resize-none')}
-          rows={4}
-        />
+        <div className={cn('space-y-2')}>
+          <label className={labelClassName}>참고 URL (선택)</label>
+          <input
+            type="text"
+            placeholder="참고 URL"
+            value={ref}
+            onChange={(e) => setRef(e.target.value)}
+            className={inputClassName}
+          />
+        </div>
 
-        <input
-          type="text"
-          placeholder="참고 URL (선택)"
-          value={ref}
-          onChange={(e) => setRef(e.target.value)}
-          className={inputClassName}
-        />
-
-        <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3')}>
+        <div className={cn('rounded-xl border border-(--border-light) bg-(--surface-muted) p-4')}>
           <PostOptionsUI options={postOptions} onChange={setPostOptions} />
         </div>
       </div>
@@ -141,9 +128,9 @@ export const PostOnlyUI = () => {
         onClick={handleSubmit}
         disabled={isPending || !keywordsText.trim()}
         className={cn(
-          'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
-          'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-          'disabled:cursor-not-allowed disabled:opacity-60'
+          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
+          'bg-(--accent) hover:bg-(--accent-hover)',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
         )}
       >
         {isPending ? '발행 중...' : '글만 발행'}
@@ -152,10 +139,10 @@ export const PostOnlyUI = () => {
       {result && (
         <div
           className={cn(
-            'rounded-2xl border px-4 py-4',
+            'rounded-2xl border p-5',
             result.success
-              ? 'border-(--success) bg-(--success-soft)'
-              : 'border-(--danger) bg-(--danger-soft)'
+              ? 'border-(--success)/30 bg-(--success-soft)'
+              : 'border-(--danger)/30 bg-(--danger-soft)'
           )}
         >
           <div className={cn('flex items-center justify-between mb-3')}>
@@ -173,14 +160,16 @@ export const PostOnlyUI = () => {
           </div>
           <p className={cn('text-sm text-(--ink-muted)')}>{result.message}</p>
 
-          {/* 큐 진행 상황 */}
           {queueStatus && Object.keys(queueStatus).length > 0 && (
-            <div className={cn('mt-4 space-y-2')}>
+            <div className={cn('mt-4 space-y-3')}>
               <div className={cn('flex items-center justify-between')}>
                 <h4 className={cn('text-sm font-medium text-(--ink)')}>진행 상황</h4>
                 <button
                   onClick={() => setIsPolling(false)}
-                  className={cn('text-xs px-2 py-1 rounded-lg bg-white/50 hover:bg-white/80 text-(--ink-muted)')}
+                  className={cn(
+                    'text-xs px-3 py-1.5 rounded-lg font-medium transition-all',
+                    'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
+                  )}
                 >
                   폴링 중지
                 </button>
@@ -190,22 +179,22 @@ export const PostOnlyUI = () => {
                 if (total === 0) return null;
                 const progress = total > 0 ? ((status.completed + status.failed) / total) * 100 : 0;
                 return (
-                  <div key={accountId} className={cn('rounded-xl bg-white/50 p-2')}>
-                    <div className={cn('flex items-center justify-between text-xs mb-1')}>
+                  <div key={accountId} className={cn('rounded-xl bg-(--surface) p-3 border border-(--border-light)')}>
+                    <div className={cn('flex items-center justify-between text-xs mb-2')}>
                       <span className={cn('font-medium text-(--ink)')}>{accountId}</span>
                       <span className={cn('text-(--ink-muted)')}>
                         {status.completed}/{total} 완료
                         {status.failed > 0 && ` (${status.failed} 실패)`}
                       </span>
                     </div>
-                    <div className={cn('h-1.5 rounded-full bg-gray-200 overflow-hidden')}>
+                    <div className={cn('h-1.5 rounded-full bg-(--surface-muted) overflow-hidden')}>
                       <div
                         className={cn('h-full bg-(--accent) transition-all')}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                     {status.active > 0 && (
-                      <p className={cn('text-xs text-(--accent) mt-1')}>
+                      <p className={cn('text-xs text-(--accent) mt-2')}>
                         {status.active}개 처리 중...
                       </p>
                     )}

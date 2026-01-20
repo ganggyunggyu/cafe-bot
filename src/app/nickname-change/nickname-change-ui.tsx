@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import {
   changeNicknameByCafeAction,
   changeNicknameByAccountAction,
@@ -156,45 +157,31 @@ export const NicknameChangeUI = () => {
       {/* 선택 옵션 */}
       {mode === 'by-cafe' && (
         <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
-          <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>카페 선택</h3>
-          <select
+          <Select
+            label="카페 선택"
             value={selectedCafeId}
             onChange={(e) => setSelectedCafeId(e.target.value)}
-            className={cn(
-              'w-full rounded-xl border border-(--border) bg-white px-4 py-2 text-sm'
-            )}
-          >
-            {cafes.map((cafe) => (
-              <option key={cafe.cafeId} value={cafe.cafeId}>
-                {cafe.name} {cafe.isDefault && '(기본)'}
-              </option>
-            ))}
-          </select>
-          <p className={cn('text-xs text-(--ink-muted) mt-2')}>
-            {accounts.length}개 계정의 닉네임이 변경됩니다.
-          </p>
+            options={cafes.map((cafe) => ({
+              value: cafe.cafeId,
+              label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
+            }))}
+            helperText={`${accounts.length}개 계정의 닉네임이 변경됩니다.`}
+          />
         </div>
       )}
 
       {mode === 'by-account' && (
         <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
-          <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>계정 선택</h3>
-          <select
+          <Select
+            label="계정 선택"
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className={cn(
-              'w-full rounded-xl border border-(--border) bg-white px-4 py-2 text-sm'
-            )}
-          >
-            {accounts.map((acc) => (
-              <option key={acc.accountId} value={acc.accountId}>
-                {acc.accountId} {acc.isMain && '(메인)'}
-              </option>
-            ))}
-          </select>
-          <p className={cn('text-xs text-(--ink-muted) mt-2')}>
-            {cafes.length}개 카페의 닉네임이 변경됩니다.
-          </p>
+            options={accounts.map((acc) => ({
+              value: acc.accountId,
+              label: `${acc.accountId}${acc.isMain ? ' (메인)' : ''}`,
+            }))}
+            helperText={`${cafes.length}개 카페의 닉네임이 변경됩니다.`}
+          />
         </div>
       )}
 

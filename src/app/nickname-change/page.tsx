@@ -5,41 +5,47 @@ import { PageLayout } from '@/shared/ui';
 export default function NicknameChangePage() {
   return (
     <PageLayout
-      title="카페 닉네임 변경"
-      subtitle="Batch Nickname Change"
-      description="랜덤 닉네임으로 카페별 닉네임을 일괄 변경합니다."
+      title="닉네임 변경"
+      subtitle="랜덤 닉네임으로 카페별 닉네임을 일괄 변경합니다"
     >
-      <div
-        className={cn(
-          'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg max-w-3xl'
-        )}
-      >
-        <NicknameChangeUI />
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8 max-w-3xl')}>
+        <div className={cn('space-y-6')}>
+          <div>
+            <h2 className={cn('text-lg font-semibold text-(--ink)')}>닉네임 일괄 변경</h2>
+            <p className={cn('text-sm text-(--ink-muted) mt-1')}>
+              닉네임은 랜덤 생성되며 중복되지 않습니다
+            </p>
+          </div>
+          <NicknameChangeUI />
+        </div>
       </div>
 
-      <div
-        className={cn(
-          'mt-10 rounded-2xl border border-(--border) bg-(--accent-soft)/70 p-6 max-w-3xl'
-        )}
-      >
-        <h3 className={cn('font-semibold text-(--accent) mb-2')}>사용 안내</h3>
-        <ul
+      <details className={cn('mt-8 group max-w-3xl')}>
+        <summary
           className={cn(
-            'text-sm text-(--ink-muted) space-y-1 list-disc list-inside'
+            'flex items-center gap-2 cursor-pointer text-sm text-(--ink-muted) hover:text-(--ink) transition',
+            'list-none [&::-webkit-details-marker]:hidden'
           )}
         >
-          <li>
-            <strong>카페 기준</strong>: 선택한 카페에서 모든 계정의 닉네임 변경
-          </li>
-          <li>
-            <strong>계정 기준</strong>: 선택한 계정으로 모든 카페의 닉네임 변경
-          </li>
-          <li>
-            <strong>전체 순회</strong>: 모든 계정 × 모든 카페 조합 변경
-          </li>
-          <li>닉네임은 랜덤 생성되며 중복되지 않습니다</li>
-        </ul>
-      </div>
+          <svg
+            className={cn('w-4 h-4 transition-transform group-open:rotate-90')}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          사용 안내
+        </summary>
+
+        <div className={cn('mt-4 rounded-xl border border-(--border-light) bg-(--surface-muted) p-5')}>
+          <ul className={cn('text-sm text-(--ink-muted) space-y-2')}>
+            <li>• <span className={cn('font-medium text-(--ink)')}>카페 기준</span>: 선택한 카페에서 모든 계정의 닉네임 변경</li>
+            <li>• <span className={cn('font-medium text-(--ink)')}>계정 기준</span>: 선택한 계정으로 모든 카페의 닉네임 변경</li>
+            <li>• <span className={cn('font-medium text-(--ink)')}>전체 순회</span>: 모든 계정 × 모든 카페 조합 변경</li>
+          </ul>
+        </div>
+      </details>
     </PageLayout>
   );
 }

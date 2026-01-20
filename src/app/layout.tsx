@@ -1,19 +1,7 @@
 import type { Metadata } from 'next';
-import { Fraunces, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
+import { JetBrains_Mono } from 'next/font/google';
 import { cn } from '@/shared/lib/cn';
 import './globals.css';
-
-const spaceGrotesk = Space_Grotesk({
-  variable: '--font-space-grotesk',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-});
-
-const fraunces = Fraunces({
-  variable: '--font-fraunces',
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-});
 
 const jetBrainsMono = JetBrains_Mono({
   variable: '--font-jetbrains-mono',
@@ -32,13 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <body
         className={cn(
-          spaceGrotesk.variable,
-          fraunces.variable,
           jetBrainsMono.variable,
-          'antialiased'
+          'antialiased bg-(--background) text-(--foreground)'
         )}
       >
         {children}

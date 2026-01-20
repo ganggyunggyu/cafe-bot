@@ -134,10 +134,12 @@ export const modifyArticleWithAccount = async (
     await page.keyboard.press('Backspace');
     await page.waitForTimeout(300);
 
-    // 새 본문 입력
+    // 새 본문 입력 - HTML 태그를 plain text로 변환
     const plainContent = newContent
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]*>/g, '');
+      .replace(/<\/p>\s*<p>/gi, '\n')  // </p><p> → 줄바꿈
+      .replace(/<br\s*\/?>/gi, '\n')   // <br> → 줄바꿈
+      .replace(/<[^>]*>/g, '')         // 나머지 태그 제거
+      .trim();
 
     const lines = plainContent.split('\n');
 

@@ -5,94 +5,43 @@ import { ManualPostUI } from '@/features/manual-post';
 export default function ManualPostPage() {
   return (
     <PageLayout
-      title="수동 원고 발행/수정"
-      subtitle="Manual Post"
-      description="폴더를 드래그앤드랍하여 원고를 발행하거나 기존 글을 수정합니다."
+      title="수동 원고"
+      subtitle="폴더 드래그앤드랍으로 원고 발행 또는 기존 글 수정"
     >
-      <section
-        className={cn(
-          'relative overflow-hidden rounded-[32px] border border-(--border) bg-white/70 p-6 shadow-[0_18px_40px_-28px_rgba(32,24,18,0.6)] backdrop-blur'
-        )}
-      >
-        <div
-          className={cn(
-            'pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-200/60 blur-3xl'
-          )}
-        />
-        <div
-          className={cn(
-            'pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-teal-200/60 blur-3xl'
-          )}
-        />
-        <div className={cn('relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr]')}>
-          <div className={cn('space-y-4')}>
-            <p className={cn('text-xs uppercase tracking-[0.28em] text-(--ink-muted)')}>
-              Drag & Drop
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8')}>
+        <div className={cn('space-y-6')}>
+          <div>
+            <h2 className={cn('text-lg font-semibold text-(--ink)')}>원고 발행/수정</h2>
+            <p className={cn('text-sm text-(--ink-muted) mt-1')}>
+              AI 생성 없이 원고 그대로 발행하거나 기존 글 수정
             </p>
-            <div className={cn('space-y-2')}>
-              <h2 className={cn('text-2xl font-semibold text-(--ink)')}>
-                수동 원고 관리
-              </h2>
-              <p className={cn('text-sm text-(--ink-muted) leading-relaxed')}>
-                폴더 업로드 → 원고 파싱 → 발행 또는 기존 글 수정
-              </p>
-            </div>
-            <div className={cn('flex flex-wrap gap-2')}>
-              {['드래그앤드랍', '폴더 구조', '이미지 첨부', '카테고리 지정'].map((label) => (
-                <span
-                  key={label}
-                  className={cn(
-                    'rounded-full border border-(--border) bg-white/70 px-3 py-1 text-xs text-(--ink-muted)'
-                  )}
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted)/80 p-4')}>
-            <p className={cn('text-sm font-semibold text-(--ink) mb-3')}>특징</p>
-            <ul className={cn('space-y-2 text-xs text-(--ink-muted)')}>
-              <li>• AI 생성 없이 원고 그대로 발행</li>
-              <li>• 이미지 파일 자동 첨부</li>
-              <li>• 발행: 큐 기반 비동기 처리</li>
-              <li>• 수정: 동기적 순차 처리</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className={cn('mt-10')}>
-        <div
-          className={cn(
-            'rounded-3xl border border-(--border) bg-white/80 p-6 shadow-[0_16px_40px_-30px_rgba(27,25,21,0.6)] backdrop-blur'
-          )}
-        >
-          <div className={cn('mb-5 flex items-start justify-between')}>
-            <div>
-              <p className={cn('text-xs uppercase tracking-[0.25em] text-(--ink-muted)')}>
-                Manual Studio
-              </p>
-              <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>
-                원고 발행/수정
-              </h3>
-            </div>
-            <span
-              className={cn(
-                'rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'
-              )}
-            >
-              Main
-            </span>
           </div>
           <ManualPostUI />
         </div>
-      </section>
+      </div>
 
-      <section className={cn('mt-10 grid gap-6 lg:grid-cols-2')}>
-        <div className={cn('rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6')}>
-          <h3 className={cn('font-semibold text-emerald-700 mb-3')}>폴더 구조</h3>
-          <pre className={cn('text-xs text-(--ink-muted) font-mono bg-white/50 p-3 rounded-xl')}>
+      <details className={cn('mt-8 group')}>
+        <summary
+          className={cn(
+            'flex items-center gap-2 cursor-pointer text-sm text-(--ink-muted) hover:text-(--ink) transition',
+            'list-none [&::-webkit-details-marker]:hidden'
+          )}
+        >
+          <svg
+            className={cn('w-4 h-4 transition-transform group-open:rotate-90')}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          사용 안내
+        </summary>
+
+        <div className={cn('mt-4 grid gap-4 lg:grid-cols-2')}>
+          <div className={cn('rounded-xl border border-(--border-light) bg-(--surface-muted) p-5')}>
+            <h3 className={cn('font-semibold text-(--ink) mb-3')}>폴더 구조</h3>
+            <pre className={cn('text-xs text-(--ink-muted) bg-(--surface) rounded-lg p-3 font-mono')}>
 {`상위폴더/
 ├── 원고1/
 │   ├── 원고.txt
@@ -101,22 +50,38 @@ export default function ManualPostPage() {
 ├── 원고2:카테고리/
 │   └── 원고.txt
 └── ...`}
-          </pre>
-        </div>
+            </pre>
+          </div>
 
-        <div className={cn('rounded-2xl border border-(--border) bg-white/80 p-6')}>
-          <h3 className={cn('font-semibold text-(--ink) mb-3')}>원고.txt 형식</h3>
-          <div className={cn('text-xs text-(--ink-muted) space-y-2')}>
-            <p>첫 번째 줄: <span className={cn('font-semibold text-(--ink)')}>제목</span></p>
-            <p>이후: <span className={cn('font-semibold text-(--ink)')}>본문</span></p>
-            <div className={cn('bg-white/50 p-3 rounded-xl font-mono mt-3')}>
+          <div className={cn('rounded-xl border border-(--border-light) bg-(--surface-muted) p-5')}>
+            <h3 className={cn('font-semibold text-(--ink) mb-3')}>원고.txt 형식</h3>
+            <div className={cn('text-sm text-(--ink-muted) space-y-2')}>
+              <p>• 첫 번째 줄: <span className={cn('font-medium text-(--ink)')}>제목</span></p>
+              <p>• 이후: <span className={cn('font-medium text-(--ink)')}>본문</span></p>
+            </div>
+            <div className={cn('bg-(--surface) p-3 rounded-lg font-mono text-xs mt-3')}>
               <p className={cn('text-(--ink)')}>여기가 제목입니다</p>
-              <p className={cn('text-(--ink-muted)')}>여기부터는</p>
-              <p className={cn('text-(--ink-muted)')}>본문 내용입니다.</p>
+              <p className={cn('text-(--ink-muted)')}>여기부터는 본문 내용입니다.</p>
             </div>
           </div>
         </div>
-      </section>
+
+        <div className={cn('mt-4 rounded-xl border border-(--border-light) bg-(--surface-muted) p-5')}>
+          <h3 className={cn('font-semibold text-(--ink) mb-3')}>특징</h3>
+          <div className={cn('grid grid-cols-2 lg:grid-cols-4 gap-3')}>
+            {['드래그앤드랍', '이미지 자동 첨부', '큐 기반 발행', '순차 수정'].map((label) => (
+              <span
+                key={label}
+                className={cn(
+                  'rounded-lg border border-(--border-light) bg-(--surface) px-3 py-2 text-xs text-(--ink-muted) text-center'
+                )}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </details>
     </PageLayout>
   );
 }

@@ -1,29 +1,67 @@
+'use client';
+
+import { useState } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { ApiTestUI, KeywordGeneratorUI } from '@/features/auto-comment/batch';
+import { ApiTestUI } from '@/features/auto-comment/batch/api-test-ui';
+import { KeywordGeneratorUI } from '@/features/auto-comment/batch/keyword-generator-ui';
 import { PageLayout } from '@/shared/ui';
 
+type TabType = 'keyword' | 'api';
+
+const TABS: { id: TabType; label: string }[] = [
+  { id: 'keyword', label: '키워드 생성' },
+  { id: 'api', label: 'API 테스트' },
+];
+
 export default function TestPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('keyword');
+
   return (
     <PageLayout
-      title="API 테스트"
-      subtitle="Content Generation"
-      description="원고/댓글/대댓글 생성 API 테스트"
+      title="테스트"
+      subtitle="원고/댓글/대댓글 생성 API 테스트"
     >
-      <div className={cn('grid gap-8 lg:grid-cols-2')}>
-        <div
-          className={cn(
-            'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
-          )}
-        >
-          <KeywordGeneratorUI />
-        </div>
-        <div
-          className={cn(
-            'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
-          )}
-        >
-          <ApiTestUI />
-        </div>
+      <div className={cn('flex gap-2 mb-8')}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'px-5 py-2.5 rounded-xl text-sm font-medium transition-all',
+              activeTab === tab.id
+                ? 'bg-(--accent) text-white'
+                : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:text-(--ink) hover:bg-(--surface-muted)'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8')}>
+        {activeTab === 'keyword' && (
+          <div className={cn('space-y-6')}>
+            <div>
+              <h2 className={cn('text-lg font-semibold text-(--ink)')}>키워드 생성</h2>
+              <p className={cn('text-sm text-(--ink-muted) mt-1')}>
+                카테고리 기반 AI 키워드 자동 생성
+              </p>
+            </div>
+            <KeywordGeneratorUI />
+          </div>
+        )}
+
+        {activeTab === 'api' && (
+          <div className={cn('space-y-6')}>
+            <div>
+              <h2 className={cn('text-lg font-semibold text-(--ink)')}>API 테스트</h2>
+              <p className={cn('text-sm text-(--ink-muted) mt-1')}>
+                콘텐츠 생성 API 직접 테스트
+              </p>
+            </div>
+            <ApiTestUI />
+          </div>
+        )}
       </div>
     </PageLayout>
   );

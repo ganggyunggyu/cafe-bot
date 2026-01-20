@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import type { PostOptions } from './types';
 
 interface PostOptionsUIProps {
@@ -10,14 +11,16 @@ interface PostOptionsUIProps {
 
 export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
   const checkboxClassName = cn(
-    'h-4 w-4 rounded border-gray-300 text-(--accent) focus:ring-(--accent)'
+    'w-5 h-5 rounded border-2 border-(--border)',
+    'checked:bg-(--accent) checked:border-(--accent)',
+    'focus:ring-2 focus:ring-(--accent)/20'
   );
 
   const labelClassName = cn('text-sm text-(--ink)');
 
   const selectClassName = cn(
-    'rounded-lg border border-(--border) bg-white/80 px-2 py-1 text-xs text-(--ink)',
-    'focus:border-(--accent) focus:outline-none focus:ring-1 focus:ring-(--accent)'
+    'rounded-lg border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--ink)',
+    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
   );
 
   const handleChange = <K extends keyof PostOptions>(key: K, value: PostOptions[K]) => {
@@ -25,14 +28,9 @@ export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
   };
 
   return (
-    <div className={cn('space-y-3')}>
-      <div className={cn('flex items-center justify-between')}>
-        <h4 className={cn('text-sm font-semibold text-(--ink)')}>게시 옵션</h4>
-        <span className={cn('text-xs text-(--ink-muted)')}>모든 글에 적용</span>
-      </div>
-
-      <div className={cn('space-y-2')}>
-        <label className={cn('flex items-center gap-2 cursor-pointer')}>
+    <div className={cn('space-y-4')}>
+      <div className={cn('space-y-3')}>
+        <label className={cn('flex items-center gap-3 cursor-pointer')}>
           <input
             type="checkbox"
             checked={options.allowComment}
@@ -42,7 +40,7 @@ export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
           <span className={labelClassName}>댓글 허용</span>
         </label>
 
-        <label className={cn('flex items-center gap-2 cursor-pointer')}>
+        <label className={cn('flex items-center gap-3 cursor-pointer')}>
           <input
             type="checkbox"
             checked={options.allowScrap}
@@ -52,7 +50,7 @@ export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
           <span className={labelClassName}>스크랩 허용</span>
         </label>
 
-        <label className={cn('flex items-center gap-2 cursor-pointer')}>
+        <label className={cn('flex items-center gap-3 cursor-pointer')}>
           <input
             type="checkbox"
             checked={options.allowCopy}
@@ -62,7 +60,7 @@ export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
           <span className={labelClassName}>복사/저장 허용</span>
         </label>
 
-        <label className={cn('flex items-center gap-2 cursor-pointer')}>
+        <label className={cn('flex items-center gap-3 cursor-pointer')}>
           <input
             type="checkbox"
             checked={options.useAutoSource}
@@ -72,8 +70,8 @@ export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
           <span className={labelClassName}>자동출처 사용</span>
         </label>
 
-        <div className={cn('space-y-2')}>
-          <label className={cn('flex items-center gap-2 cursor-pointer')}>
+        <div className={cn('space-y-3')}>
+          <label className={cn('flex items-center gap-3 cursor-pointer')}>
             <input
               type="checkbox"
               checked={options.useCcl}
@@ -84,30 +82,34 @@ export const PostOptionsUI = ({ options, onChange }: PostOptionsUIProps) => {
           </label>
 
           {options.useCcl && (
-            <div className={cn('ml-6 space-y-2 p-2 rounded-lg bg-white/50')}>
-              <div className={cn('flex items-center justify-between gap-2')}>
-                <span className={cn('text-xs text-(--ink-muted)')}>영리적 이용</span>
-                <select
+            <div className={cn('ml-8 space-y-3 p-4 rounded-xl bg-(--surface-muted)')}>
+              <div className={cn('flex items-center justify-between gap-4')}>
+                <span className={cn('text-sm text-(--ink-muted)')}>영리적 이용</span>
+                <Select
                   value={options.cclCommercial}
                   onChange={(e) => handleChange('cclCommercial', e.target.value as 'allow' | 'disallow')}
-                  className={selectClassName}
-                >
-                  <option value="allow">허용</option>
-                  <option value="disallow">허용 안 함</option>
-                </select>
+                  options={[
+                    { value: 'allow', label: '허용' },
+                    { value: 'disallow', label: '허용 안 함' },
+                  ]}
+                  fullWidth={false}
+                  className="w-32"
+                />
               </div>
 
-              <div className={cn('flex items-center justify-between gap-2')}>
-                <span className={cn('text-xs text-(--ink-muted)')}>콘텐츠 변경</span>
-                <select
+              <div className={cn('flex items-center justify-between gap-4')}>
+                <span className={cn('text-sm text-(--ink-muted)')}>콘텐츠 변경</span>
+                <Select
                   value={options.cclModify}
                   onChange={(e) => handleChange('cclModify', e.target.value as 'allow' | 'same' | 'disallow')}
-                  className={selectClassName}
-                >
-                  <option value="allow">허용</option>
-                  <option value="same">동일조건허용</option>
-                  <option value="disallow">허용 안 함</option>
-                </select>
+                  options={[
+                    { value: 'allow', label: '허용' },
+                    { value: 'same', label: '동일조건허용' },
+                    { value: 'disallow', label: '허용 안 함' },
+                  ]}
+                  fullWidth={false}
+                  className="w-32"
+                />
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useCallback, DragEvent, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
@@ -24,7 +25,6 @@ interface CafeConfig {
 
 type ManuscriptMode = 'publish' | 'modify';
 
-// 폴더명에서 이름과 카테고리 추출 (구분자: _)
 const parseFolderName = (folderName: string): { name: string; category?: string } => {
   const lastUnderscoreIndex = folderName.lastIndexOf('_');
   if (lastUnderscoreIndex === -1) {
@@ -36,13 +36,11 @@ const parseFolderName = (folderName: string): { name: string; category?: string 
   };
 };
 
-// 이미지 파일 여부 확인
 const isImageFile = (fileName: string): boolean => {
   const ext = fileName.toLowerCase().split('.').pop();
   return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext || '');
 };
 
-// File을 base64 data URL로 변환
 const fileToDataUrl = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -52,7 +50,6 @@ const fileToDataUrl = (file: File): Promise<string> => {
   });
 };
 
-// File을 텍스트로 읽기
 const fileToText = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -72,11 +69,9 @@ export const ManuscriptUploadUI = () => {
   const [result, setResult] = useState<ManuscriptUploadResult | ManuscriptModifyResult | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  // 수정 모드 옵션
   const [sortOrder, setSortOrder] = useState<ManuscriptSortOrder>('oldest');
   const [daysLimit, setDaysLimit] = useState<number>(0);
 
-  // 카페 데이터 로딩
   useEffect(() => {
     const loadCafes = async () => {
       const data = await getCafesAction();
@@ -90,10 +85,14 @@ export const ManuscriptUploadUI = () => {
   const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
+    'placeholder:text-(--ink-tertiary) transition-all',
+    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
   );
 
-  // 드래그앤드랍 처리
+  const labelClassName = cn('text-sm font-medium text-(--ink)');
+  const helperClassName = cn('text-xs text-(--ink-muted) mt-1');
+
   const handleDrop = useCallback(async (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -103,7 +102,6 @@ export const ManuscriptUploadUI = () => {
     const parsedManuscripts: ManuscriptFolder[] = [];
     const folderMap = new Map<string, { content?: string; images: ManuscriptImage[] }>();
 
-    // webkitGetAsEntry를 사용해 폴더 구조 파싱
     const processEntry = async (entry: FileSystemEntry, parentPath: string = ''): Promise<void> => {
       if (entry.isFile) {
         const fileEntry = entry as FileSystemFileEntry;
@@ -150,7 +148,6 @@ export const ManuscriptUploadUI = () => {
         }
       }
 
-      // Map을 ManuscriptFolder 배열로 변환
       for (const [folderName, data] of folderMap) {
         if (!data.content) {
           console.warn(`[MANUSCRIPT] ${folderName}: 원고.txt 없음, 스킵`);
@@ -223,7 +220,6 @@ export const ManuscriptUploadUI = () => {
     setParseError(null);
   };
 
-  // 카테고리별 그룹핑
   const groupedByCategory = manuscripts.reduce((acc, m) => {
     const cat = m.category || '미지정';
     if (!acc[cat]) acc[cat] = [];
@@ -232,30 +228,15 @@ export const ManuscriptUploadUI = () => {
   }, {} as Record<string, ManuscriptFolder[]>);
 
   return (
-    <div className={cn('space-y-4')}>
-      <div className={cn('space-y-1')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
-          Manuscript Upload
-        </p>
-        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
-          원고 일괄 {mode === 'publish' ? '발행' : '수정'}
-        </h2>
-        <p className={cn('text-sm text-(--ink-muted)')}>
-          {mode === 'publish'
-            ? '폴더 드래그앤드랍으로 최대 100개 원고 업로드'
-            : '기존 발행 글을 원고로 수정'}
-        </p>
-      </div>
-
-      {/* 모드 토글 */}
+    <div className={cn('space-y-6')}>
       <div className={cn('flex gap-2')}>
         <button
           onClick={() => { setMode('publish'); setResult(null); }}
           className={cn(
-            'flex-1 rounded-xl py-2 text-sm font-medium transition',
+            'flex-1 rounded-xl py-3 text-sm font-medium transition-all',
             mode === 'publish'
               ? 'bg-(--accent) text-white'
-              : 'bg-white/50 border border-(--border) text-(--ink-muted) hover:bg-white/80'
+              : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
           )}
         >
           발행 (새 글)
@@ -263,40 +244,28 @@ export const ManuscriptUploadUI = () => {
         <button
           onClick={() => { setMode('modify'); setResult(null); }}
           className={cn(
-            'flex-1 rounded-xl py-2 text-sm font-medium transition',
+            'flex-1 rounded-xl py-3 text-sm font-medium transition-all',
             mode === 'modify'
               ? 'bg-(--accent) text-white'
-              : 'bg-white/50 border border-(--border) text-(--ink-muted) hover:bg-white/80'
+              : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
           )}
         >
           수정 (기존 글)
         </button>
       </div>
 
-      <div className={cn('space-y-3')}>
-        <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-(--ink-muted)')}>
-            카페 선택
-          </label>
-          <select
-            value={selectedCafeId}
-            onChange={(e) => setSelectedCafeId(e.target.value)}
-            className={inputClassName}
-          >
-            {cafes.map((cafe) => (
-              <option key={cafe.cafeId} value={cafe.cafeId}>
-                {cafe.name} {cafe.isDefault ? '(기본)' : ''}
-              </option>
-            ))}
-          </select>
-          {selectedCafe && (
-            <p className={cn('text-xs text-(--ink-muted)')}>
-              카테고리: {selectedCafe.categories.join(', ')}
-            </p>
-          )}
-        </div>
+      <div className={cn('space-y-4')}>
+        <Select
+          label="카페 선택"
+          value={selectedCafeId}
+          onChange={(e) => setSelectedCafeId(e.target.value)}
+          options={cafes.map((cafe) => ({
+            value: cafe.cafeId,
+            label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
+          }))}
+          helperText={selectedCafe && `카테고리: ${selectedCafe.categories.join(', ')}`}
+        />
 
-        {/* 드래그앤드랍 영역 */}
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -304,17 +273,17 @@ export const ManuscriptUploadUI = () => {
           className={cn(
             'rounded-2xl border-2 border-dashed p-8 text-center transition-all cursor-pointer',
             isDragOver
-              ? 'border-(--accent) bg-(--accent-soft)'
-              : 'border-(--border) bg-white/50 hover:border-(--accent)/50'
+              ? 'border-(--accent) bg-(--accent)/5'
+              : 'border-(--border) bg-(--surface) hover:border-(--accent)/50'
           )}
         >
           {manuscripts.length === 0 ? (
             <>
-              <div className={cn('text-4xl mb-2')}>📁</div>
+              <div className={cn('text-4xl mb-3')}>📁</div>
               <p className={cn('font-medium text-(--ink)')}>
                 원고 폴더를 여기에 드래그
               </p>
-              <p className={cn('text-xs text-(--ink-muted) mt-1')}>
+              <p className={cn('text-xs text-(--ink-muted) mt-2')}>
                 폴더명 형식: 원고명_카테고리 (예: 제주도여행_일상)
               </p>
               <p className={cn('text-xs text-(--ink-muted)')}>
@@ -340,25 +309,24 @@ export const ManuscriptUploadUI = () => {
           <p className={cn('text-sm text-(--danger)')}>{parseError}</p>
         )}
 
-        {/* 원고 미리보기 */}
         {manuscripts.length > 0 && (
           <div className={cn('space-y-2')}>
-            <p className={cn('text-xs font-medium text-(--ink-muted)')}>
+            <p className={cn('text-sm font-medium text-(--ink)')}>
               원고 목록 ({manuscripts.length}개)
             </p>
-            <div className={cn('max-h-[200px] overflow-y-auto space-y-2')}>
+            <div className={cn('max-h-52 overflow-y-auto space-y-2')}>
               {Object.entries(groupedByCategory).map(([category, items]) => (
-                <div key={category} className={cn('rounded-xl bg-white/50 p-2')}>
-                  <p className={cn('text-xs font-medium text-(--accent) mb-1')}>
+                <div key={category} className={cn('rounded-xl bg-(--surface-muted) p-3')}>
+                  <p className={cn('text-xs font-medium text-(--accent) mb-2')}>
                     {category} ({items.length}개)
                   </p>
-                  <div className={cn('flex flex-wrap gap-1')}>
+                  <div className={cn('flex flex-wrap gap-1.5')}>
                     {items.map((m, i) => (
                       <span
                         key={i}
                         className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs',
-                          'bg-white border border-(--border) text-(--ink)'
+                          'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs',
+                          'bg-(--surface) border border-(--border-light) text-(--ink)'
                         )}
                       >
                         {m.name}
@@ -376,25 +344,22 @@ export const ManuscriptUploadUI = () => {
           </div>
         )}
 
-        {/* 수정 모드 옵션 */}
         {mode === 'modify' && (
-          <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3 space-y-3')}>
-            <p className={cn('text-xs font-medium text-(--ink-muted)')}>수정 옵션</p>
-            <div className={cn('grid grid-cols-2 gap-3')}>
-              <div className={cn('space-y-1')}>
-                <label className={cn('text-xs text-(--ink-muted)')}>정렬 순서</label>
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as ManuscriptSortOrder)}
-                  className={inputClassName}
-                >
-                  <option value="oldest">오래된 순</option>
-                  <option value="newest">최신 순</option>
-                  <option value="random">랜덤</option>
-                </select>
-              </div>
-              <div className={cn('space-y-1')}>
-                <label className={cn('text-xs text-(--ink-muted)')}>기간 제한 (일)</label>
+          <div className={cn('rounded-xl border border-(--border-light) bg-(--surface) p-4 space-y-4')}>
+            <p className={cn('text-sm font-medium text-(--ink)')}>수정 옵션</p>
+            <div className={cn('grid grid-cols-2 gap-4')}>
+              <Select
+                label="정렬 순서"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as ManuscriptSortOrder)}
+                options={[
+                  { value: 'oldest', label: '오래된 순' },
+                  { value: 'newest', label: '최신 순' },
+                  { value: 'random', label: '랜덤' },
+                ]}
+              />
+              <div className={cn('space-y-2')}>
+                <label className={labelClassName}>기간 제한 (일)</label>
                 <input
                   type="number"
                   value={daysLimit}
@@ -405,15 +370,14 @@ export const ManuscriptUploadUI = () => {
                 />
               </div>
             </div>
-            <p className={cn('text-xs text-(--ink-muted)')}>
+            <p className={helperClassName}>
               발행된 글 중 {daysLimit > 0 ? `${daysLimit}일 이내` : '전체'}에서 {sortOrder === 'oldest' ? '오래된' : sortOrder === 'newest' ? '최신' : '랜덤'} 순으로 {manuscripts.length}개 선택
             </p>
           </div>
         )}
 
-        {/* 발행 모드 옵션 */}
         {mode === 'publish' && (
-          <div className={cn('rounded-xl border border-(--border) bg-white/50 p-3')}>
+          <div className={cn('rounded-xl border border-(--border-light) bg-(--surface-muted) p-4')}>
             <PostOptionsUI options={postOptions} onChange={setPostOptions} />
           </div>
         )}
@@ -423,9 +387,9 @@ export const ManuscriptUploadUI = () => {
         onClick={handleSubmit}
         disabled={isPending || manuscripts.length === 0}
         className={cn(
-          'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
-          'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-          'disabled:cursor-not-allowed disabled:opacity-60'
+          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
+          'bg-(--accent) hover:bg-(--accent-hover)',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
         )}
       >
         {isPending
@@ -436,13 +400,13 @@ export const ManuscriptUploadUI = () => {
       {result && (
         <div
           className={cn(
-            'rounded-2xl border px-4 py-4',
+            'rounded-2xl border p-5',
             result.success
-              ? 'border-(--success) bg-(--success-soft)'
-              : 'border-(--danger) bg-(--danger-soft)'
+              ? 'border-(--success)/30 bg-(--success-soft)'
+              : 'border-(--danger)/30 bg-(--danger-soft)'
           )}
         >
-          <div className={cn('flex items-center justify-between mb-2')}>
+          <div className={cn('flex items-center justify-between mb-3')}>
             <h3
               className={cn(
                 'font-semibold',

@@ -302,10 +302,12 @@ export const writePostWithAccount = async (
     await contentArea.click();
     await page.waitForTimeout(500);
 
-    // HTML 태그를 plain text로 변환 (<br> → 줄바꿈)
+    // HTML 태그를 plain text로 변환
     const plainContent = content
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]*>/g, '');
+      .replace(/<\/p>\s*<p>/gi, '\n')  // </p><p> → 줄바꿈
+      .replace(/<br\s*\/?>/gi, '\n')   // <br> → 줄바꿈
+      .replace(/<[^>]*>/g, '')         // 나머지 태그 제거
+      .trim();
 
     // SmartEditor는 contenteditable이므로 줄바꿈은 Enter 키로 처리
     const lines = plainContent.split('\n');

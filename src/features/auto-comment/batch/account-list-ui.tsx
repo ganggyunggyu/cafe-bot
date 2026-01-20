@@ -16,7 +16,6 @@ export const AccountListUI = () => {
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [isPending, startTransition] = useTransition();
 
-  // 계정 데이터 로딩
   useEffect(() => {
     const loadAccounts = async () => {
       const data = await getAccountsAction();
@@ -24,6 +23,7 @@ export const AccountListUI = () => {
     };
     loadAccounts();
   }, []);
+
   const [loginStatus, setLoginStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -62,29 +62,26 @@ export const AccountListUI = () => {
 
   const getStatusBadge = (id: string) => {
     const status = loginStatus[id];
-    if (status === 'loading') return <span className={cn('text-xs text-blue-500')}>로그인 중...</span>;
-    if (status === 'success') return <span className={cn('text-xs text-green-600')}>로그인됨</span>;
-    if (status === 'error') return <span className={cn('text-xs text-red-500')}>실패</span>;
-    return <span className={cn('text-xs text-gray-400')}>대기</span>;
+    if (status === 'loading') return <span className={cn('text-xs text-(--info)')}>로그인 중...</span>;
+    if (status === 'success') return <span className={cn('text-xs text-(--success)')}>로그인됨</span>;
+    if (status === 'error') return <span className={cn('text-xs text-(--danger)')}>실패</span>;
+    return <span className={cn('text-xs text-(--ink-muted)')}>대기</span>;
   };
 
   return (
-    <div className={cn('space-y-4')}>
+    <div className={cn('space-y-6')}>
       <div className={cn('space-y-2')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
-          Accounts
-        </p>
         <div className={cn('flex items-center justify-between')}>
-          <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
+          <h2 className={cn('text-lg font-semibold text-(--ink)')}>
             등록된 계정 ({accounts.length}개)
           </h2>
           <button
             onClick={handleLoginAll}
             disabled={isPending}
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-semibold transition',
-              'border border-(--teal) text-(--teal) hover:bg-(--teal) hover:text-white',
-              'disabled:cursor-not-allowed disabled:opacity-60'
+              'rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+              'border border-(--accent) text-(--accent) hover:bg-(--accent) hover:text-white',
+              'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           >
             로그인 테스트
@@ -98,10 +95,10 @@ export const AccountListUI = () => {
       {message && (
         <div
           className={cn(
-            'rounded-xl border px-3 py-2 text-sm',
+            'rounded-xl border px-4 py-3 text-sm',
             message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-700'
+              ? 'border-(--success)/30 bg-(--success-soft) text-(--success)'
+              : 'border-(--danger)/30 bg-(--danger-soft) text-(--danger)'
           )}
         >
           {message.text}
@@ -113,14 +110,15 @@ export const AccountListUI = () => {
           <li
             key={account.id}
             className={cn(
-              'rounded-xl border border-(--border) bg-white/70 px-4 py-3 flex items-center justify-between gap-3'
+              'rounded-xl border border-(--border-light) bg-(--surface) px-4 py-3',
+              'flex items-center justify-between gap-3 transition-all hover:border-(--border)'
             )}
           >
             <div className={cn('flex items-center gap-3')}>
               <span
                 className={cn(
-                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold',
-                  'bg-(--accent-soft) text-(--accent)'
+                  'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold',
+                  'bg-(--accent)/10 text-(--accent)'
                 )}
               >
                 {index + 1}
@@ -143,9 +141,9 @@ export const AccountListUI = () => {
               onClick={() => handleLogin(account.id, account.password)}
               disabled={isPending || loginStatus[account.id] === 'loading'}
               className={cn(
-                'rounded-full px-2 py-1 text-xs font-medium transition',
-                'border border-gray-300 text-gray-600 hover:bg-gray-100',
-                'disabled:cursor-not-allowed disabled:opacity-60'
+                'rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+                'border border-(--border) text-(--ink-secondary) hover:bg-(--surface-muted)',
+                'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
               테스트

@@ -1,17 +1,16 @@
-export interface ActivityHours {
-  start: number;
-  end: number;
-}
+// Model (Types)
+export type {
+  ActivityHours,
+  NaverAccount,
+  Account,
+  AccountData,
+  AccountInput,
+} from './model';
 
-export interface NaverAccount {
-  id: string;
-  password: string;
-  nickname?: string;
-  isMain?: boolean;
-  activityHours?: ActivityHours;
-  restDays?: number[];
-  dailyPostLimit?: number;
-  personaId?: string;
-}
-
-export type Account = NaverAccount;
+// API (Server Actions)
+export {
+  getAccountsAction,
+  addAccountAction,
+  updateAccountAction,
+  deleteAccountAction,
+} from './api';

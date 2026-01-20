@@ -10,36 +10,27 @@ interface PageLayoutProps {
 
 export const PageLayout = ({ children, title, subtitle, description }: PageLayoutProps) => {
   return (
-    <div className={cn('min-h-screen relative overflow-hidden bg-(--surface)')}>
-      <div
-        className={cn(
-          'pointer-events-none absolute -top-24 right-[-10%] h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_65%)] blur-3xl opacity-80'
-        )}
-      />
-      <div
-        className={cn(
-          'pointer-events-none absolute bottom-[-25%] left-[-10%] h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle_at_center,var(--teal-soft),transparent_70%)] blur-3xl opacity-70'
-        )}
-      />
-
+    <div className={cn('min-h-screen bg-(--background)')}>
       <AppHeader />
 
-      <main className={cn('relative z-10 max-w-6xl mx-auto px-6 lg:px-10 py-10 lg:py-16')}>
-        <div className={cn('mb-8 space-y-2')}>
+      <main className={cn('max-w-5xl mx-auto px-6 lg:px-8 py-12 lg:py-20')}>
+        <div className={cn('mb-12 space-y-3')}>
           {subtitle && (
-            <p className={cn('text-xs uppercase tracking-[0.4em] text-(--ink-muted)')}>
+            <p className={cn('text-sm font-medium text-(--ink-muted)')}>
               {subtitle}
             </p>
           )}
           <h1
             className={cn(
-              'font-(--font-display) text-3xl sm:text-4xl leading-tight text-(--ink)'
+              'text-3xl sm:text-4xl font-bold tracking-tight text-(--ink)'
             )}
           >
             {title}
           </h1>
           {description && (
-            <p className={cn('text-base text-(--ink-muted) max-w-xl')}>{description}</p>
+            <p className={cn('text-lg text-(--ink-muted) max-w-2xl leading-relaxed')}>
+              {description}
+            </p>
           )}
         </div>
 

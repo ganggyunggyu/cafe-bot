@@ -5,15 +5,15 @@ import { PageLayout } from '@/shared/ui';
 export default function SettingsPage() {
   return (
     <PageLayout
-      title="큐 설정"
-      subtitle="Queue Settings"
-      description="작업 딜레이 및 재시도 설정"
+      title="설정"
+      subtitle="작업 딜레이 및 재시도 설정"
     >
       <div
         className={cn(
-          'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg max-w-2xl'
+          'rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8 max-w-2xl'
         )}
       >
+        <h2 className={cn('text-lg font-semibold text-(--ink) mb-6')}>큐 설정</h2>
         <DelaySettingsUI />
       </div>
     </PageLayout>

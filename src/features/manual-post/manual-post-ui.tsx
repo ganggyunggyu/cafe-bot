@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition, useCallback, type DragEvent } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import { runManualPublishAction, runManualModifyAction } from './manual-actions';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '@/features/auto-comment/batch/types';
@@ -51,7 +52,6 @@ const parseManuscriptFolders = async (
       const file = await new Promise<File>((resolve) => fileEntry.file(resolve));
       const pathParts = entry.fullPath.split('/').filter(Boolean);
 
-      // 상위 폴더 > 하위 폴더 구조에서 하위 폴더명 추출
       if (pathParts.length >= 2) {
         const folderName = pathParts[1];
 
@@ -96,13 +96,11 @@ const parseManuscriptFolders = async (
     await processEntry(entry);
   }
 
-  // Map을 ManuscriptFolder 배열로 변환
   for (const [folderName, data] of folderMap) {
     if (data.text) {
       const { title, body } = parseManuscriptText(data.text);
       const htmlContent = convertBodyToHtml(body);
 
-      // 폴더명에서 카테고리 추출 (폴더명:카테고리 형식 지원)
       const parts = folderName.split(':');
       const actualFolderName = parts[0].trim();
       const category = parts.length > 1 ? parts.slice(1).join(':').trim() : undefined;
@@ -135,10 +133,12 @@ export const ManualPostUI = () => {
   const [modifyResult, setModifyResult] = useState<ManualModifyResult | null>(null);
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm',
-    'placeholder:text-(--ink-muted) shadow-sm transition',
-    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/20'
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
+    'placeholder:text-(--ink-tertiary) transition-all',
+    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
   );
+
+  const labelClassName = cn('text-sm font-medium text-(--ink)');
 
   useEffect(() => {
     const loadCafes = async () => {
@@ -241,24 +241,16 @@ export const ManualPostUI = () => {
   const result = mode === 'publish' ? publishResult : modifyResult;
 
   return (
-    <div className={cn('space-y-4')}>
-      <div className={cn('space-y-1')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>Manual Post</p>
-        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>수동 원고 발행/수정</h2>
-        <p className={cn('text-xs text-(--ink-muted)')}>
-          폴더를 드래그앤드랍하여 원고를 업로드하고 발행하거나 기존 글을 수정합니다.
-        </p>
-      </div>
-
+    <div className={cn('space-y-6')}>
       {/* 모드 선택 */}
-      <div className={cn('flex gap-2')}>
+      <div className={cn('flex gap-2 p-1 rounded-xl bg-(--surface-muted)')}>
         <button
           onClick={() => setMode('publish')}
           className={cn(
-            'flex-1 rounded-xl px-4 py-2 text-sm font-medium transition',
+            'flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all',
             mode === 'publish'
-              ? 'bg-(--accent) text-white'
-              : 'bg-white/80 text-(--ink-muted) border border-(--border)'
+              ? 'bg-(--surface) text-(--ink) shadow-sm'
+              : 'text-(--ink-muted) hover:text-(--ink)'
           )}
         >
           발행
@@ -266,10 +258,10 @@ export const ManualPostUI = () => {
         <button
           onClick={() => setMode('modify')}
           className={cn(
-            'flex-1 rounded-xl px-4 py-2 text-sm font-medium transition',
+            'flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all',
             mode === 'modify'
-              ? 'bg-(--accent) text-white'
-              : 'bg-white/80 text-(--ink-muted) border border-(--border)'
+              ? 'bg-(--surface) text-(--ink) shadow-sm'
+              : 'text-(--ink-muted) hover:text-(--ink)'
           )}
         >
           수정
@@ -282,30 +274,30 @@ export const ManualPostUI = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          'rounded-2xl border-2 border-dashed p-8 text-center transition',
+          'rounded-2xl border-2 border-dashed p-10 text-center transition-all',
           isDragging
-            ? 'border-(--accent) bg-(--accent)/10'
-            : 'border-(--border) bg-white/50',
-          manuscripts.length > 0 && 'border-green-400 bg-green-50'
+            ? 'border-(--accent) bg-(--accent)/5'
+            : 'border-(--border) bg-(--surface-muted)',
+          manuscripts.length > 0 && 'border-(--success) bg-(--success-soft)'
         )}
       >
         {manuscripts.length === 0 ? (
           <div className={cn('space-y-2')}>
-            <p className={cn('text-sm text-(--ink)')}>
+            <p className={cn('text-base font-medium text-(--ink)')}>
               폴더를 여기에 드래그앤드랍하세요
             </p>
-            <p className={cn('text-xs text-(--ink-muted)')}>
+            <p className={cn('text-sm text-(--ink-muted)')}>
               상위폴더 &gt; 하위폴더(원고.txt + 이미지) 구조
             </p>
           </div>
         ) : (
-          <div className={cn('space-y-2')}>
-            <p className={cn('text-sm font-semibold text-green-700')}>
+          <div className={cn('space-y-3')}>
+            <p className={cn('text-base font-semibold text-(--success)')}>
               {manuscripts.length}개 원고 준비됨
             </p>
             <button
               onClick={clearManuscripts}
-              className={cn('text-xs text-red-500 underline')}
+              className={cn('text-sm text-(--danger) hover:underline')}
             >
               초기화
             </button>
@@ -315,26 +307,26 @@ export const ManualPostUI = () => {
 
       {/* 원고 목록 미리보기 */}
       {manuscripts.length > 0 && (
-        <div className={cn('rounded-xl border border-(--border) bg-white/70 p-3 space-y-2')}>
-          <h4 className={cn('text-xs font-semibold text-(--ink-muted)')}>원고 목록</h4>
-          <div className={cn('max-h-40 overflow-y-auto space-y-1')}>
+        <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-5 space-y-3')}>
+          <h4 className={cn('text-sm font-semibold text-(--ink)')}>원고 목록</h4>
+          <div className={cn('max-h-48 overflow-y-auto space-y-2')}>
             {manuscripts.map((m, idx) => (
               <div
                 key={idx}
-                className={cn('flex items-center justify-between text-xs py-1 border-b border-(--border) last:border-0')}
+                className={cn('flex items-center justify-between text-sm py-2 border-b border-(--border-light) last:border-0')}
               >
                 <div className={cn('flex items-center gap-2')}>
                   <span className={cn('font-medium text-(--ink)')}>{m.folderName}</span>
                   {m.category && (
-                    <span className={cn('px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 text-[10px]')}>
+                    <span className={cn('px-2 py-0.5 rounded-md bg-(--info-soft) text-(--info) text-xs font-medium')}>
                       {m.category}
                     </span>
                   )}
                 </div>
                 <div className={cn('flex items-center gap-2 text-(--ink-muted)')}>
-                  <span className={cn('truncate max-w-32')}>{m.title}</span>
+                  <span className={cn('truncate max-w-40')}>{m.title}</span>
                   {m.images.length > 0 && (
-                    <span className={cn('px-1.5 py-0.5 rounded bg-gray-100 text-[10px]')}>
+                    <span className={cn('px-2 py-0.5 rounded-md bg-(--surface-muted) text-xs')}>
                       이미지 {m.images.length}장
                     </span>
                   )}
@@ -346,30 +338,25 @@ export const ManualPostUI = () => {
       )}
 
       {/* 설정 섹션 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm space-y-3')}>
-        <h3 className={cn('text-sm font-semibold text-(--ink)')}>설정</h3>
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 space-y-5')}>
+        <h3 className={cn('text-base font-semibold text-(--ink)')}>설정</h3>
 
         {/* 카페 선택 */}
-        <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-(--ink-muted)')}>카페 선택</label>
-          <select
-            value={selectedCafeId}
-            onChange={(e) => setSelectedCafeId(e.target.value)}
-            className={inputClassName}
-          >
-            {cafes.map((cafe) => (
-              <option key={cafe.cafeId} value={cafe.cafeId}>
-                {cafe.name} {cafe.isDefault ? '(기본)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="카페 선택"
+          value={selectedCafeId}
+          onChange={(e) => setSelectedCafeId(e.target.value)}
+          options={cafes.map((cafe) => ({
+            value: cafe.cafeId,
+            label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
+          }))}
+        />
 
         {/* 발행 모드: 게시 옵션 */}
         {mode === 'publish' && (
-          <div className={cn('space-y-2')}>
-            <span className={cn('text-xs font-medium text-(--ink-muted)')}>게시 옵션</span>
-            <div className={cn('rounded-xl border border-(--border) bg-white/80 p-3')}>
+          <div className={cn('space-y-3')}>
+            <span className={labelClassName}>게시 옵션</span>
+            <div className={cn('rounded-xl border border-(--border-light) bg-(--surface-muted) p-4')}>
               <PostOptionsUI options={postOptions} onChange={setPostOptions} />
             </div>
           </div>
@@ -377,24 +364,20 @@ export const ManualPostUI = () => {
 
         {/* 수정 모드: 정렬 및 필터 옵션 */}
         {mode === 'modify' && (
-          <>
-            <div className={cn('space-y-1')}>
-              <label className={cn('text-xs font-medium text-(--ink-muted)')}>정렬 순서</label>
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                className={inputClassName}
-              >
-                <option value="oldest">오래된 순</option>
-                <option value="newest">최신 순</option>
-                <option value="random">랜덤</option>
-              </select>
-            </div>
+          <div className={cn('grid gap-4 md:grid-cols-2')}>
+            <Select
+              label="정렬 순서"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+              options={[
+                { value: 'oldest', label: '오래된 순' },
+                { value: 'newest', label: '최신 순' },
+                { value: 'random', label: '랜덤' },
+              ]}
+            />
 
-            <div className={cn('space-y-1')}>
-              <label className={cn('text-xs font-medium text-(--ink-muted)')}>
-                기간 제한 (일)
-              </label>
+            <div className={cn('space-y-2')}>
+              <label className={labelClassName}>기간 제한 (일)</label>
               <input
                 type="number"
                 value={daysLimit ?? ''}
@@ -404,14 +387,14 @@ export const ManualPostUI = () => {
                 min={1}
               />
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* 폴더 구조 안내 */}
-      <div className={cn('rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-1')}>
-        <p className={cn('text-xs font-semibold text-blue-700')}>폴더 구조 안내</p>
-        <pre className={cn('text-xs text-blue-600 font-mono')}>
+      <div className={cn('rounded-xl border border-(--info)/20 bg-(--info-soft) p-4 space-y-2')}>
+        <p className={cn('text-sm font-semibold text-(--info)')}>폴더 구조 안내</p>
+        <pre className={cn('text-xs text-(--info)/80 font-mono leading-relaxed')}>
 {`상위폴더/
 ├── 원고1/
 │   ├── 원고.txt (첫 줄: 제목, 이후: 본문)
@@ -428,11 +411,9 @@ export const ManualPostUI = () => {
         onClick={handleRun}
         disabled={isPending || manuscripts.length === 0}
         className={cn(
-          'w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition',
-          mode === 'publish'
-            ? 'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105'
-            : 'bg-[linear-gradient(135deg,#f59e0b,#d97706)] hover:brightness-105',
-          'disabled:opacity-60 disabled:cursor-not-allowed'
+          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
+          'bg-(--accent) hover:bg-(--accent-hover)',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
         )}
       >
         {isPending
@@ -446,23 +427,25 @@ export const ManualPostUI = () => {
 
       {/* 결과 */}
       {result && (
-        <div className={cn('space-y-3')}>
+        <div className={cn('space-y-4')}>
           <div
             className={cn(
-              'rounded-xl border px-3 py-3',
-              result.success ? 'border-green-300 bg-green-50' : 'border-amber-300 bg-amber-50'
+              'rounded-xl border p-4',
+              result.success
+                ? 'border-(--success)/30 bg-(--success-soft)'
+                : 'border-(--warning)/30 bg-(--warning-soft)'
             )}
           >
             <div className={cn('flex items-center justify-between')}>
               <h4
                 className={cn(
-                  'text-sm font-semibold',
-                  result.success ? 'text-green-700' : 'text-amber-700'
+                  'text-base font-semibold',
+                  result.success ? 'text-(--success)' : 'text-(--warning)'
                 )}
               >
                 {result.success ? '완료' : '부분 완료'}
               </h4>
-              <span className={cn('text-xs text-(--ink-muted)')}>
+              <span className={cn('text-sm text-(--ink-muted)')}>
                 {result.completed}/{result.totalManuscripts} 성공
               </span>
             </div>
@@ -474,21 +457,23 @@ export const ManualPostUI = () => {
               <div
                 key={idx}
                 className={cn(
-                  'rounded-lg border px-3 py-2',
-                  r.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                  'rounded-xl border p-4',
+                  r.success
+                    ? 'border-(--success)/20 bg-(--success-soft)'
+                    : 'border-(--danger)/20 bg-(--danger-soft)'
                 )}
               >
                 <div className={cn('flex items-center justify-between')}>
                   <span
                     className={cn(
-                      'text-xs font-semibold px-2 py-0.5 rounded',
-                      r.success ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'
+                      'text-sm font-semibold px-2.5 py-1 rounded-lg',
+                      r.success ? 'text-(--success) bg-(--success)/10' : 'text-(--danger) bg-(--danger)/10'
                     )}
                   >
                     {r.folderName}
                   </span>
                   {r.success && (
-                    <span className={cn('text-xs text-green-600')}>
+                    <span className={cn('text-sm text-(--success)')}>
                       {mode === 'modify' && 'originalArticleId' in r
                         ? `#${(r as { originalArticleId: number }).originalArticleId}`
                         : ''
@@ -497,17 +482,17 @@ export const ManualPostUI = () => {
                   )}
                 </div>
                 {'title' in r && r.success && (
-                  <p className={cn('text-xs text-green-700 mt-1 truncate')}>
+                  <p className={cn('text-sm text-(--success)/80 mt-2 truncate')}>
                     {(r as { title: string }).title}
                   </p>
                 )}
                 {'newTitle' in r && r.success && (
-                  <p className={cn('text-xs text-green-700 mt-1 truncate')}>
+                  <p className={cn('text-sm text-(--success)/80 mt-2 truncate')}>
                     {(r as { newTitle: string }).newTitle}
                   </p>
                 )}
                 {!r.success && r.error && (
-                  <p className={cn('text-xs text-red-600 mt-1')}>{r.error}</p>
+                  <p className={cn('text-sm text-(--danger)/80 mt-2')}>{r.error}</p>
                 )}
               </div>
             ))}

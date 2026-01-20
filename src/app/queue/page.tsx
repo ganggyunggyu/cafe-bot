@@ -6,14 +6,9 @@ export default function QueuePage() {
   return (
     <PageLayout
       title="큐 대시보드"
-      subtitle="Queue Monitor"
-      description="예약된 작업 상세 모니터링 및 관리"
+      subtitle="예약된 작업 상세 모니터링 및 관리"
     >
-      <div
-        className={cn(
-          'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
-        )}
-      >
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8')}>
         <QueueDashboardUI />
       </div>
     </PageLayout>

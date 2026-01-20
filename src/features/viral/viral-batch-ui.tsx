@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import { runViralBatchAction } from './viral-actions';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '@/features/auto-comment/batch/types';
@@ -30,15 +31,17 @@ export const ViralBatchUI = () => {
   const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
   const [result, setResult] = useState<ViralBatchResult | null>(null);
 
-  // 이미지 생성 옵션
   const [enableImage, setEnableImage] = useState(false);
-  const [imageCount, setImageCount] = useState(0); // 0 = 랜덤 1~2장
+  const [imageCount, setImageCount] = useState(0);
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm',
-    'placeholder:text-(--ink-muted) shadow-sm transition',
-    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/20'
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
+    'placeholder:text-(--ink-tertiary) transition-all',
+    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
   );
+
+  const labelClassName = cn('text-sm font-medium text-(--ink)');
+  const helperClassName = cn('text-xs text-(--ink-muted) mt-1');
 
   useEffect(() => {
     const loadCafes = async () => {
@@ -63,7 +66,6 @@ export const ViralBatchUI = () => {
     const parsedKeywords = parseKeywords();
     if (parsedKeywords.length === 0) return;
 
-    // localStorage에서 딜레이 설정 가져오기
     const delaySettings = getDelaySettings();
 
     startTransition(async () => {
@@ -100,23 +102,17 @@ export const ViralBatchUI = () => {
   const selectedCafe = cafes.find((cafe) => cafe.cafeId === selectedCafeId);
 
   return (
-    <div className={cn('space-y-4')}>
-      <div className={cn('space-y-1')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>Viral Batch</p>
-        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>바이럴 콘텐츠 생성</h2>
-        <p className={cn('text-xs text-(--ink-muted)')}>
-          AI가 제목, 본문, 댓글, 대댓글을 한 번에 생성하고 자동으로 발행합니다.
-        </p>
-      </div>
-
+    <div className={cn('space-y-6')}>
       {/* 키워드 입력 */}
-      <div>
-        <label className={cn('block text-xs font-medium text-(--ink-muted) mb-1')}>
-          키워드 입력 <span className="text-red-400">*</span>
+      <div className={cn('space-y-2')}>
+        <div className={cn('flex items-center justify-between')}>
+          <label className={labelClassName}>
+            키워드 입력
+          </label>
           {keywordCount > 0 && (
-            <span className={cn('ml-2 text-(--accent)')}>({keywordCount}개)</span>
+            <span className={cn('text-sm font-medium text-(--accent)')}>{keywordCount}개</span>
           )}
-        </label>
+        </div>
         <textarea
           value={keywords}
           onChange={(e) => setKeywords(e.target.value)}
@@ -126,98 +122,85 @@ export const ViralBatchUI = () => {
 기력보충
 수족냉증:건강
 흑염소진액 효과:후기`}
-          className={cn(inputClassName, 'min-h-32 resize-none font-mono text-xs')}
+          className={cn(inputClassName, 'min-h-36 resize-none font-mono text-xs')}
         />
       </div>
 
-      {/* 설정 섹션 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm space-y-3')}>
-        <h3 className={cn('text-sm font-semibold text-(--ink)')}>설정</h3>
+      {/* 설정 카드 */}
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 space-y-5')}>
+        <h3 className={cn('text-base font-semibold text-(--ink)')}>설정</h3>
 
         {/* 카페 선택 */}
-        <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-(--ink-muted)')}>카페 선택</label>
-          <select
-            value={selectedCafeId}
-            onChange={(e) => setSelectedCafeId(e.target.value)}
-            className={inputClassName}
-          >
-            {cafes.map((cafe) => (
-              <option key={cafe.cafeId} value={cafe.cafeId}>
-                {cafe.name} {cafe.isDefault ? '(기본)' : ''}
-              </option>
-            ))}
-          </select>
-          {selectedCafe && (
-            <p className={cn('text-xs text-(--ink-muted)')}>
-              카테고리: {selectedCafe.categories.join(', ')}
-            </p>
-          )}
-        </div>
+        <Select
+          label="카페 선택"
+          value={selectedCafeId}
+          onChange={(e) => setSelectedCafeId(e.target.value)}
+          options={cafes.map((cafe) => ({
+            value: cafe.cafeId,
+            label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
+          }))}
+          helperText={selectedCafe && `카테고리: ${selectedCafe.categories.join(', ')}`}
+        />
 
         {/* 모델 선택 */}
-        <div className={cn('space-y-1')}>
-          <label className={cn('text-xs font-medium text-(--ink-muted)')}>AI 모델</label>
-          <select value={model} onChange={(e) => setModel(e.target.value)} className={inputClassName}>
-            {MODELS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="AI 모델"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          options={MODELS}
+        />
 
         {/* 이미지 생성 옵션 */}
-        <div className={cn('space-y-2')}>
-          <div className={cn('flex items-center gap-2')}>
+        <div className={cn('space-y-3')}>
+          <label className={cn('flex items-center gap-3 cursor-pointer')}>
             <input
               type="checkbox"
-              id="enableImage"
               checked={enableImage}
               onChange={(e) => setEnableImage(e.target.checked)}
-              className={cn('rounded border-gray-300')}
+              className={cn(
+                'w-5 h-5 rounded border-2 border-(--border)',
+                'checked:bg-(--accent) checked:border-(--accent)',
+                'focus:ring-2 focus:ring-(--accent)/20'
+              )}
             />
-            <label htmlFor="enableImage" className={cn('text-xs font-medium text-(--ink-muted)')}>
-              이미지 생성
-            </label>
-          </div>
+            <span className={labelClassName}>이미지 생성</span>
+          </label>
           {enableImage && (
-            <div className={cn('flex items-center gap-2 pl-5')}>
-              <label className={cn('text-xs text-(--ink-muted)')}>장수:</label>
-              <select
-                value={imageCount}
+            <div className={cn('flex items-center gap-3 pl-8')}>
+              <Select
+                label="장수"
+                value={String(imageCount)}
                 onChange={(e) => setImageCount(Number(e.target.value))}
-                className={cn(inputClassName, 'w-28')}
-              >
-                <option value={0}>랜덤 1~2장</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                  <option key={n} value={n}>
-                    {n}장
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '0', label: '랜덤 1~2장' },
+                  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => ({
+                    value: String(n),
+                    label: `${n}장`,
+                  })),
+                ]}
+                fullWidth={false}
+                className="w-32"
+              />
             </div>
           )}
         </div>
 
         {/* 게시 옵션 */}
-        <div className={cn('space-y-2')}>
-          <span className={cn('text-xs font-medium text-(--ink-muted)')}>게시 옵션</span>
-          <div className={cn('rounded-xl border border-(--border) bg-white/80 p-3')}>
+        <div className={cn('space-y-3')}>
+          <span className={labelClassName}>게시 옵션</span>
+          <div className={cn('rounded-xl border border-(--border-light) bg-(--surface-muted) p-4')}>
             <PostOptionsUI options={postOptions} onChange={setPostOptions} />
           </div>
         </div>
       </div>
 
-      {/* 키워드 타입 설명 */}
-      <div className={cn('rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-1')}>
-        <p className={cn('text-xs font-semibold text-blue-700')}>키워드 자동 분류</p>
-        <p className={cn('text-xs text-blue-600')}>
-          • <strong>자사 키워드</strong>: 기력보충, 흑염소, 피로회복 등 → 직접 제품 홍보
-        </p>
-        <p className={cn('text-xs text-blue-600')}>
-          • <strong>타사 키워드</strong>: 경쟁 제품명 → 중립적 질문 후 대안 제시
-        </p>
+      {/* 키워드 타입 안내 */}
+      <div className={cn('rounded-xl border border-(--info)/20 bg-(--info-soft) p-4 space-y-2')}>
+        <p className={cn('text-sm font-semibold text-(--info)')}>키워드 자동 분류</p>
+        <div className={cn('text-sm text-(--info)/80 space-y-1')}>
+          <p><strong>자사 키워드</strong>: 기력보충, 흑염소, 피로회복 등 → 직접 제품 홍보</p>
+          <p><strong>타사 키워드</strong>: 경쟁 제품명 → 중립적 질문 후 대안 제시</p>
+        </div>
       </div>
 
       {/* 실행 버튼 */}
@@ -225,9 +208,9 @@ export const ViralBatchUI = () => {
         onClick={handleRun}
         disabled={isPending || keywordCount === 0}
         className={cn(
-          'w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition',
-          'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-          'disabled:opacity-60 disabled:cursor-not-allowed'
+          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
+          'bg-(--accent) hover:bg-(--accent-hover)',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
         )}
       >
         {isPending ? '생성 중...' : `바이럴 배치 실행 (${keywordCount}개)`}
@@ -235,23 +218,25 @@ export const ViralBatchUI = () => {
 
       {/* 결과 */}
       {result && (
-        <div className={cn('space-y-3')}>
+        <div className={cn('space-y-4')}>
           <div
             className={cn(
-              'rounded-xl border px-3 py-3',
-              result.success ? 'border-green-300 bg-green-50' : 'border-amber-300 bg-amber-50'
+              'rounded-xl border p-4',
+              result.success
+                ? 'border-(--success)/30 bg-(--success-soft)'
+                : 'border-(--warning)/30 bg-(--warning-soft)'
             )}
           >
             <div className={cn('flex items-center justify-between')}>
               <h4
                 className={cn(
-                  'text-sm font-semibold',
-                  result.success ? 'text-green-700' : 'text-amber-700'
+                  'text-base font-semibold',
+                  result.success ? 'text-(--success)' : 'text-(--warning)'
                 )}
               >
                 {result.success ? '배치 완료' : '부분 완료'}
               </h4>
-              <span className={cn('text-xs text-(--ink-muted)')}>
+              <span className={cn('text-sm text-(--ink-muted)')}>
                 {result.completed}/{result.totalKeywords} 성공
               </span>
             </div>
@@ -263,40 +248,44 @@ export const ViralBatchUI = () => {
               <div
                 key={idx}
                 className={cn(
-                  'rounded-lg border px-3 py-2',
-                  r.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                  'rounded-xl border p-4',
+                  r.success
+                    ? 'border-(--success)/20 bg-(--success-soft)'
+                    : 'border-(--danger)/20 bg-(--danger-soft)'
                 )}
               >
                 <div className={cn('flex items-center justify-between')}>
                   <div className={cn('flex items-center gap-2')}>
                     <span
                       className={cn(
-                        'text-xs font-semibold px-2 py-0.5 rounded',
-                        r.success ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'
+                        'text-sm font-semibold px-2.5 py-1 rounded-lg',
+                        r.success ? 'text-(--success) bg-(--success)/10' : 'text-(--danger) bg-(--danger)/10'
                       )}
                     >
                       {r.keyword}
                     </span>
                     <span
                       className={cn(
-                        'text-[10px] px-1.5 py-0.5 rounded',
-                        r.keywordType === 'own' ? 'text-blue-600 bg-blue-100' : 'text-orange-600 bg-orange-100'
+                        'text-xs px-2 py-0.5 rounded-md font-medium',
+                        r.keywordType === 'own'
+                          ? 'text-(--info) bg-(--info)/10'
+                          : 'text-(--warning) bg-(--warning)/10'
                       )}
                     >
                       {r.keywordType === 'own' ? '자사' : '타사'}
                     </span>
                   </div>
                   {r.success && (
-                    <span className={cn('text-xs text-green-600')}>
+                    <span className={cn('text-sm text-(--success)')}>
                       댓글 {r.commentCount}개, 대댓글 {r.replyCount}개
                     </span>
                   )}
                 </div>
                 {r.success && r.title && (
-                  <p className={cn('text-xs text-green-700 mt-1 truncate')}>{r.title}</p>
+                  <p className={cn('text-sm text-(--success)/80 mt-2 truncate')}>{r.title}</p>
                 )}
                 {!r.success && r.error && (
-                  <p className={cn('text-xs text-red-600 mt-1')}>{r.error}</p>
+                  <p className={cn('text-sm text-(--danger)/80 mt-2')}>{r.error}</p>
                 )}
               </div>
             ))}

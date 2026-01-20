@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Select } from '@/shared/ui';
 import { runBatchPostAction } from './batch-actions';
 import { PostOptionsUI } from './post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from './types';
@@ -256,16 +257,12 @@ export const ApiTestUI = () => {
       </div>
 
       {/* 모델 선택 */}
-      <div>
-        <label className={cn('block text-xs font-medium text-(--ink-muted) mb-1')}>모델</label>
-        <select value={model} onChange={(e) => setModel(e.target.value)} className={inputClassName}>
-          {MODELS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label="모델"
+        value={model}
+        onChange={(e) => setModel(e.target.value)}
+        options={MODELS}
+      />
 
       {/* 실제 배치 발행 */}
       <div className={cn('rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm space-y-3')}>
@@ -278,25 +275,16 @@ export const ApiTestUI = () => {
         </div>
 
         <div className={cn('space-y-2')}>
-          <div className={cn('space-y-1')}>
-            <label className={cn('text-xs font-medium text-(--ink-muted)')}>카페 선택</label>
-            <select
-              value={selectedCafeId}
-              onChange={(e) => setSelectedCafeId(e.target.value)}
-              className={inputClassName}
-            >
-              {cafes.map((cafe) => (
-                <option key={cafe.cafeId} value={cafe.cafeId}>
-                  {cafe.name} {cafe.isDefault ? '(기본)' : ''}
-                </option>
-              ))}
-            </select>
-            {selectedCafe && (
-              <p className={cn('text-xs text-(--ink-muted)')}>
-                카테고리: {selectedCafe.categories.join(', ')}
-              </p>
-            )}
-          </div>
+          <Select
+            label="카페 선택"
+            value={selectedCafeId}
+            onChange={(e) => setSelectedCafeId(e.target.value)}
+            options={cafes.map((cafe) => ({
+              value: cafe.cafeId,
+              label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
+            }))}
+            helperText={selectedCafe && `카테고리: ${selectedCafe.categories.join(', ')}`}
+          />
 
           <div className={cn('space-y-1')}>
             <label className={cn('text-xs font-medium text-(--ink-muted)')}>참고 URL (선택)</label>
