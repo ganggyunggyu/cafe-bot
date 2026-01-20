@@ -3,8 +3,17 @@
 import { getAllAccounts } from '@/shared/config/accounts';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
-import { getRandomDelay, type DelayRange } from '@/shared/hooks/use-delay-settings';
 import { isAccountActive, getNextActiveTime, type NaverAccount } from '@/shared/lib/account-manager';
+
+export interface DelayRange {
+  min: number;
+  max: number;
+}
+
+const getRandomDelay = (range: DelayRange): number => {
+  return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+};
+
 import { generateViralContent, generateImages } from '@/shared/api/content-api';
 import { buildViralPrompt, detectKeywordType, type KeywordType } from './viral-prompt';
 import { parseViralResponse, validateParsedContent } from './viral-parser';
