@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getSettingsAction, updateSettingsAction, resetSettingsAction, QueueSettingsData } from './actions';
+import { useDelaySettings, type DelaySettings } from '@/shared/hooks/use-delay-settings';
 
-// ms를 분:초로 변환
 const msToMinSec = (ms: number): string => {
   const totalSec = Math.floor(ms / 1000);
   const min = Math.floor(totalSec / 60);
@@ -65,59 +63,27 @@ const RangeSlider = ({ label, min, max, minValue, maxValue, step, onChange }: Ra
       </div>
     </div>
   );
-}
+};
 
 export const DelaySettingsUI = () => {
-  const [isPending, startTransition] = useTransition();
-  const [settings, setSettings] = useState<QueueSettingsData | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const data = await getSettingsAction();
-        setSettings(data);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadSettings();
-  }, []);
+  const { settings, updateSettings, reset, isLoaded } = useDelaySettings();
 
   const handleDelayChange = (
     key: 'betweenPosts' | 'betweenComments' | 'afterPost',
     min: number,
     max: number
   ) => {
-    if (!settings) return;
-    setSettings({
+    const newSettings: DelaySettings = {
       ...settings,
       delays: {
         ...settings.delays,
         [key]: { min, max },
       },
-    });
-    setHasChanges(true);
+    };
+    updateSettings(newSettings);
   };
 
-  const handleSave = () => {
-    if (!settings) return;
-    startTransition(async () => {
-      await updateSettingsAction(settings);
-      setHasChanges(false);
-    });
-  };
-
-  const handleReset = () => {
-    startTransition(async () => {
-      const data = await resetSettingsAction();
-      setSettings(data);
-      setHasChanges(false);
-    });
-  };
-
-  if (isLoading || !settings) {
+  if (!isLoaded) {
     return (
       <div className={cn('p-4 text-center text-(--ink-muted)')}>
         로딩 중...
@@ -128,13 +94,18 @@ export const DelaySettingsUI = () => {
   return (
     <div className={cn('space-y-6')}>
       <div className={cn('space-y-4')}>
-        <h3 className={cn('text-sm font-semibold text-(--ink)')}>딜레이 설정</h3>
+        <div className={cn('flex items-center justify-between')}>
+          <h3 className={cn('text-sm font-semibold text-(--ink)')}>딜레이 설정</h3>
+          <span className={cn('text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded')}>
+            자동 저장
+          </span>
+        </div>
 
         <RangeSlider
           label="글 사이 딜레이"
-          min={60 * 1000}
-          max={15 * 60 * 1000}
-          step={30 * 1000}
+          min={10 * 1000}
+          max={5 * 60 * 1000}
+          step={5 * 1000}
           minValue={settings.delays.betweenPosts.min}
           maxValue={settings.delays.betweenPosts.max}
           onChange={(min, max) => handleDelayChange('betweenPosts', min, max)}
@@ -142,9 +113,9 @@ export const DelaySettingsUI = () => {
 
         <RangeSlider
           label="댓글 사이 딜레이"
-          min={10 * 1000}
-          max={5 * 60 * 1000}
-          step={10 * 1000}
+          min={1 * 1000}
+          max={60 * 1000}
+          step={1 * 1000}
           minValue={settings.delays.betweenComments.min}
           maxValue={settings.delays.betweenComments.max}
           onChange={(min, max) => handleDelayChange('betweenComments', min, max)}
@@ -152,9 +123,9 @@ export const DelaySettingsUI = () => {
 
         <RangeSlider
           label="글 작성 후 딜레이"
-          min={10 * 1000}
-          max={3 * 60 * 1000}
-          step={10 * 1000}
+          min={1 * 1000}
+          max={60 * 1000}
+          step={1 * 1000}
           minValue={settings.delays.afterPost.min}
           maxValue={settings.delays.afterPost.max}
           onChange={(min, max) => handleDelayChange('afterPost', min, max)}
@@ -176,11 +147,10 @@ export const DelaySettingsUI = () => {
                 const cleaned = e.target.value.replace(/\D/g, '');
                 if (cleaned === '') return;
                 const val = Math.max(1, Math.min(10, Number(cleaned)));
-                setSettings({
+                updateSettings({
                   ...settings,
                   retry: { ...settings.retry, attempts: val },
                 });
-                setHasChanges(true);
               }}
               className={cn(
                 'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
@@ -199,8 +169,7 @@ export const DelaySettingsUI = () => {
                 const cleaned = e.target.value.replace(/\D/g, '');
                 if (cleaned === '') return;
                 const val = Math.max(1, Math.min(30, Number(cleaned)));
-                setSettings({ ...settings, timeout: val * 60000 });
-                setHasChanges(true);
+                updateSettings({ ...settings, timeout: val * 60000 });
               }}
               className={cn(
                 'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
@@ -219,11 +188,10 @@ export const DelaySettingsUI = () => {
               type="checkbox"
               checked={settings.limits?.enableDailyPostLimit ?? false}
               onChange={(e) => {
-                setSettings({
+                updateSettings({
                   ...settings,
                   limits: { ...settings.limits, enableDailyPostLimit: e.target.checked },
                 });
-                setHasChanges(true);
               }}
               className={cn('w-4 h-4 accent-(--accent)')}
             />
@@ -241,11 +209,10 @@ export const DelaySettingsUI = () => {
               onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
                 const val = cleaned === '' ? 0 : Math.min(10, Number(cleaned));
-                setSettings({
+                updateSettings({
                   ...settings,
                   limits: { ...settings.limits, maxCommentsPerAccount: val },
                 });
-                setHasChanges(true);
               }}
               className={cn(
                 'w-16 rounded-lg border border-(--border) bg-white/80 px-3 py-1.5 text-sm text-center'
@@ -256,31 +223,15 @@ export const DelaySettingsUI = () => {
         </div>
       </div>
 
-      <div className={cn('flex gap-2')}>
-        <button
-          onClick={handleSave}
-          disabled={!hasChanges || isPending}
-          className={cn(
-            'flex-1 rounded-xl py-2.5 text-sm font-medium transition',
-            hasChanges
-              ? 'bg-(--accent) text-white hover:opacity-90'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          )}
-        >
-          {isPending ? '저장 중...' : '저장'}
-        </button>
-
-        <button
-          onClick={handleReset}
-          disabled={isPending}
-          className={cn(
-            'rounded-xl px-4 py-2.5 text-sm font-medium border border-(--border)',
-            'hover:bg-gray-50 transition'
-          )}
-        >
-          초기화
-        </button>
-      </div>
+      <button
+        onClick={reset}
+        className={cn(
+          'w-full rounded-xl px-4 py-2.5 text-sm font-medium border border-(--border)',
+          'hover:bg-gray-50 transition'
+        )}
+      >
+        기본값으로 초기화
+      </button>
     </div>
   );
-}
+};
