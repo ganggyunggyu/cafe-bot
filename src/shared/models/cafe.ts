@@ -28,4 +28,4 @@ const CafeSchema = new Schema<ICafe>(
 );
 
 export const Cafe: Model<ICafe> =
-  mongoose.models.Cafe || mongoose.model<ICafe>('Cafe', CafeSchema, 'caves');
+  mongoose.models.Cafe || mongoose.model<ICafe>('Cafe', CafeSchema, 'cafes');

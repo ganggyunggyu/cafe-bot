@@ -34,7 +34,7 @@ export type NicknameChangeMode = 'by-cafe' | 'by-account' | 'all';
  */
 export const changeNicknameInCafe = async (
   account: NaverAccount,
-  cafe: { cafeId: string; name: string },
+  cafe: { cafeId: string; cafeUrl: string; name: string },
   newNickname: string
 ): Promise<NicknameChangeResult> => {
   const { id, password } = account;
@@ -58,8 +58,8 @@ export const changeNicknameInCafe = async (
     const page = await getPageForAccount(id);
 
     // 카페 메인 페이지로 이동
-    const cafeUrl = `https://cafe.naver.com/ca-fe/cafes/${cafe.cafeId}`;
-    await page.goto(cafeUrl, {
+    const cafeHomeUrl = `https://cafe.naver.com/${cafe.cafeUrl}`;
+    await page.goto(cafeHomeUrl, {
       waitUntil: 'networkidle',
       timeout: 30000,
     });
@@ -80,26 +80,32 @@ export const changeNicknameInCafe = async (
       };
     }
 
+    await myActivityButton.click();
+    await page.waitForTimeout(1500);
+
+    // "프로필 변경하기" 링크 클릭
+    let profileEditLink = await page.$('a[onclick*="cafeMemberInfoEdit"]');
+    if (!profileEditLink) {
+      profileEditLink = await page.$('a:has-text("프로필 변경하기")');
+    }
+    if (!profileEditLink) {
+      return {
+        success: false,
+        accountId: id,
+        cafeId: cafe.cafeId,
+        cafeName: cafe.name,
+        error: '프로필 변경하기 링크를 찾을 수 없습니다.',
+      };
+    }
+
     // 새 창 감지를 위한 이벤트 리스너
     const [popup] = await Promise.all([
       page.context().waitForEvent('page', { timeout: 10000 }),
-      myActivityButton.click(),
+      profileEditLink.click(),
     ]);
 
     await popup.waitForLoadState('networkidle');
     await popup.waitForTimeout(2000);
-
-    // 프로필 설정 페이지인지 확인
-    const currentUrl = popup.url();
-    if (!currentUrl.includes('profile-setting')) {
-      // 프로필 설정으로 직접 이동 시도
-      // 나의활동 페이지에서 설정 버튼 찾기
-      const settingButton = await popup.$('a[href*="profile-setting"], button:has-text("설정")');
-      if (settingButton) {
-        await settingButton.click();
-        await popup.waitForTimeout(2000);
-      }
-    }
 
     // 닉네임 입력 textarea 찾기
     const nicknameTextarea = await popup.$('textarea[type="text"], textarea.nickname-input, textarea');
@@ -190,7 +196,7 @@ export const changeByCafe = async (
 
     const result = await changeNicknameInCafe(
       account,
-      { cafeId: cafe.cafeId, name: cafe.name },
+      { cafeId: cafe.cafeId, cafeUrl: cafe.cafeUrl, name: cafe.name },
       newNickname
     );
 
@@ -238,7 +244,7 @@ export const changeByAccount = async (
 
     const result = await changeNicknameInCafe(
       account,
-      { cafeId: cafe.cafeId, name: cafe.name },
+      { cafeId: cafe.cafeId, cafeUrl: cafe.cafeUrl, name: cafe.name },
       newNickname
     );
 
@@ -304,7 +310,7 @@ export const changeAll = async (
 
         const result = await changeNicknameInCafe(
           naverAccount,
-          { cafeId: cafe.cafeId, name: cafe.name },
+          { cafeId: cafe.cafeId, cafeUrl: cafe.cafeUrl, name: cafe.name },
           newNickname
         );
 

@@ -45,6 +45,7 @@ export const BatchUI = () => {
       const data = await getCafesAction();
       const cafeList = data.map((c) => ({
         cafeId: c.cafeId,
+        cafeUrl: c.cafeUrl,
         menuId: c.menuId,
         name: c.name,
         categories: c.categories || [],

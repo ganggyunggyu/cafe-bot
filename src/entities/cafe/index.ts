@@ -1,5 +1,6 @@
 export interface CafeConfig {
   cafeId: string;
+  cafeUrl: string;
   menuId: string;
   name: string;
   categories: string[];

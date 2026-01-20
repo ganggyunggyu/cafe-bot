@@ -17,6 +17,7 @@ export const getAllCafes = async (): Promise<CafeConfig[]> => {
 
       return {
         cafeId: c.cafeId,
+        cafeUrl: c.cafeUrl,
         menuId: c.menuId,
         name: c.name,
         categories: c.categories || [],
