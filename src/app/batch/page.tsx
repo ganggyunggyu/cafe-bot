@@ -1,6 +1,7 @@
 import { cn } from '@/shared/lib/cn';
 import Link from 'next/link';
 import { BatchUI, KeywordGeneratorUI, QueueStatusUI } from '@/features/auto-comment/batch';
+import { ManualPostUI } from '@/features/manual-post';
 import { PageLayout } from '@/shared/ui';
 
 export default function BatchPage() {
@@ -161,6 +162,31 @@ export default function BatchPage() {
           </span>
         </div>
         <QueueStatusUI />
+      </section>
+
+      <section
+        className={cn(
+          'mt-8 rounded-3xl border border-(--border) bg-white/80 p-6 shadow-[0_16px_40px_-30px_rgba(27,25,21,0.6)] backdrop-blur'
+        )}
+      >
+        <div className={cn('mb-5 flex items-start justify-between')}>
+          <div>
+            <p className={cn('text-xs uppercase tracking-[0.25em] text-(--ink-muted)')}>
+              Manual Studio
+            </p>
+            <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>
+              수동 원고 발행/수정
+            </h3>
+          </div>
+          <span
+            className={cn(
+              'rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'
+            )}
+          >
+            Drag & Drop
+          </span>
+        </div>
+        <ManualPostUI />
       </section>
 
       <section className={cn('mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]')}>
