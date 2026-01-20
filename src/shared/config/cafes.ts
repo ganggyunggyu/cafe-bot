@@ -1,11 +1,13 @@
 import type { CafeConfig } from '@/entities/cafe';
 import { connectDB } from '@/shared/lib/mongodb';
 import { Cafe } from '@/shared/models';
+import { getCurrentUserId } from './user';
 
-export const getAllCafes = async (): Promise<CafeConfig[]> => {
+export const getAllCafes = async (userId?: string): Promise<CafeConfig[]> => {
   try {
     await connectDB();
-    const dbCafes = await Cafe.find({ isActive: true })
+    const targetUserId = userId || getCurrentUserId();
+    const dbCafes = await Cafe.find({ userId: targetUserId, isActive: true })
       .sort({ isDefault: -1, createdAt: 1 })
       .lean();
 
@@ -31,13 +33,13 @@ export const getAllCafes = async (): Promise<CafeConfig[]> => {
   }
 };
 
-export const getDefaultCafe = async (): Promise<CafeConfig | undefined> => {
-  const cafes = await getAllCafes();
+export const getDefaultCafe = async (userId?: string): Promise<CafeConfig | undefined> => {
+  const cafes = await getAllCafes(userId);
   return cafes.find((c) => c.isDefault) || cafes[0];
 };
 
-export const getCafeById = async (cafeId: string): Promise<CafeConfig | undefined> => {
-  const cafes = await getAllCafes();
+export const getCafeById = async (cafeId: string, userId?: string): Promise<CafeConfig | undefined> => {
+  const cafes = await getAllCafes(userId);
   return cafes.find((c) => c.cafeId === cafeId);
 };
 

@@ -1,11 +1,13 @@
 import { connectDB } from '@/shared/lib/mongodb';
 import { Account } from '@/shared/models';
+import { getCurrentUserId } from './user';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 
-export const getAllAccounts = async (): Promise<NaverAccount[]> => {
+export const getAllAccounts = async (userId?: string): Promise<NaverAccount[]> => {
   try {
     await connectDB();
-    const dbAccounts = await Account.find({ isActive: true })
+    const targetUserId = userId || getCurrentUserId();
+    const dbAccounts = await Account.find({ userId: targetUserId, isActive: true })
       .sort({ isMain: -1, createdAt: 1 })
       .lean();
 
