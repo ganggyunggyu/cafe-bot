@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/cn';
 const NAV_ITEMS = [
   { href: '/batch', label: '배치 모드' },
   { href: '/viral', label: '바이럴' },
+  { href: '/manual-post', label: '수동 발행' },
   { href: '/publish', label: '분리 발행' },
   { href: '/queue', label: '큐 대시보드' },
   { href: '/cafe-join', label: '카페 가입' },

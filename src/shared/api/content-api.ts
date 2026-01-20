@@ -19,7 +19,9 @@ export const generateContent = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Content generation failed: ${response.status}`);
+    const errorBody = await response.text();
+    console.error('[CONTENT API] 에러 응답:', response.status, errorBody);
+    throw new Error(`Content generation failed: ${response.status} - ${errorBody}`);
   }
 
   return response.json();

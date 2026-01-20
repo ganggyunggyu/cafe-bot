@@ -12,6 +12,7 @@ import {
 
 interface CafeData {
   cafeId: string;
+  cafeUrl: string;
   menuId: string;
   name: string;
   categories: string[];
@@ -22,6 +23,7 @@ interface CafeData {
 
 interface CafeFormData {
   cafeId: string;
+  cafeUrl: string;
   menuId: string;
   name: string;
   categories: string;
@@ -31,6 +33,7 @@ interface CafeFormData {
 
 const INITIAL_FORM: CafeFormData = {
   cafeId: '',
+  cafeUrl: '',
   menuId: '1',
   name: '',
   categories: '',
@@ -89,6 +92,7 @@ export const CafeManagerUI = () => {
   const openEditForm = (cafe: CafeData) => {
     setForm({
       cafeId: cafe.cafeId,
+      cafeUrl: cafe.cafeUrl,
       menuId: cafe.menuId,
       name: cafe.name,
       categories: cafe.categories.join('\n'),
@@ -100,13 +104,14 @@ export const CafeManagerUI = () => {
   };
 
   const handleSubmit = () => {
-    if (!form.cafeId || !form.name) {
-      alert('카페ID와 이름은 필수입니다');
+    if (!form.cafeId || !form.cafeUrl || !form.name) {
+      alert('카페ID, 카페URL, 이름은 필수입니다');
       return;
     }
 
     const input: CafeInput = {
       cafeId: form.cafeId,
+      cafeUrl: form.cafeUrl,
       menuId: form.menuId || '1',
       name: form.name,
       categories: form.categories.split('\n').map((s) => s.trim()).filter(Boolean),
@@ -182,17 +187,33 @@ export const CafeManagerUI = () => {
             </div>
 
             <div className={cn('space-y-1')}>
-              <label className={cn('text-xs text-(--ink-muted)')}>기본 메뉴 ID</label>
+              <label className={cn('text-xs text-(--ink-muted)')}>카페 URL *</label>
               <input
                 type="text"
-                value={form.menuId}
-                onChange={(e) => setForm({ ...form, menuId: e.target.value })}
+                value={form.cafeUrl}
+                onChange={(e) => setForm({ ...form, cafeUrl: e.target.value })}
                 className={cn(
                   'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
                 )}
-                placeholder="1"
+                placeholder="usshdd"
               />
+              <p className={cn('text-xs text-(--ink-muted)')}>
+                cafe.naver.com/ 뒤에 오는 값
+              </p>
             </div>
+          </div>
+
+          <div className={cn('space-y-1')}>
+            <label className={cn('text-xs text-(--ink-muted)')}>기본 메뉴 ID</label>
+            <input
+              type="text"
+              value={form.menuId}
+              onChange={(e) => setForm({ ...form, menuId: e.target.value })}
+              className={cn(
+                'w-full rounded-lg border border-(--border) bg-white/80 px-3 py-2 text-sm'
+              )}
+              placeholder="1"
+            />
           </div>
 
           <div className={cn('space-y-1')}>
@@ -321,7 +342,7 @@ export const CafeManagerUI = () => {
                     )}
                   </div>
                   <div className={cn('text-xs text-(--ink-muted) mt-0.5')}>
-                    ID: {cafe.cafeId} | 메뉴: {cafe.menuId}
+                    ID: {cafe.cafeId} | URL: {cafe.cafeUrl} | 메뉴: {cafe.menuId}
                   </div>
                 </div>
                 <div className={cn('flex gap-1')}>

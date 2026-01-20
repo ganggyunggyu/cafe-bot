@@ -19,6 +19,7 @@ export interface AccountInput {
 
 export interface CafeInput {
   cafeId: string;
+  cafeUrl: string;
   menuId: string;
   name: string;
   categories?: string[];
@@ -152,6 +153,7 @@ export const getCafesAction = async () => {
     const { CAFE_LIST } = await import('@/shared/config/cafes');
     return CAFE_LIST.map((c) => ({
       cafeId: c.cafeId,
+      cafeUrl: c.cafeUrl,
       menuId: c.menuId,
       name: c.name,
       categories: c.categories,
@@ -168,6 +170,7 @@ export const getCafesAction = async () => {
       : c.categoryMenuIds;
     return {
       cafeId: c.cafeId,
+      cafeUrl: c.cafeUrl,
       menuId: c.menuId,
       name: c.name,
       categories: c.categories,
@@ -193,6 +196,7 @@ export const addCafeAction = async (input: CafeInput) => {
 
   await Cafe.create({
     cafeId: input.cafeId,
+    cafeUrl: input.cafeUrl,
     menuId: input.menuId,
     name: input.name,
     categories: input.categories ?? [],
