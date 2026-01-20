@@ -3,17 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/shared/lib/cn';
+import { ThemeToggle } from './theme-toggle';
 
 const NAV_ITEMS = [
-  { href: '/batch', label: '배치 모드' },
   { href: '/viral', label: '바이럴' },
   { href: '/manual-post', label: '수동 발행' },
   { href: '/publish', label: '분리 발행' },
-  { href: '/queue', label: '큐 대시보드' },
+  { href: '/queue', label: '큐' },
   { href: '/cafe-join', label: '카페 가입' },
-  { href: '/nickname-change', label: '닉네임 변경' },
+  { href: '/nickname-change', label: '닉네임' },
   { href: '/test', label: '테스트' },
-  { href: '/accounts', label: '계정 관리' },
+  { href: '/accounts', label: '계정' },
   { href: '/settings', label: '설정' },
 ];
 
@@ -21,59 +21,51 @@ export const AppHeader = () => {
   const pathname = usePathname();
 
   return (
-    <header className={cn('relative z-10')}>
+    <header
+      className={cn(
+        'sticky top-0 z-50 bg-(--background)/80 backdrop-blur-xl',
+        'border-b border-(--border-light)'
+      )}
+    >
       <div
         className={cn(
-          'max-w-6xl mx-auto px-6 lg:px-10 py-6 flex flex-wrap items-center justify-between gap-4'
+          'max-w-5xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between'
         )}
       >
-        <div className={cn('flex items-center gap-3')}>
-          <Link href="/" className={cn('flex items-center gap-3')}>
-            <div
-              className={cn(
-                'h-11 w-11 rounded-2xl bg-(--accent) text-white flex items-center justify-center font-semibold'
-              )}
-            >
-              CB
-            </div>
-            <div className={cn('space-y-1')}>
-              <p
-                className={cn(
-                  'text-[10px] uppercase tracking-[0.35em] text-(--ink-muted)'
-                )}
-              >
-                Automation
-              </p>
-              <p className={cn('font-(--font-display) text-lg leading-none')}>
-                Cafe Bot
-              </p>
-            </div>
-          </Link>
-        </div>
+        <Link href="/" className={cn('flex items-center gap-2.5')}>
+          <div
+            className={cn(
+              'h-9 w-9 rounded-xl bg-(--accent) text-white',
+              'flex items-center justify-center text-sm font-semibold'
+            )}
+          >
+            CB
+          </div>
+          <span className={cn('font-semibold text-(--ink)')}>Cafe Bot</span>
+        </Link>
 
-        <nav className={cn('flex items-center gap-4')}>
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            return isActive ? (
-              <span
-                key={item.href}
-                className={cn(
-                  'text-sm font-semibold text-(--ink) border-b-2 border-(--accent)'
-                )}
-              >
-                {item.label}
-              </span>
-            ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn('text-sm text-(--ink-muted) hover:text-(--ink)')}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className={cn('flex items-center gap-1')}>
+          <nav className={cn('flex items-center gap-1')}>
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-(--accent) text-white'
+                      : 'text-(--ink-muted) hover:text-(--ink) hover:bg-(--surface-muted)'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
