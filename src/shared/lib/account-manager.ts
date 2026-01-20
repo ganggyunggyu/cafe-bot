@@ -1,8 +1,32 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
+// ★★★ 계정 소스 토글 ★★★
+// true = 정적 JSON 파일 사용 (src/shared/config/accounts.json)
+// false = 동적 파일 사용 (.cafe-bot-data/accounts.json)
+const USE_STATIC_ACCOUNTS = false;
+
 const DATA_DIR = join(process.cwd(), '.cafe-bot-data');
 const ACCOUNTS_FILE = join(DATA_DIR, 'accounts.json');
+const STATIC_ACCOUNTS_FILE = join(
+  process.cwd(),
+  'src/shared/config/accounts.json'
+);
+
+// MongoDB export 형식 타입
+interface MongoExportAccount {
+  _id?: { $oid: string };
+  accountId: string;
+  password: string;
+  nickname?: string;
+  personaId?: string;
+  isMain?: boolean;
+  dailyPostLimit?: number;
+  activityHours?: { start: number; end: number };
+  isActive?: boolean;
+  restDays?: number[];
+  updatedAt?: { $date: string };
+}
 
 export interface ActivityHours {
   start: number;
@@ -28,9 +52,39 @@ const ensureDataDir = (): void => {
   if (!existsSync(DATA_DIR)) {
     mkdirSync(DATA_DIR, { recursive: true });
   }
-}
+};
 
-export const getAccounts = (): NaverAccount[] => {
+// MongoDB export 형식을 NaverAccount로 변환
+const convertMongoAccount = (mongo: MongoExportAccount): NaverAccount => ({
+  id: mongo.accountId,
+  password: mongo.password,
+  nickname: mongo.nickname,
+  isMain: mongo.isMain,
+  activityHours: mongo.activityHours,
+  restDays: mongo.restDays,
+  dailyPostLimit: mongo.dailyPostLimit,
+  personaId: mongo.personaId,
+});
+
+// 정적 JSON 파일에서 계정 로드
+const getStaticAccounts = (): NaverAccount[] => {
+  if (!existsSync(STATIC_ACCOUNTS_FILE)) {
+    console.warn('[ACCOUNTS] 정적 계정 파일 없음:', STATIC_ACCOUNTS_FILE);
+    return [];
+  }
+
+  try {
+    const data = readFileSync(STATIC_ACCOUNTS_FILE, 'utf-8');
+    const parsed: MongoExportAccount[] = JSON.parse(data);
+    return parsed.map(convertMongoAccount);
+  } catch (err) {
+    console.error('[ACCOUNTS] 정적 계정 파일 파싱 실패:', err);
+    return [];
+  }
+};
+
+// 동적 파일에서 계정 로드 (기존 로직)
+const getDynamicAccounts = (): NaverAccount[] => {
   ensureDataDir();
 
   if (!existsSync(ACCOUNTS_FILE)) {
@@ -44,6 +98,13 @@ export const getAccounts = (): NaverAccount[] => {
   } catch {
     return [];
   }
+};
+
+export const getAccounts = (): NaverAccount[] => {
+  if (USE_STATIC_ACCOUNTS) {
+    return getStaticAccounts();
+  }
+  return getDynamicAccounts();
 }
 
 export const saveAccounts = (accounts: NaverAccount[]): void => {
