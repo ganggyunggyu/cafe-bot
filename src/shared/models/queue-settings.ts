@@ -36,15 +36,15 @@ const QueueSettingsSchema = new Schema<IQueueSettings>(
     delays: {
       betweenPosts: {
         type: DelayRangeSchema,
-        default: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 },
+        default: { min: 30 * 1000, max: 60 * 1000 },
       },
       betweenComments: {
         type: DelayRangeSchema,
-        default: { min: 30 * 1000, max: 2 * 60 * 1000 },
+        default: { min: 3 * 1000, max: 10 * 1000 },
       },
       afterPost: {
         type: DelayRangeSchema,
-        default: { min: 30 * 1000, max: 60 * 1000 },
+        default: { min: 5 * 1000, max: 15 * 1000 },
       },
     },
     retry: {
@@ -66,9 +66,9 @@ export const QueueSettings: Model<IQueueSettings> =
 
 export const DEFAULT_QUEUE_SETTINGS = {
   delays: {
-    betweenPosts: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 }, // 3~8분
-    betweenComments: { min: 30 * 1000, max: 2 * 60 * 1000 }, // 30초~2분
-    afterPost: { min: 30 * 1000, max: 60 * 1000 }, // 30초~1분
+    betweenPosts: { min: 30 * 1000, max: 60 * 1000 }, // 30초~1분
+    betweenComments: { min: 3 * 1000, max: 10 * 1000 }, // 3~10초
+    afterPost: { min: 5 * 1000, max: 15 * 1000 }, // 5~15초
   },
   retry: { attempts: 3, backoffDelay: 5000 },
 

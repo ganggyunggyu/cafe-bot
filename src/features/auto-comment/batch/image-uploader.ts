@@ -161,6 +161,11 @@ const waitForPopupClose = async (page: Page, maxWait = 5000): Promise<void> => {
   console.log('[IMAGE] 팝업 닫기 대기 타임아웃 - 강제 진행');
 };
 
+// 단일 이미지 업로드
+export const uploadSingleImage = async (page: Page, image: string): Promise<boolean> => {
+  return uploadImages(page, [image]);
+};
+
 // 이미지 업로드 (URL 또는 base64 지원)
 export const uploadImages = async (page: Page, images: string[]): Promise<boolean> => {
   if (!images || images.length === 0) return true;

@@ -7,6 +7,10 @@ import {
   releaseAccountLock,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
+import { uploadImages, uploadSingleImage } from './image-uploader';
+
+// 부제 패턴 (숫자. 형식)
+const SUBTITLE_PATTERN = /^\d+\.\s*/;
 
 export interface ModifyArticleInput {
   cafeId: string;
@@ -14,6 +18,7 @@ export interface ModifyArticleInput {
   newTitle: string;
   newContent: string;
   category?: string; // 게시판명 (미지정 시 카테고리 변경 안함)
+  images?: string[]; // Base64 이미지 배열
 }
 
 export interface ModifyResult {
@@ -28,7 +33,7 @@ export const modifyArticleWithAccount = async (
   input: ModifyArticleInput
 ): Promise<ModifyResult> => {
   const { id, password } = account;
-  const { cafeId, articleId, newTitle, newContent, category } = input;
+  const { cafeId, articleId, newTitle, newContent, category, images } = input;
 
   // 계정 락 획득 (동시 접근 방지)
   await acquireAccountLock(id);
@@ -121,10 +126,10 @@ export const modifyArticleWithAccount = async (
       };
     }
 
-    // 기존 본문 전체 선택 후 삭제
+    // 기존 본문 전체 선택 후 삭제 (macOS: Meta+A, Windows: Control+A)
     await contentArea.click();
     await page.waitForTimeout(300);
-    await page.keyboard.press('Control+A');
+    await page.keyboard.press('Meta+A');
     await page.waitForTimeout(200);
     await page.keyboard.press('Backspace');
     await page.waitForTimeout(300);
@@ -135,6 +140,21 @@ export const modifyArticleWithAccount = async (
       .replace(/<[^>]*>/g, '');
 
     const lines = plainContent.split('\n');
+
+    // 부제 위치 찾기 (숫자. 형식)
+    const subtitleIndices: number[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (SUBTITLE_PATTERN.test(lines[i].trim())) {
+        subtitleIndices.push(i);
+      }
+    }
+
+    // 이미지 삽입 위치 결정
+    let imageQueue = images ? [...images] : [];
+    const hasSubtitles = subtitleIndices.length > 0;
+
+    console.log(`[MODIFY] 부제 ${subtitleIndices.length}개 발견, 이미지 ${imageQueue.length}장`);
+
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].trim()) {
         await page.keyboard.type(lines[i], { delay: 5 });
@@ -142,9 +162,45 @@ export const modifyArticleWithAccount = async (
       if (i < lines.length - 1) {
         await page.keyboard.press('Enter');
       }
+
+      // 부제 다음에 이미지 삽입 (이미지가 남아있고, 현재 줄이 부제인 경우)
+      if (hasSubtitles && imageQueue.length > 0 && subtitleIndices.includes(i)) {
+        await page.waitForTimeout(300);
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(500);
+
+        const imageToUpload = imageQueue.shift();
+        if (imageToUpload) {
+          console.log(`[MODIFY] 부제 ${i + 1} 아래에 이미지 삽입`);
+          await uploadSingleImage(page, imageToUpload);
+          await page.waitForTimeout(500);
+
+          // 이미지 삽입 후 본문 영역으로 돌아가기
+          const newContentArea = await page.$('p.se-text-paragraph');
+          if (newContentArea) {
+            await newContentArea.click();
+          }
+          await page.keyboard.press('End');
+          await page.keyboard.press('Enter');
+        }
+      }
     }
 
     await page.waitForTimeout(500);
+
+    // 남은 이미지는 마지막에 업로드
+    if (imageQueue.length > 0) {
+      console.log(`[MODIFY] ${id} 남은 이미지 ${imageQueue.length}장 마지막에 업로드`);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+      const uploadSuccess = await uploadImages(page, imageQueue);
+      if (uploadSuccess) {
+        console.log(`[MODIFY] ${id} 이미지 업로드 완료`);
+      } else {
+        console.warn(`[MODIFY] ${id} 이미지 업로드 실패 - 글 수정은 계속 진행`);
+      }
+      await page.waitForTimeout(1000);
+    }
 
     // 수정 완료 버튼 클릭
     const submitButton = await page.$('a.BaseButton--skinGreen, a.BaseButton');

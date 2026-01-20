@@ -4,7 +4,7 @@ import { getAllAccounts } from '@/shared/config/accounts';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { BatchJobLog, type IBatchJobLog, canPostToday } from '@/shared/models';
-import { getQueueSettings } from '@/shared/models/queue-settings';
+import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
 import { isAccountActive } from '@/shared/lib/account-manager';
 import {
   type BatchJobInput,
@@ -128,6 +128,20 @@ export const runBatchJob = async (
   const queueSettings = dbConnected ? await getQueueSettings() : null;
   const enableDailyPostLimit = queueSettings?.limits?.enableDailyPostLimit ?? true;
 
+  // DB 설정에서 딜레이 적용 (DB 설정 > options > DEFAULT_DELAYS 우선순위)
+  const dbDelays = queueSettings?.delays;
+  const effectiveDelays = {
+    ...delays,
+    afterPost: dbDelays ? getRandomDelay(dbDelays.afterPost) : delays.afterPost,
+    betweenComments: dbDelays ? getRandomDelay(dbDelays.betweenComments) : delays.betweenComments,
+    betweenKeywords: dbDelays ? getRandomDelay(dbDelays.betweenPosts) : delays.betweenKeywords,
+  };
+  console.log('[BATCH] 적용된 딜레이:', {
+    afterPost: `${effectiveDelays.afterPost / 1000}초`,
+    betweenComments: `${effectiveDelays.betweenComments / 1000}초`,
+    betweenKeywords: `${effectiveDelays.betweenKeywords / 1000}초`,
+  });
+
   try {
     for (let i = 0; i < keywords.length; i++) {
       const rawKeyword = keywords[i];
@@ -158,7 +172,7 @@ export const runBatchJob = async (
           cafeId,
           menuId,
           postOptions,
-          delays,
+          delays: effectiveDelays,
           accounts,
           dbConnected,
           onProgress,
@@ -189,10 +203,10 @@ export const runBatchJob = async (
           keywordIndex: i,
           totalKeywords: keywords.length,
           phase: 'waiting',
-          message: `다음 키워드 전 대기 중... (${delays.betweenKeywords / 1000}초)`,
+          message: `다음 키워드 전 대기 중... (${effectiveDelays.betweenKeywords / 1000}초)`,
         });
 
-        await sleep(delays.betweenKeywords);
+        await sleep(effectiveDelays.betweenKeywords);
       }
     }
 

@@ -285,7 +285,7 @@ export const writePostWithAccount = async (
 
     await titleInput.click();
     await page.waitForTimeout(300);
-    await page.keyboard.type(subject, { delay: 150 }); // 400타/분 속도
+    await page.keyboard.type(subject, { delay: 100 }); // 600타/분 속도
     await page.waitForTimeout(500);
 
     // 본문 입력 (SmartEditor - p.se-text-paragraph 클릭 후 타이핑)
@@ -311,7 +311,7 @@ export const writePostWithAccount = async (
     const lines = plainContent.split('\n');
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].trim()) {
-        await page.keyboard.type(lines[i], { delay: 150 }); // 400타/분 속도
+        await page.keyboard.type(lines[i], { delay: 100 }); // 600타/분 속도
       }
       if (i < lines.length - 1) {
         await page.keyboard.press('Enter');
