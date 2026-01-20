@@ -1,8 +1,6 @@
-export { BatchUI } from './batch-ui';
 export { AccountListUI } from './account-list-ui';
 export { PostOptionsUI } from './post-options-ui';
 export { KeywordGeneratorUI } from './keyword-generator-ui';
-export { QueueStatusUI } from './queue-ui';
 export { ApiTestUI } from './api-test-ui';
 export { runBatchPostAction, testSingleKeywordAction, runModifyBatchAction } from './batch-actions';
 export { runBatchJob } from './batch-job';
