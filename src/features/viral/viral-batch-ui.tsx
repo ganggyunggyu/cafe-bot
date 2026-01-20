@@ -6,6 +6,7 @@ import { runViralBatchAction } from './viral-actions';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '@/features/auto-comment/batch/types';
 import { getCafesAction } from '@/features/accounts/actions';
+import { getDelaySettings } from '@/shared/hooks/use-delay-settings';
 import type { CafeConfig } from '@/entities/cafe';
 import type { ViralBatchResult } from './viral-batch-job';
 
@@ -31,7 +32,7 @@ export const ViralBatchUI = () => {
 
   // 이미지 생성 옵션
   const [enableImage, setEnableImage] = useState(false);
-  const [imageCount, setImageCount] = useState(1);
+  const [imageCount, setImageCount] = useState(0); // 0 = 랜덤 1~2장
 
   const inputClassName = cn(
     'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm',
@@ -62,6 +63,9 @@ export const ViralBatchUI = () => {
     const parsedKeywords = parseKeywords();
     if (parsedKeywords.length === 0) return;
 
+    // localStorage에서 딜레이 설정 가져오기
+    const delaySettings = getDelaySettings();
+
     startTransition(async () => {
       setResult(null);
       try {
@@ -72,6 +76,7 @@ export const ViralBatchUI = () => {
           model: model || undefined,
           enableImage,
           imageCount: enableImage ? imageCount : 0,
+          delays: delaySettings.delays,
         });
         setResult(res);
       } catch (error) {
@@ -182,8 +187,9 @@ export const ViralBatchUI = () => {
               <select
                 value={imageCount}
                 onChange={(e) => setImageCount(Number(e.target.value))}
-                className={cn(inputClassName, 'w-20')}
+                className={cn(inputClassName, 'w-28')}
               >
+                <option value={0}>랜덤 1~2장</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                   <option key={n} value={n}>
                     {n}장

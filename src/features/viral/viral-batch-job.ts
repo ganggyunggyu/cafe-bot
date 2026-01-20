@@ -3,7 +3,7 @@
 import { getAllAccounts } from '@/shared/config/accounts';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
-import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
+import { getRandomDelay, type DelayRange } from '@/shared/hooks/use-delay-settings';
 import { isAccountActive, getNextActiveTime, type NaverAccount } from '@/shared/lib/account-manager';
 import { generateViralContent, generateImages } from '@/shared/api/content-api';
 import { buildViralPrompt, detectKeywordType, type KeywordType } from './viral-prompt';
@@ -13,6 +13,12 @@ import { addTaskJob, startAllTaskWorkers } from '@/shared/lib/queue';
 import type { PostJobData, ViralCommentsData } from '@/shared/lib/queue/types';
 import type { PostOptions, ProgressCallback } from '@/features/auto-comment/batch/types';
 
+export interface DelayConfig {
+  betweenPosts: DelayRange;
+  betweenComments: DelayRange;
+  afterPost: DelayRange;
+}
+
 export interface ViralBatchInput {
   keywords: string[];
   cafeId?: string;
@@ -20,6 +26,7 @@ export interface ViralBatchInput {
   model?: string;
   enableImage?: boolean;
   imageCount?: number;
+  delays?: DelayConfig;
 }
 
 export interface ViralKeywordResult {
@@ -55,7 +62,7 @@ export const runViralBatch = async (
   input: ViralBatchInput,
   onProgress?: ProgressCallback
 ): Promise<ViralBatchResult> => {
-  const { keywords, cafeId: inputCafeId, postOptions, model, enableImage, imageCount } = input;
+  const { keywords, cafeId: inputCafeId, postOptions, model, enableImage, imageCount, delays } = input;
 
   console.log('[VIRAL] runViralBatch 시작');
   console.log('[VIRAL] 키워드 수:', keywords.length);
@@ -93,8 +100,15 @@ export const runViralBatch = async (
   }
 
   await connectDB();
-  const settings = await getQueueSettings();
   await startAllTaskWorkers();
+
+  // 기본 딜레이 설정 (클라이언트에서 전달받지 못한 경우)
+  const defaultDelays: DelayConfig = {
+    betweenPosts: { min: 30000, max: 60000 },
+    betweenComments: { min: 3000, max: 10000 },
+    afterPost: { min: 5000, max: 15000 },
+  };
+  const effectiveDelays = delays || defaultDelays;
 
   const results: ViralKeywordResult[] = [];
   let completed = 0;
@@ -188,20 +202,25 @@ export const runViralBatch = async (
 
       // 이미지 생성 (옵션이 활성화된 경우)
       let images: string[] | undefined;
-      if (enableImage && imageCount && imageCount > 0) {
+      if (enableImage) {
+        // imageCount가 0이면 랜덤 1~2장, 0보다 크면 고정 개수
+        const finalCount = imageCount && imageCount > 0
+          ? imageCount
+          : Math.floor(Math.random() * 2) + 1;
+
         onProgress?.({
           currentKeyword: keyword,
           keywordIndex: i,
           totalKeywords: keywords.length,
           phase: 'post',
-          message: `[${i + 1}/${keywords.length}] ${keyword} 이미지 ${imageCount}장 생성 중...`,
+          message: `[${i + 1}/${keywords.length}] ${keyword} 이미지 ${finalCount}장 생성 중...`,
         });
 
         try {
           const imageResult = await generateImages({
             keyword,
             category,
-            count: imageCount,
+            count: finalCount,
           });
 
           if (imageResult.success && imageResult.images?.length) {
@@ -238,7 +257,7 @@ export const runViralBatch = async (
       console.log(`[VIRAL]   - 댓글: ${commentCount}개, 대댓글: ${replyCount}개`);
       console.log(`[VIRAL]   - 딜레이: ${Math.round(postDelay / 1000)}초`);
 
-      globalDelay = postDelay + getRandomDelay(settings.delays.betweenPosts);
+      globalDelay = postDelay + getRandomDelay(effectiveDelays.betweenPosts);
 
       results.push({
         keyword,
