@@ -3,13 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3007",
+    "dev": "concurrently \"next dev --port 3007\" \"npx tsx scripts/bull-board.ts\"",
+    "dev:next": "next dev --port 3007",
     "build": "next build",
     "start": "next start --port 3007",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bull-board": "npx tsx scripts/bull-board.ts"
   },
   "dependencies": {
+    "@bull-board/api": "^6.16.2",
+    "@bull-board/express": "^6.16.2",
+    "bullmq": "^5.66.5",
     "clsx": "^2.1.1",
+    "express": "^5.2.1",
+    "ioredis": "^5.9.1",
     "mongoose": "^9.1.2",
     "next": "16.1.1",
     "next-auth": "^5.0.0-beta.30",
@@ -20,9 +27,11 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/express": "^5.0.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",

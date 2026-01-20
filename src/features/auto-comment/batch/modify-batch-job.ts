@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
-import { generateContent } from '@/shared/api/content-api';
-import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
-import { PublishedArticle, ModifiedArticle, BatchJobLog, type IPublishedArticle } from '@/shared/models';
-import { modifyArticleWithAccount } from './article-modifier';
-import { parseKeywordWithCategory } from './batch-job';
+import { BatchJobLog } from '@/shared/models';
+import { processArticleModification, type ModifyProcessResult } from './modify-article-processor';
+import { parseKeywordWithCategory } from './keyword-utils';
+import { buildBaseFilter, fetchArticlesToModify } from './modify-query-utils';
 import type { ProgressCallback } from './types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,6 +18,8 @@ export interface ModifyBatchInput {
   adKeywords: string[]; // 광고 키워드 (발행원고와 1:1 매칭)
   ref?: string;
   sortOrder?: SortOrder; // 정렬 순서 (기본: oldest)
+  cafeId?: string; // 카페 ID (미지정 시 기본 카페)
+  daysLimit?: number; // N일 이내 원고만 (미지정 시 전체)
 }
 
 export interface ModifyKeywordResult {
@@ -45,7 +47,7 @@ export const runModifyBatchJob = async (
   options: ModifyBatchOptions = {},
   onProgress?: ProgressCallback
 ): Promise<ModifyBatchResult> => {
-  const { service, adKeywords, ref, sortOrder = 'oldest' } = input;
+  const { service, adKeywords, ref, sortOrder = 'oldest', cafeId: inputCafeId, daysLimit } = input;
   const delayBetweenArticles = options.delayBetweenArticles ?? 30000;
 
   if (adKeywords.length === 0) {
@@ -58,7 +60,7 @@ export const runModifyBatchJob = async (
     };
   }
 
-  const accounts = getAllAccounts();
+  const accounts = await getAllAccounts();
 
   if (accounts.length === 0) {
     return {
@@ -70,9 +72,9 @@ export const runModifyBatchJob = async (
     };
   }
 
-  const cafeId = process.env.NAVER_CAFE_ID;
+  const cafe = inputCafeId ? await getCafeById(inputCafeId) : await getDefaultCafe();
 
-  if (!cafeId) {
+  if (!cafe) {
     return {
       success: false,
       totalArticles: 0,
@@ -81,6 +83,9 @@ export const runModifyBatchJob = async (
       results: [],
     };
   }
+
+  const { cafeId } = cafe;
+  console.log(`[MODIFY BATCH] 카페: ${cafe.name} (${cafeId})`);
 
   // MongoDB 연결 (수정 기능은 DB 필수)
   try {
@@ -111,19 +116,8 @@ export const runModifyBatchJob = async (
 
   // 수정 대상 글 조회 (키워드 개수만큼)
   const limit = adKeywords.length;
-  let articlesToModify: IPublishedArticle[];
-
-  if (sortOrder === 'random') {
-    articlesToModify = await PublishedArticle.aggregate([
-      { $match: { cafeId, status: 'published' } },
-      { $sample: { size: limit } },
-    ]);
-  } else {
-    const sortDirection = sortOrder === 'oldest' ? 1 : -1;
-    articlesToModify = await PublishedArticle.find({ cafeId, status: 'published' })
-      .sort({ publishedAt: sortDirection })
-      .limit(limit);
-  }
+  const baseFilter = buildBaseFilter(cafeId, daysLimit);
+  const articlesToModify = await fetchArticlesToModify(sortOrder, limit, baseFilter);
 
   if (articlesToModify.length === 0) {
     return {
@@ -152,115 +146,86 @@ export const runModifyBatchJob = async (
   let completed = 0;
   let failed = 0;
 
+  const appendOutcome = async (outcome: ModifyProcessResult) => {
+    results.push(outcome.keywordResult);
+
+    if (outcome.success) {
+      completed++;
+    } else {
+      failed++;
+    }
+
+    jobLog.results.push(outcome.logEntry);
+    jobLog.completed = completed;
+    jobLog.failed = failed;
+    await jobLog.save();
+  }
+
   try {
     for (let i = 0; i < articlesToModify.length; i++) {
       const article = articlesToModify[i];
       const { articleId, writerAccountId } = article;
       const rawAdKeyword = adKeywords[i];
-      const { keyword: adKeyword, category } = parseKeywordWithCategory(rawAdKeyword);
+      const { keyword: adKeyword } = parseKeywordWithCategory(rawAdKeyword);
 
       // 글 작성자 계정으로 수정해야 함
       const writerAccount = accounts.find((a) => a.id === writerAccountId);
 
       if (!writerAccount) {
-        results.push({
-          keyword: adKeyword,
-          articleId,
+        await appendOutcome({
           success: false,
-          error: `작성자 계정(${writerAccountId}) 없음`,
+          keywordResult: {
+            keyword: adKeyword,
+            articleId,
+            success: false,
+            error: `작성자 계정(${writerAccountId}) 없음`,
+          },
+          logEntry: {
+            keyword: adKeyword,
+            articleId,
+            success: false,
+            commentCount: article.commentCount,
+            replyCount: article.replyCount,
+            error: `작성자 계정(${writerAccountId}) 없음`,
+          },
         });
-        failed++;
-
-        jobLog.results.push({
-          keyword: adKeyword,
-          articleId,
-          success: false,
-          commentCount: 0,
-          replyCount: 0,
-          error: `작성자 계정(${writerAccountId}) 없음`,
-        });
-        jobLog.failed = failed;
-        await jobLog.save();
-
         continue;
       }
 
-      onProgress?.({
-        currentKeyword: adKeyword,
-        keywordIndex: i,
-        totalKeywords: articlesToModify.length,
-        phase: 'post',
-        message: `[${i + 1}/${articlesToModify.length}] "${adKeyword}" - 광고글로 수정 중...`,
-      });
-
-      // 광고 콘텐츠 생성 (새 광고 키워드 사용)
-      const generated = await generateContent({ service, keyword: adKeyword, ref });
-      const { title: newTitle, htmlContent: newContent } = buildCafePostContent(generated.content, adKeyword);
-
-      // 글 수정
-      const modifyResult = await modifyArticleWithAccount(writerAccount, {
-        cafeId,
-        articleId,
-        newTitle,
-        newContent,
-        category,
-      });
-
-      if (!modifyResult.success) {
-        results.push({
-          keyword: adKeyword,
-          articleId,
-          success: false,
-          error: modifyResult.error,
+      try {
+        const outcome = await processArticleModification({
+          service,
+          adKeywordInput: rawAdKeyword,
+          article,
+          cafeId,
+          writerAccount,
+          ref,
+          keywordIndex: i,
+          totalKeywords: articlesToModify.length,
+          onProgress,
         });
-        failed++;
 
-        jobLog.results.push({
-          keyword: adKeyword,
-          articleId,
+        await appendOutcome(outcome);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+        await appendOutcome({
           success: false,
-          commentCount: 0,
-          replyCount: 0,
-          error: modifyResult.error,
+          keywordResult: {
+            keyword: adKeyword,
+            articleId,
+            success: false,
+            error: errorMessage,
+          },
+          logEntry: {
+            keyword: adKeyword,
+            articleId,
+            success: false,
+            commentCount: article.commentCount,
+            replyCount: article.replyCount,
+            error: errorMessage,
+          },
         });
-        jobLog.failed = failed;
-        await jobLog.save();
-
-        continue;
       }
-
-      // ModifiedArticle 저장
-      await ModifiedArticle.create({
-        originalArticleId: article._id,
-        articleId,
-        cafeId,
-        keyword: adKeyword,
-        newTitle,
-        newContent,
-        modifiedAt: new Date(),
-        modifiedBy: writerAccountId,
-      });
-
-      // PublishedArticle 삭제 (수정 완료 후 발행원고에서 제거)
-      await PublishedArticle.deleteOne({ _id: article._id });
-
-      results.push({
-        keyword: adKeyword,
-        articleId,
-        success: true,
-      });
-
-      completed++;
-
-      jobLog.results.push({
-        keyword: adKeyword,
-        articleId,
-        success: true,
-        commentCount: article.commentCount,
-        replyCount: article.replyCount,
-      });
-      jobLog.completed = completed;
-      await jobLog.save();
 
       // 다음 글 전 대기
       if (i < articlesToModify.length - 1) {

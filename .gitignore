@@ -46,3 +46,9 @@ next-env.d.ts
 # cafe bot data (accounts)
 .cafe-bot-data/
 .claude_backup/
+
+# debug folders
+.viral-debug/
+
+# test scripts
+scripts/test-viral-queue.ts

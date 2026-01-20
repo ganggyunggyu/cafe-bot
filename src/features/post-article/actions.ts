@@ -4,6 +4,7 @@ import { auth } from '@/shared/lib/auth';
 import { generateContent } from '@/shared/api/content-api';
 import { postToCafe } from '@/shared/api/naver-cafe-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
+import { getDefaultCafe } from '@/shared/config/cafes';
 import type { PostArticleInput } from '@/shared/types';
 
 export interface PostArticleResult {
@@ -25,8 +26,9 @@ export const postArticle = async (input: PostArticleInput): Promise<PostArticleR
       };
     }
 
-    const cafeId = input.cafeId || process.env.NAVER_CAFE_ID;
-    const menuId = input.menuId || process.env.NAVER_CAFE_MENU_ID;
+    const defaultCafe = await getDefaultCafe();
+    const cafeId = input.cafeId || defaultCafe?.cafeId;
+    const menuId = input.menuId || defaultCafe?.menuId;
 
     if (!cafeId || !menuId) {
       return {

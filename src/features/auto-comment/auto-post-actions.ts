@@ -3,9 +3,10 @@
 import { auth } from '@/shared/lib/auth';
 import { generateContent } from '@/shared/api/content-api';
 import { postToCafe } from '@/shared/api/naver-cafe-api';
-import { getCommentAccounts } from '@/shared/lib/account-manager';
+import { getCommentAccounts } from '@/shared/config/accounts';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { closeAllContexts } from '@/shared/lib/multi-session';
+import { getDefaultCafe } from '@/shared/config/cafes';
 import { getCommentDelayMs } from './comment-delay';
 import { writeCommentWithAccount, type WriteCommentResult } from './comment-writer';
 
@@ -27,7 +28,7 @@ const writeComments = async (
   articleId: number,
   comments: string[]
 ): Promise<WriteCommentResult[]> => {
-  const commentAccounts = getCommentAccounts();
+  const commentAccounts = await getCommentAccounts();
   const results: WriteCommentResult[] = [];
 
   for (let i = 0; i < commentAccounts.length && i < comments.length; i++) {
@@ -59,19 +60,20 @@ export const autoPostWithComments = async (input: {
     if (!session?.accessToken) {
       return {
         success: false,
-        error: '네이버 로그인이 필요해. OAuth로 로그인해줘.',
+        error: '네이버 로그인이 필요합니다. OAuth로 로그인해주세요.',
       };
     }
 
-    const cafeId = process.env.NAVER_CAFE_ID;
-    const menuId = process.env.NAVER_CAFE_MENU_ID;
+    const cafe = await getDefaultCafe();
 
-    if (!cafeId || !menuId) {
+    if (!cafe) {
       return {
         success: false,
-        error: '카페 ID 또는 메뉴 ID가 설정되지 않았어.',
+        error: '카페 설정이 없습니다.',
       };
     }
+
+    const { cafeId, menuId } = cafe;
 
     const generated = await generateContent({ service, keyword, ref });
     const { title, htmlContent } = buildCafePostContent(generated.content, keyword);
@@ -89,7 +91,7 @@ export const autoPostWithComments = async (input: {
     if (!articleId) {
       return {
         success: false,
-        error: '글 작성은 됐는데 articleId를 못 가져왔어.',
+        error: '글 작성은 됐는데 articleId를 가져오지 못했습니다.',
       };
     }
 
@@ -104,7 +106,7 @@ export const autoPostWithComments = async (input: {
   } catch (error) {
     return {
       success: false,
-      error: getErrorMessage(error, '알 수 없는 오류가 발생했어.'),
+      error: getErrorMessage(error, '알 수 없는 오류가 발생했습니다.'),
     };
   } finally {
     await closeAllContexts();
@@ -118,13 +120,13 @@ export const addCommentsToArticle = async (input: {
   const { articleId, comments } = input;
 
   try {
-    const cafeId = process.env.NAVER_CAFE_ID;
+    const cafe = await getDefaultCafe();
 
-    if (!cafeId) {
-      return { success: false, error: '카페 ID가 설정되지 않았어.' };
+    if (!cafe) {
+      return { success: false, error: '카페 설정이 없습니다.' };
     }
 
-    const results = await writeComments(cafeId, articleId, comments);
+    const results = await writeComments(cafe.cafeId, articleId, comments);
 
     return { success: true, results };
   } catch (error) {

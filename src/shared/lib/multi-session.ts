@@ -7,18 +7,18 @@ const SESSION_DIR = join(process.cwd(), '.playwright-session');
 let browser: Browser | null = null;
 const contexts: Map<string, BrowserContext> = new Map();
 
-// 계정별 락 관리 (동시 접근 방지)
 const accountLocks: Map<string, Promise<void>> = new Map();
 const lockResolvers: Map<string, () => void> = new Map();
 
+const loginStatusCache: Map<string, number> = new Map();
+const LOGIN_CACHE_TTL = 30 * 60 * 1000;
+
 export const acquireAccountLock = async (accountId: string): Promise<void> => {
-  // 이전 락이 있으면 대기
   while (accountLocks.has(accountId)) {
     console.log(`[LOCK] ${accountId} 락 대기 중...`);
     await accountLocks.get(accountId);
   }
 
-  // 새 락 생성
   let resolver: () => void;
   const lockPromise = new Promise<void>((resolve) => {
     resolver = resolve;
@@ -38,16 +38,26 @@ export const releaseAccountLock = (accountId: string): void => {
   }
 };
 
+export const invalidateLoginCache = (accountId: string): void => {
+  loginStatusCache.delete(accountId);
+  console.log(`[LOGIN] ${accountId} 캐시 무효화됨`);
+};
+
+export const isLoginRedirect = (url: string): boolean => {
+  return url.includes('nidlogin.login') || url.includes('nid.naver.com/nidlogin');
+};
+
 const getSessionFile = (accountId: string): string => {
   return join(SESSION_DIR, `${accountId}-cookies.json`);
 }
 
 export const getBrowser = async (): Promise<Browser> => {
   if (!browser) {
-    const isDebug = process.env.PLAYWRIGHT_DEBUG === 'true';
+    const isHeadless = process.env.PLAYWRIGHT_HEADLESS !== 'false';
+    console.log(`[BROWSER] 브라우저 시작 (headless: ${isHeadless})`);
     browser = await chromium.launch({
-      headless: !isDebug,
-      slowMo: isDebug ? 500 : 0,
+      headless: isHeadless,
+      slowMo: isHeadless ? 0 : 100,
     });
   }
   return browser;
@@ -125,6 +135,7 @@ export const closeContextForAccount = async (accountId: string): Promise<void> =
     await context.close();
     contexts.delete(accountId);
   }
+  loginStatusCache.delete(accountId);
 }
 
 export const closeAllContexts = async (): Promise<void> => {
@@ -133,6 +144,7 @@ export const closeAllContexts = async (): Promise<void> => {
     await context.close();
   }
   contexts.clear();
+  loginStatusCache.clear();
 
   if (browser) {
     await browser.close();
@@ -141,6 +153,12 @@ export const closeAllContexts = async (): Promise<void> => {
 }
 
 export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => {
+  const cachedTime = loginStatusCache.get(accountId);
+  if (cachedTime && Date.now() - cachedTime < LOGIN_CACHE_TTL) {
+    console.log(`[LOGIN] ${accountId} 캐시 히트 (${Math.round((Date.now() - cachedTime) / 1000)}초 전 확인)`);
+    return true;
+  }
+
   const page = await getPageForAccount(accountId);
 
   try {
@@ -150,8 +168,18 @@ export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => 
     });
 
     const url = page.url();
-    return !url.includes('nidlogin.login');
+    const isLoggedIn = !url.includes('nidlogin.login');
+
+    if (isLoggedIn) {
+      loginStatusCache.set(accountId, Date.now());
+      console.log(`[LOGIN] ${accountId} 로그인 상태 캐시됨`);
+    } else {
+      loginStatusCache.delete(accountId);
+    }
+
+    return isLoggedIn;
   } catch {
+    loginStatusCache.delete(accountId);
     return false;
   }
 }
@@ -175,10 +203,14 @@ export const loginAccount = async (
 
     const currentUrl = page.url();
     if (currentUrl.includes('nidlogin.login')) {
-      return { success: false, error: '로그인 실패. ID/PW 확인해줘.' };
+      return { success: false, error: '로그인 실패. ID/PW를 확인해주세요.' };
     }
 
     await saveCookiesForAccount(accountId);
+
+    loginStatusCache.set(accountId, Date.now());
+    console.log(`[LOGIN] ${accountId} 로그인 완료, 캐시 갱신`);
+
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';

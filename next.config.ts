@@ -1,7 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/queue/:path*',
+        destination: 'http://localhost:3008/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

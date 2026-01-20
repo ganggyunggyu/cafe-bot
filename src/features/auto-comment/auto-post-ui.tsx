@@ -9,7 +9,7 @@ import {
   type AutoPostResultState,
 } from './auto-post-form';
 
-export function AutoPostUI() {
+export const AutoPostUI = () => {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<AutoPostMode>('new');
 
@@ -50,7 +50,7 @@ export function AutoPostUI() {
       const { service, keyword, ref } = postInput;
 
       if (!service || !keyword) {
-        setResult({ type: 'error', message: 'service와 keyword를 입력해줘.' });
+        setResult({ type: 'error', message: 'service와 keyword를 입력해주세요.' });
         return;
       }
 
@@ -80,7 +80,7 @@ export function AutoPostUI() {
       });
     } else {
       if (!articleId) {
-        setResult({ type: 'error', message: 'articleId를 입력해줘.' });
+        setResult({ type: 'error', message: 'articleId를 입력해주세요.' });
         return;
       }
 
@@ -126,4 +126,4 @@ export function AutoPostUI() {
       onSubmit={handleSubmit}
     />
   );
-}
+};

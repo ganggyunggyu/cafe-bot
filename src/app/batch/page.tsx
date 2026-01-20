@@ -1,146 +1,247 @@
 import { cn } from '@/shared/lib/cn';
 import Link from 'next/link';
-import { BatchUI, AccountListUI } from '@/features/auto-comment/batch';
+import { BatchUI, KeywordGeneratorUI, QueueStatusUI } from '@/features/auto-comment/batch';
+import { ManualPostUI } from '@/features/manual-post';
+import { PageLayout } from '@/shared/ui';
 
 export default function BatchPage() {
   return (
-    <div className={cn('min-h-screen relative overflow-hidden bg-[var(--surface)]')}>
-      <div
+    <PageLayout
+      title="배치 자동 포스팅"
+      subtitle="Full Automation"
+      description="여러 키워드 입력 → 계정 로테이션 글 작성 → 자동 댓글 + 대댓글"
+    >
+      <section
         className={cn(
-          'pointer-events-none absolute -top-24 right-[-10%] h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_65%)] blur-3xl opacity-80'
+          'relative overflow-hidden rounded-[32px] border border-(--border) bg-white/70 p-6 shadow-[0_18px_40px_-28px_rgba(32,24,18,0.6)] backdrop-blur'
         )}
-      />
-      <div
-        className={cn(
-          'pointer-events-none absolute bottom-[-25%] left-[-10%] h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle_at_center,var(--teal-soft),transparent_70%)] blur-3xl opacity-70'
-        )}
-      />
-
-      <header className={cn('relative z-10')}>
+      >
         <div
           className={cn(
-            'max-w-6xl mx-auto px-6 lg:px-10 py-6 flex flex-wrap items-center justify-between gap-4'
+            'pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-(--accent-soft)/80 blur-3xl'
           )}
-        >
-          <div className={cn('flex items-center gap-3')}>
-            <Link href="/" className={cn('flex items-center gap-3')}>
-              <div
-                className={cn(
-                  'h-11 w-11 rounded-2xl bg-[var(--accent)] text-white flex items-center justify-center font-semibold'
-                )}
-              >
-                CB
-              </div>
-              <div className={cn('space-y-1')}>
-                <p
+        />
+        <div
+          className={cn(
+            'pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-(--teal-soft)/80 blur-3xl'
+          )}
+        />
+        <div className={cn('relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr]')}>
+          <div className={cn('space-y-4')}>
+            <p
+              className={cn(
+                'text-xs uppercase tracking-[0.28em] text-(--ink-muted)'
+              )}
+            >
+              Batch Flow
+            </p>
+            <div className={cn('space-y-2')}>
+              <h2 className={cn('text-2xl font-semibold text-(--ink)')}>
+                오늘 배치 흐름을 한 장으로
+              </h2>
+              <p className={cn('text-sm text-(--ink-muted) leading-relaxed')}>
+                키워드 수급부터 계정 로테이션, 댓글 체인까지 한 번에 묶습니다. 아래 순서대로
+                진행하면 큐가 안정적으로 돌아갑니다.
+              </p>
+            </div>
+            <div className={cn('flex flex-wrap gap-2')}>
+              {['키워드 생성', '배치 입력', '댓글 체인', '상태 모니터링'].map((label) => (
+                <span
+                  key={label}
                   className={cn(
-                    'text-[10px] uppercase tracking-[0.35em] text-[color:var(--ink-muted)]'
+                    'rounded-full border border-(--border) bg-white/70 px-3 py-1 text-xs text-(--ink-muted)'
                   )}
                 >
-                  Batch Mode
-                </p>
-                <p className={cn('font-[var(--font-display)] text-lg leading-none')}>
-                  Cafe Bot
-                </p>
-              </div>
-            </Link>
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
+          <div
+            className={cn(
+              'rounded-2xl border border-(--border) bg-(--surface-muted)/80 p-4'
+            )}
+          >
+            <p className={cn('text-sm font-semibold text-(--ink) mb-3')}>
+              빠른 체크
+            </p>
+            <ul className={cn('space-y-2 text-xs text-(--ink-muted)')}>
+              <li>• 계정 로그인 상태 확인</li>
+              <li>• 금일 발행 제한 수치 확인</li>
+              <li>• 큐 지연 로그 점검</li>
+            </ul>
+            <div className={cn('mt-4 rounded-xl bg-white/70 px-3 py-2 text-xs')}>
+              <p className={cn('text-(--ink-muted)')}>
+                준비되면 아래 1단계부터 시작합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          <nav className={cn('flex items-center gap-4')}>
-            <Link
-              href="/"
-              className={cn(
-                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
-              )}
-            >
-              기본 발행
-            </Link>
-            <Link
-              href="/auto"
-              className={cn(
-                'text-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
-              )}
-            >
-              자동 댓글 (Legacy)
-            </Link>
+      <section className={cn('mt-10 grid gap-8 lg:grid-cols-2')}>
+        <div
+          className={cn(
+            'rounded-3xl border border-(--border) bg-white/80 p-6 shadow-[0_16px_40px_-30px_rgba(27,25,21,0.6)] backdrop-blur'
+          )}
+        >
+          <div className={cn('mb-5 flex items-start justify-between')}>
+            <div>
+              <p
+                className={cn(
+                  'text-xs uppercase tracking-[0.25em] text-(--ink-muted)'
+                )}
+              >
+                Keyword Studio
+              </p>
+              <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>
+                키워드 생성
+              </h3>
+            </div>
             <span
               className={cn(
-                'text-sm font-semibold text-[color:var(--ink)] border-b-2 border-[var(--accent)]'
+                'rounded-full bg-(--accent-soft) px-3 py-1 text-xs font-semibold text-(--accent-strong)'
               )}
             >
-              배치 모드
+              Step 01
             </span>
-          </nav>
-        </div>
-      </header>
-
-      <main className={cn('relative z-10 max-w-6xl mx-auto px-6 lg:px-10 py-10 lg:py-16')}>
-        <div className={cn('mb-8 space-y-2')}>
-          <p
-            className={cn(
-              'text-xs uppercase tracking-[0.4em] text-[color:var(--ink-muted)]'
-            )}
-          >
-            Full Automation
-          </p>
-          <h1
-            className={cn(
-              'font-[var(--font-display)] text-3xl sm:text-4xl leading-tight text-[color:var(--ink)]'
-            )}
-          >
-            배치 자동 포스팅
-          </h1>
-          <p className={cn('text-base text-[color:var(--ink-muted)] max-w-xl')}>
-            여러 키워드 입력 → 계정 로테이션 글 작성 → 자동 댓글 + 대댓글
-          </p>
-        </div>
-
-        <div className={cn('grid gap-8 lg:grid-cols-2')}>
-          <div
-            className={cn(
-              'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
-            )}
-          >
-            <AccountListUI />
           </div>
-          <div
-            className={cn(
-              'rounded-3xl border border-white/80 bg-white/70 backdrop-blur-xl p-6 shadow-lg'
-            )}
-          >
-            <BatchUI />
-          </div>
+          <KeywordGeneratorUI />
         </div>
 
         <div
           className={cn(
-            'mt-10 rounded-2xl border border-[color:var(--border)] bg-[color:var(--accent-soft)]/70 p-6'
+            'rounded-3xl border border-(--border) bg-white/80 p-6 shadow-[0_16px_40px_-30px_rgba(27,25,21,0.6)] backdrop-blur'
           )}
         >
-          <h3 className={cn('font-semibold text-[color:var(--accent-strong)] mb-2')}>
+          <div className={cn('mb-5 flex items-start justify-between')}>
+            <div>
+              <p
+                className={cn(
+                  'text-xs uppercase tracking-[0.25em] text-(--ink-muted)'
+                )}
+              >
+                Batch Console
+              </p>
+              <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>
+                배치 실행
+              </h3>
+            </div>
+            <span
+              className={cn(
+                'rounded-full bg-(--teal-soft) px-3 py-1 text-xs font-semibold text-(--teal)'
+              )}
+            >
+              Step 02
+            </span>
+          </div>
+          <BatchUI />
+        </div>
+      </section>
+
+      <section
+        className={cn(
+          'mt-8 rounded-3xl border border-(--border) bg-white/80 p-6 shadow-[0_16px_40px_-30px_rgba(27,25,21,0.6)] backdrop-blur'
+        )}
+      >
+        <div className={cn('mb-4 flex items-center justify-between')}>
+          <div>
+            <p className={cn('text-xs uppercase tracking-[0.25em] text-(--ink-muted)')}>
+              Queue Radar
+            </p>
+            <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>
+              큐 상태 모니터
+            </h3>
+          </div>
+          <span
+            className={cn(
+              'rounded-full border border-(--border) bg-white/70 px-3 py-1 text-xs text-(--ink-muted)'
+            )}
+          >
+            Live
+          </span>
+        </div>
+        <QueueStatusUI />
+      </section>
+
+      <section
+        className={cn(
+          'mt-8 rounded-3xl border border-(--border) bg-white/80 p-6 shadow-[0_16px_40px_-30px_rgba(27,25,21,0.6)] backdrop-blur'
+        )}
+      >
+        <div className={cn('mb-5 flex items-start justify-between')}>
+          <div>
+            <p className={cn('text-xs uppercase tracking-[0.25em] text-(--ink-muted)')}>
+              Manual Studio
+            </p>
+            <h3 className={cn('text-lg font-semibold text-(--ink) mt-1')}>
+              수동 원고 발행/수정
+            </h3>
+          </div>
+          <span
+            className={cn(
+              'rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'
+            )}
+          >
+            Drag & Drop
+          </span>
+        </div>
+        <ManualPostUI />
+      </section>
+
+      <section className={cn('mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]')}>
+        <div
+          className={cn(
+            'rounded-2xl border border-(--border) bg-(--accent-soft)/70 p-6'
+          )}
+        >
+          <h3 className={cn('font-semibold text-(--accent-strong) mb-3')}>
             배치 모드 사용법
           </h3>
           <ol
             className={cn(
-              'text-sm text-[color:var(--ink-muted)] space-y-1 list-decimal list-inside'
+              'text-sm text-(--ink-muted) space-y-2 list-decimal list-inside'
             )}
           >
-            <li>좌측에서 계정들 &quot;로그인&quot; 버튼으로 Playwright 세션 생성</li>
-            <li>우측에서 서비스 입력 (예: 여행, 맛집)</li>
-            <li>키워드 목록 입력 (한 줄에 하나씩)</li>
-            <li>&quot;배치 실행&quot; 버튼 클릭</li>
+            <li>좌측 키워드 생성기로 AI가 키워드 생성</li>
+            <li>&quot;카테고리 포함 복사&quot; 버튼 클릭</li>
+            <li>우측 배치 입력창에 붙여넣기</li>
+            <li>&quot;배치 발행&quot; 또는 &quot;배치 수정&quot; 버튼 클릭</li>
           </ol>
-          <div className={cn('mt-4 p-3 rounded-xl bg-white/50 text-xs text-[color:var(--ink-muted)]')}>
-            <p className={cn('font-semibold mb-1')}>작동 방식:</p>
-            <ul className={cn('space-y-0.5')}>
-              <li>• 키워드1: 계정A 글 작성 → B,C,D 댓글 → 대댓글 체인</li>
-              <li>• 키워드2: 계정B 글 작성 → A,C,D 댓글 → 대댓글 체인</li>
-              <li>• 키워드3: 계정C 글 작성 → A,B,D 댓글 → 대댓글 체인</li>
-              <li>• ... (계정 로테이션)</li>
-            </ul>
+          <div className={cn('mt-4 rounded-xl bg-white/70 p-3 text-xs text-(--ink-muted)')}>
+            <p className={cn('font-semibold text-(--ink) mb-1')}>바로가기</p>
+            <p>
+              계정 로그인은{' '}
+              <Link
+                href="/accounts"
+                className={cn('text-(--accent-strong) underline underline-offset-4')}
+              >
+                계정 관리
+              </Link>{' '}
+              페이지에서 진행합니다.
+            </p>
           </div>
         </div>
-      </main>
-    </div>
+
+        <div
+          className={cn(
+            'rounded-2xl border border-(--border) bg-white/80 p-6'
+          )}
+        >
+          <h3 className={cn('font-semibold text-(--ink) mb-3')}>
+            계정 로테이션 로직
+          </h3>
+          <ul className={cn('text-sm text-(--ink-muted) space-y-2')}>
+            <li>• 키워드1: 계정A 글 작성 → B,C,D 댓글 → 대댓글 체인</li>
+            <li>• 키워드2: 계정B 글 작성 → A,C,D 댓글 → 대댓글 체인</li>
+            <li>• 키워드3: 계정C 글 작성 → A,B,D 댓글 → 대댓글 체인</li>
+            <li>• 반복 진행, 계정 부하 분산</li>
+          </ul>
+          <div className={cn('mt-4 rounded-xl border border-(--border) bg-(--surface-muted) p-3 text-xs text-(--ink-muted)')}>
+            <p>하루 기준으로 로테이션 순서를 유지하면 차단 위험이 줄어듭니다.</p>
+          </div>
+        </div>
+      </section>
+    </PageLayout>
   );
 }

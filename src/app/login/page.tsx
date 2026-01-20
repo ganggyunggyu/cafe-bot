@@ -23,44 +23,44 @@ export default function LoginPage() {
         <section className={cn('flex-1 space-y-6')}>
           <p
             className={cn(
-              'text-xs uppercase tracking-[0.4em] text-[color:var(--ink-muted)]'
+              'text-xs uppercase tracking-[0.4em] text-(--ink-muted)'
             )}
           >
             Naver Cafe Publishing
           </p>
           <h1
             className={cn(
-              'font-[var(--font-display)] text-4xl sm:text-5xl leading-tight text-[color:var(--ink)]'
+              'font-(--font-display) text-4xl sm:text-5xl leading-tight text-(--ink)'
             )}
           >
             로그인만 하면 바로 자동 발행 준비 완료.
           </h1>
-          <p className={cn('text-base sm:text-lg text-[color:var(--ink-muted)] max-w-lg')}>
+          <p className={cn('text-base sm:text-lg text-(--ink-muted) max-w-lg')}>
             네이버 계정 인증을 마치면 원고 생성과 게시까지 한 번에 이어져. 발행
             작업 흐름을 단단하게 고정해두자.
           </p>
           <div className={cn('grid gap-3 sm:grid-cols-2')}>
             <div
               className={cn(
-                'rounded-2xl border border-[color:var(--border)] bg-white/60 p-4 shadow-sm'
+                'rounded-2xl border border-(--border) bg-white/60 p-4 shadow-sm'
               )}
             >
-              <p className={cn('text-sm font-semibold text-[color:var(--ink)]')}>
+              <p className={cn('text-sm font-semibold text-(--ink)')}>
                 안전한 OAuth 인증
               </p>
-              <p className={cn('mt-1 text-xs text-[color:var(--ink-muted)]')}>
+              <p className={cn('mt-1 text-xs text-(--ink-muted)')}>
                 토큰 기반으로 세션 관리.
               </p>
             </div>
             <div
               className={cn(
-                'rounded-2xl border border-[color:var(--border)] bg-white/60 p-4 shadow-sm'
+                'rounded-2xl border border-(--border) bg-white/60 p-4 shadow-sm'
               )}
             >
-              <p className={cn('text-sm font-semibold text-[color:var(--ink)]')}>
+              <p className={cn('text-sm font-semibold text-(--ink)')}>
                 발행 대기 없음
               </p>
-              <p className={cn('mt-1 text-xs text-[color:var(--ink-muted)]')}>
+              <p className={cn('mt-1 text-xs text-(--ink-muted)')}>
                 로그인 후 즉시 발행 시작.
               </p>
             </div>
@@ -76,19 +76,19 @@ export default function LoginPage() {
             <div className={cn('space-y-2')}>
               <p
                 className={cn(
-                  'text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]'
+                  'text-xs uppercase tracking-[0.3em] text-(--ink-muted)'
                 )}
               >
                 Sign In
               </p>
               <h2
                 className={cn(
-                  'font-[var(--font-display)] text-2xl text-[color:var(--ink)]'
+                  'font-(--font-display) text-2xl text-(--ink)'
                 )}
               >
                 네이버 로그인
               </h2>
-              <p className={cn('text-sm text-[color:var(--ink-muted)]')}>
+              <p className={cn('text-sm text-(--ink-muted)')}>
                 네이버 계정으로 로그인해서 자동 글쓰기 기능을 바로 써봐.
               </p>
             </div>
@@ -102,13 +102,13 @@ export default function LoginPage() {
                 type="submit"
                 className={cn(
                   'w-full rounded-2xl px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
-                  'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]'
+                  'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)'
                 )}
               >
                 네이버로 로그인
               </button>
             </form>
-            <p className={cn('text-xs text-[color:var(--ink-muted)]')}>
+            <p className={cn('text-xs text-(--ink-muted)')}>
               인증 완료 후 홈으로 이동한다.
             </p>
           </div>

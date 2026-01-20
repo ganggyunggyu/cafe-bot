@@ -1,0 +1,62 @@
+[
+  {
+    "_id": {
+      "$oid": "69671ca6acc0691280ff56f0"
+    },
+    "accountId": "ggg8019",
+    "password": "12Qwaszx!@",
+    "nickname": "테스트5",
+    "personaId": "pregnant",
+    "isMain": true,
+    "dailyPostLimit": 6,
+    "activityHours": {
+      "start": 7,
+      "end": 24
+    },
+    "isActive": true,
+    "restDays": [],
+    "updatedAt": {
+      "$date": "2026-01-14T08:00:41.842Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69671ca6acc0691280ff56ef"
+    },
+    "accountId": "qwzx16",
+    "password": "12Qwaszx!@",
+    "nickname": "테스트4",
+    "personaId": "naver_cafe",
+    "isMain": false,
+    "dailyPostLimit": 4,
+    "activityHours": {
+      "start": 10,
+      "end": 23
+    },
+    "isActive": true,
+    "restDays": [],
+    "updatedAt": {
+      "$date": "2026-01-15T01:23:08.482Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "69671ca6acc0691280ff56ee"
+    },
+    "accountId": "akepzkthf12",
+    "password": "12qwaszx",
+    "nickname": "테스트2",
+    "personaId": "tmi",
+    "isMain": false,
+    "dailyPostLimit": 5,
+    "activityHours": {
+      "start": 9,
+      "end": 24
+    },
+    "isActive": true,
+    "restDays": [],
+    "updatedAt": {
+      "$date": "2026-01-14T09:11:25.350Z"
+    }
+  }
+]

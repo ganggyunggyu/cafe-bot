@@ -30,7 +30,7 @@ interface AutoPostFormProps {
   onSubmit: () => void;
 }
 
-export function AutoPostForm({
+export const AutoPostForm = ({
   mode,
   postInput,
   articleId,
@@ -44,27 +44,27 @@ export function AutoPostForm({
   onRemoveComment,
   onUpdateComment,
   onSubmit,
-}: AutoPostFormProps) {
+}: AutoPostFormProps) => {
   const sectionClassName = cn(
-    'rounded-2xl border border-[color:var(--border)] bg-white/70 p-4 shadow-sm'
+    'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
   );
   const inputClassName = cn(
-    'w-full rounded-xl border border-[color:var(--border)] bg-white/80 px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] shadow-sm transition focus:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]'
+    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
   const tabClassName = (active: boolean) =>
     cn(
       'rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition',
       active
         ? 'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] text-white shadow-[0_12px_30px_rgba(216,92,47,0.35)]'
-        : 'border border-[color:var(--border)] bg-white/70 text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
+        : 'border border-(--border) bg-white/70 text-(--ink-muted) hover:text-(--ink)'
     );
   const addButtonClassName = cn(
     'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(31,111,103,0.35)] transition',
-    'bg-[var(--teal)] hover:brightness-105'
+    'bg-(--teal) hover:brightness-105'
   );
   const deleteButtonClassName = cn(
     'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(181,65,50,0.35)] transition',
-    'bg-[var(--danger)] hover:brightness-105'
+    'bg-(--danger) hover:brightness-105'
   );
   const submitButtonClassName = cn(
     'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
@@ -78,12 +78,12 @@ export function AutoPostForm({
       <div className={cn('space-y-2')}>
         <p
           className={cn(
-            'text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]'
+            'text-xs uppercase tracking-[0.3em] text-(--ink-muted)'
           )}
         >
           Auto Posting
         </p>
-        <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
           자동 포스팅
         </h2>
       </div>
@@ -107,7 +107,7 @@ export function AutoPostForm({
 
       {mode === 'new' ? (
         <div className={sectionClassName}>
-          <h3 className={cn('text-sm font-semibold text-[color:var(--ink)] mb-3')}>
+          <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>
             글 작성 정보
           </h3>
           <div className={cn('flex flex-col gap-2')}>
@@ -151,7 +151,7 @@ export function AutoPostForm({
         </div>
       ) : (
         <div className={sectionClassName}>
-          <h3 className={cn('text-sm font-semibold text-[color:var(--ink)] mb-3')}>
+          <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>
             게시글 ID
           </h3>
           <input
@@ -166,7 +166,7 @@ export function AutoPostForm({
 
       <div className={sectionClassName}>
         <div className={cn('flex flex-wrap justify-between items-center gap-3 mb-3')}>
-          <h3 className={cn('text-sm font-semibold text-[color:var(--ink)]')}>
+          <h3 className={cn('text-sm font-semibold text-(--ink)')}>
             댓글 목록 (계정 순서대로 작성됨)
           </h3>
           <button
@@ -180,7 +180,7 @@ export function AutoPostForm({
         <div className={cn('space-y-2')}>
           {comments.map((comment, index) => (
             <div key={index} className={cn('flex flex-col gap-2 sm:flex-row')}>
-              <span className={cn('py-2 text-xs text-[color:var(--ink-muted)] w-8')}>
+              <span className={cn('py-2 text-xs text-(--ink-muted) w-8')}>
                 {index + 1}.
               </span>
               <textarea
@@ -218,8 +218,8 @@ export function AutoPostForm({
           className={cn(
             'rounded-2xl border px-4 py-3 text-sm',
             result.type === 'success'
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)] text-[color:var(--success)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)] text-[color:var(--danger)]'
+              ? 'border-(--success) bg-(--success-soft) text-(--success)'
+              : 'border-(--danger) bg-(--danger-soft) text-(--danger)'
           )}
         >
           <p className={cn('font-semibold')}>{result.message}</p>
@@ -234,4 +234,4 @@ export function AutoPostForm({
       ) : null}
     </div>
   );
-}
+};

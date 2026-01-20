@@ -13,7 +13,7 @@ import type { NaverAccount } from '@/shared/lib/account-manager';
 import { AccountManagerForm } from './account-manager-form';
 import { AccountManagerList } from './account-manager-list';
 
-export function AccountManagerUI() {
+export const AccountManagerUI = () => {
   const [accounts, setAccounts] = useState<NaverAccount[]>([]);
   const [isPending, startTransition] = useTransition();
   const [newAccount, setNewAccount] = useState({ id: '', password: '', nickname: '' });
@@ -36,7 +36,7 @@ export function AccountManagerUI() {
     const { id, password, nickname } = newAccount;
 
     if (!id || !password) {
-      setMessage({ type: 'error', text: 'ID와 비밀번호를 입력해줘.' });
+      setMessage({ type: 'error', text: 'ID와 비밀번호를 입력해주세요.' });
       return;
     }
 
@@ -50,7 +50,7 @@ export function AccountManagerUI() {
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
         setNewAccount({ id: '', password: '', nickname: '' });
-        setMessage({ type: 'success', text: '계정이 추가됐어.' });
+        setMessage({ type: 'success', text: '계정이 추가되었습니다.' });
       } else {
         setMessage({ type: 'error', text: result.error || '추가 실패' });
       }
@@ -62,7 +62,7 @@ export function AccountManagerUI() {
       const result = await removeAccountAction(id);
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
-        setMessage({ type: 'success', text: '계정이 삭제됐어.' });
+        setMessage({ type: 'success', text: '계정이 삭제되었습니다.' });
       }
     });
   };
@@ -72,7 +72,7 @@ export function AccountManagerUI() {
       const result = await setMainAccountAction(id);
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
-        setMessage({ type: 'success', text: '메인 계정이 설정됐어.' });
+        setMessage({ type: 'success', text: '메인 계정이 설정되었습니다.' });
       }
     });
   };
@@ -101,12 +101,12 @@ export function AccountManagerUI() {
       <div className={cn('space-y-2')}>
         <p
           className={cn(
-            'text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]'
+            'text-xs uppercase tracking-[0.3em] text-(--ink-muted)'
           )}
         >
           Account Desk
         </p>
-        <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
           계정 관리
         </h2>
       </div>
@@ -116,8 +116,8 @@ export function AccountManagerUI() {
           className={cn(
             'rounded-2xl border px-4 py-3 text-sm',
             message.type === 'success'
-              ? 'border-[color:var(--success)] bg-[color:var(--success-soft)] text-[color:var(--success)]'
-              : 'border-[color:var(--danger)] bg-[color:var(--danger-soft)] text-[color:var(--danger)]'
+              ? 'border-(--success) bg-(--success-soft) text-(--success)'
+              : 'border-(--danger) bg-(--danger-soft) text-(--danger)'
           )}
         >
           {message.text}
@@ -142,4 +142,4 @@ export function AccountManagerUI() {
       />
     </div>
   );
-}
+};

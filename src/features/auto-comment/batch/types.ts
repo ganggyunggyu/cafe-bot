@@ -1,15 +1,18 @@
 import type { NaverAccount } from '@/shared/lib/account-manager';
 
-// 배치 작업 입력
 export interface BatchJobInput {
   service: string;
   keywords: string[];
   ref?: string;
+  cafeId?: string;
   commentTemplates?: string[];
   replyTemplates?: string[];
+  postOptions?: PostOptions;
+  skipComments?: boolean;
+  contentPrompt?: string;
+  contentModel?: string;
 }
 
-// 글 작성 결과
 export interface PostResult {
   success: boolean;
   articleId?: number;
@@ -18,7 +21,6 @@ export interface PostResult {
   error?: string;
 }
 
-// 댓글 결과
 export interface CommentResult {
   accountId: string;
   success: boolean;
@@ -26,15 +28,14 @@ export interface CommentResult {
   error?: string;
 }
 
-// 대댓글 결과
 export interface ReplyResult {
   accountId: string;
   success: boolean;
   targetCommentIndex: number;
+  isAuthor?: boolean;
   error?: string;
 }
 
-// 키워드별 결과
 export interface KeywordResult {
   keyword: string;
   post: PostResult;
@@ -42,7 +43,6 @@ export interface KeywordResult {
   replies: ReplyResult[];
 }
 
-// 전체 배치 결과
 export interface BatchJobResult {
   success: boolean;
   totalKeywords: number;
@@ -52,7 +52,26 @@ export interface BatchJobResult {
   jobLogId?: string;
 }
 
-// 딜레이 설정
+export interface PostOptions {
+  allowComment: boolean;
+  allowScrap: boolean;
+  allowCopy: boolean;
+  useAutoSource: boolean;
+  useCcl: boolean;
+  cclCommercial: 'allow' | 'disallow';
+  cclModify: 'allow' | 'same' | 'disallow';
+}
+
+export const DEFAULT_POST_OPTIONS: PostOptions = {
+  allowComment: true,
+  allowScrap: true,
+  allowCopy: false,
+  useAutoSource: false,
+  useCcl: false,
+  cclCommercial: 'disallow',
+  cclModify: 'disallow',
+};
+
 export interface DelayConfig {
   afterPost: number;
   betweenComments: number;
@@ -61,25 +80,23 @@ export interface DelayConfig {
   betweenKeywords: number;
 }
 
-// 기본 딜레이 값 (ms)
+// DB 설정과 동기화 - queue-settings.ts의 DEFAULT_QUEUE_SETTINGS 참조
+// betweenPosts: 30초~1분, betweenComments: 3~10초, afterPost: 5~15초
 export const DEFAULT_DELAYS: DelayConfig = {
-  afterPost: 5000,
-  betweenComments: 4000,
-  beforeReplies: 10000,
-  betweenReplies: 4000,
-  betweenKeywords: 30000,
+  afterPost: 10 * 1000, // 10초 (5~15초 중간값)
+  betweenComments: 5 * 1000, // 5초 (3~10초 중간값)
+  beforeReplies: 10 * 1000, // 10초
+  betweenReplies: 10 * 1000, // 10초
+  betweenKeywords: 45 * 1000, // 45초 (30초~1분 중간값)
 };
 
-// 대댓글 전략
 export type ReplyStrategy = 'rotation' | 'random' | 'all-to-first';
 
-// 배치 작업 옵션
 export interface BatchJobOptions {
   delays?: Partial<DelayConfig>;
   replyStrategy?: ReplyStrategy;
 }
 
-// 진행 상황 콜백
 export interface BatchProgress {
   currentKeyword: string;
   keywordIndex: number;
@@ -90,17 +107,27 @@ export interface BatchProgress {
 
 export type ProgressCallback = (progress: BatchProgress) => void;
 
-// 계정 로테이션 헬퍼
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export const getWriterAccount = (
   accounts: NaverAccount[],
-  keywordIndex: number
+  _keywordIndex: number
 ): NaverAccount => {
-  return accounts[keywordIndex % accounts.length];
-}
+  const randomIndex = Math.floor(Math.random() * accounts.length);
+  return accounts[randomIndex];
+};
 
 export const getCommenterAccounts = (
   accounts: NaverAccount[],
   writerAccountId: string
 ): NaverAccount[] => {
-  return accounts.filter((a) => a.id !== writerAccountId);
-}
+  const commenters = accounts.filter((a) => a.id !== writerAccountId);
+  return shuffleArray(commenters);
+};

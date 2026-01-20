@@ -52,6 +52,7 @@ export interface GenerateContentRequest {
   service: string;
   keyword: string;
   ref?: string;
+  personaId?: string | null; // 페르소나 ID (null이면 랜덤)
 }
 
 export interface GenerateContentResponse {

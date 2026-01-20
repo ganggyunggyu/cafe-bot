@@ -1,13 +1,29 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getAllAccounts } from '@/shared/config/accounts';
+import { getAccountsAction } from '@/features/accounts/actions';
 import { loginAccountAction } from '../actions';
 
-export function AccountListUI() {
-  const accounts = getAllAccounts();
+interface AccountInfo {
+  id: string;
+  password: string;
+  nickname?: string;
+  isMain?: boolean;
+}
+
+export const AccountListUI = () => {
+  const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [isPending, startTransition] = useTransition();
+
+  // 계정 데이터 로딩
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const data = await getAccountsAction();
+      setAccounts(data);
+    };
+    loadAccounts();
+  }, []);
   const [loginStatus, setLoginStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -55,25 +71,28 @@ export function AccountListUI() {
   return (
     <div className={cn('space-y-4')}>
       <div className={cn('space-y-2')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-[color:var(--ink-muted)]')}>
+        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
           Accounts
         </p>
         <div className={cn('flex items-center justify-between')}>
-          <h2 className={cn('font-[var(--font-display)] text-xl text-[color:var(--ink)]')}>
+          <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
             등록된 계정 ({accounts.length}개)
           </h2>
           <button
             onClick={handleLoginAll}
             disabled={isPending}
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-semibold text-white transition',
-              'bg-[var(--teal)] hover:brightness-105',
+              'rounded-full px-3 py-1 text-xs font-semibold transition',
+              'border border-(--teal) text-(--teal) hover:bg-(--teal) hover:text-white',
               'disabled:cursor-not-allowed disabled:opacity-60'
             )}
           >
-            전체 로그인
+            로그인 테스트
           </button>
         </div>
+        <p className={cn('text-xs text-(--ink-muted)')}>
+          배치 실행 시 자동 로그인되므로 필수 아님
+        </p>
       </div>
 
       {message && (
@@ -94,25 +113,25 @@ export function AccountListUI() {
           <li
             key={account.id}
             className={cn(
-              'rounded-xl border border-[color:var(--border)] bg-white/70 px-4 py-3 flex items-center justify-between gap-3'
+              'rounded-xl border border-(--border) bg-white/70 px-4 py-3 flex items-center justify-between gap-3'
             )}
           >
             <div className={cn('flex items-center gap-3')}>
               <span
                 className={cn(
                   'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold',
-                  'bg-[var(--accent-soft)] text-[var(--accent)]'
+                  'bg-(--accent-soft) text-(--accent)'
                 )}
               >
                 {index + 1}
               </span>
               <div>
                 <div className={cn('flex items-center gap-2')}>
-                  <span className={cn('text-sm font-semibold text-[color:var(--ink)]')}>
+                  <span className={cn('text-sm font-semibold text-(--ink)')}>
                     {account.id}
                   </span>
                   {account.nickname && (
-                    <span className={cn('text-xs text-[color:var(--ink-muted)]')}>
+                    <span className={cn('text-xs text-(--ink-muted)')}>
                       ({account.nickname})
                     </span>
                   )}
@@ -124,16 +143,16 @@ export function AccountListUI() {
               onClick={() => handleLogin(account.id, account.password)}
               disabled={isPending || loginStatus[account.id] === 'loading'}
               className={cn(
-                'rounded-full px-3 py-1 text-xs font-semibold text-white transition',
-                'bg-[var(--teal)] hover:brightness-105',
+                'rounded-full px-2 py-1 text-xs font-medium transition',
+                'border border-gray-300 text-gray-600 hover:bg-gray-100',
                 'disabled:cursor-not-allowed disabled:opacity-60'
               )}
             >
-              로그인
+              테스트
             </button>
           </li>
         ))}
       </ul>
     </div>
   );
-}
+};
