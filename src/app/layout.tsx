@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { JetBrains_Mono } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { cn } from '@/shared/lib/cn';
+import { Providers } from '@/shared/providers';
 import './globals.css';
 
 const jetBrainsMono = JetBrains_Mono({
@@ -27,7 +29,19 @@ export default function RootLayout({
           'antialiased bg-(--background) text-(--foreground)'
         )}
       >
-        {children}
+        <Providers>{children}</Providers>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--ink)',
+            },
+          }}
+          richColors
+          closeButton
+        />
       </body>
     </html>
   );
