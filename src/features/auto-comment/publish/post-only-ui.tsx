@@ -17,8 +17,10 @@ import { runPostOnlyAction, getPostQueueStatusAction, type QueueBatchResult, typ
 
 export const PostOnlyUI = () => {
   const [isPending, startTransition] = useTransition();
-  const [cafes, setCafes] = useState<CafeConfig[]>([]);
-  const [selectedCafeId, setSelectedCafeId] = useState('');
+  const [cafes, setCafes] = useAtom(cafesAtom);
+  const [selectedCafeId, setSelectedCafeId] = useAtom(selectedCafeIdAtom);
+  const [cafesInitialized, setCafesInitialized] = useAtom(cafesInitializedAtom);
+  const selectedCafe = useAtom(selectedCafeAtom)[0];
   const [keywordsText, setKeywordsText] = useState('');
   const [ref, setRef] = useState('');
   const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
@@ -27,16 +29,17 @@ export const PostOnlyUI = () => {
   const [isPolling, setIsPolling] = useState(false);
 
   useEffect(() => {
+    if (cafesInitialized) return;
+
     const loadCafes = async () => {
       const data = await getCafesAction();
       setCafes(data);
       const defaultCafe = data.find((c) => c.isDefault) || data[0];
       if (defaultCafe) setSelectedCafeId(defaultCafe.cafeId);
+      setCafesInitialized(true);
     };
     loadCafes();
-  }, []);
-
-  const selectedCafe = cafes.find((c) => c.cafeId === selectedCafeId);
+  }, [cafesInitialized, setCafes, setSelectedCafeId, setCafesInitialized]);
 
   useEffect(() => {
     if (!isPolling) return;

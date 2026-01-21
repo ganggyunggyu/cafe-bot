@@ -6,9 +6,13 @@ import { cn } from '@/shared/lib/cn';
 import { Select, Button } from '@/shared/ui';
 import { runManualPublishAction, runManualModifyAction } from './manual-actions';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
-import { postOptionsAtom } from '@/entities/store';
+import {
+  postOptionsAtom,
+  cafesAtom,
+  selectedCafeIdAtom,
+  cafesInitializedAtom,
+} from '@/entities/store';
 import { getCafesAction } from '@/features/accounts/actions';
-import type { CafeConfig } from '@/entities/cafe';
 import type {
   ManuscriptFolder,
   ManualPublishResult,
@@ -124,8 +128,9 @@ export const ManualPostUI = () => {
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<Mode>('publish');
   const [manuscripts, setManuscripts] = useState<ManuscriptFolder[]>([]);
-  const [cafes, setCafes] = useState<CafeConfig[]>([]);
-  const [selectedCafeId, setSelectedCafeId] = useState('');
+  const [cafes, setCafes] = useAtom(cafesAtom);
+  const [selectedCafeId, setSelectedCafeId] = useAtom(selectedCafeIdAtom);
+  const [cafesInitialized, setCafesInitialized] = useAtom(cafesInitializedAtom);
   const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [sortOrder, setSortOrder] = useState<SortOrder>('oldest');
   const [daysLimit, setDaysLimit] = useState<number | undefined>(undefined);
@@ -142,6 +147,8 @@ export const ManualPostUI = () => {
   const labelClassName = cn('text-sm font-medium text-(--ink)');
 
   useEffect(() => {
+    if (cafesInitialized) return;
+
     const loadCafes = async () => {
       const data = await getCafesAction();
       setCafes(data);
@@ -149,9 +156,10 @@ export const ManualPostUI = () => {
       if (defaultCafe) {
         setSelectedCafeId(defaultCafe.cafeId);
       }
+      setCafesInitialized(true);
     };
     loadCafes();
-  }, []);
+  }, [cafesInitialized, setCafes, setSelectedCafeId, setCafesInitialized]);
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();

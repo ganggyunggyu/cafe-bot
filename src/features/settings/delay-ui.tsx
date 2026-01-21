@@ -114,7 +114,7 @@ export const DelaySettingsUI = () => {
           <RangeSlider
             label="글 사이 딜레이"
             min={10 * 1000}
-            max={5 * 60 * 1000}
+            max={30 * 60 * 1000}
             step={5 * 1000}
             minValue={settings.delays.betweenPosts.min}
             maxValue={settings.delays.betweenPosts.max}
