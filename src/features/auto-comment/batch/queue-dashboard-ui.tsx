@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
+import Link from 'next/link';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import {
   getDetailedJobs,
   getQueueSummary,
@@ -28,11 +29,11 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  delayed: 'bg-(--info-soft) text-(--info)',
-  waiting: 'bg-(--surface-muted) text-(--ink-muted)',
-  active: 'bg-(--warning-soft) text-(--warning)',
-  completed: 'bg-(--success-soft) text-(--success)',
-  failed: 'bg-(--danger-soft) text-(--danger)',
+  delayed: 'bg-info-soft text-info',
+  waiting: 'bg-surface-muted text-ink-muted',
+  active: 'bg-warning-soft text-warning',
+  completed: 'bg-success-soft text-success',
+  failed: 'bg-danger-soft text-danger',
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -99,8 +100,8 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
   };
 
   const selectClassName = cn(
-    'rounded-lg border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--ink)',
-    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
+    'rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink',
+    'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
   );
 
   return (
@@ -108,41 +109,33 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
       {/* 헤더 */}
       <div className={cn('flex items-center justify-between')}>
         <div>
-          <h2 className={cn('text-xl font-bold text-(--ink)')}>큐 대시보드</h2>
-          <p className={cn('text-sm text-(--ink-muted) mt-1')}>작업 상세 모니터링</p>
+          <h2 className={cn('text-xl font-bold text-ink')}>큐 대시보드</h2>
+          <p className={cn('text-sm text-ink-muted mt-1')}>작업 상세 모니터링</p>
         </div>
         <div className={cn('flex items-center gap-2')}>
-          <button
+          <Button
+            variant={isPolling ? 'teal' : 'ghost'}
+            size="sm"
             onClick={() => setIsPolling((p) => !p)}
-            className={cn(
-              'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-              isPolling
-                ? 'bg-(--success-soft) text-(--success)'
-                : 'bg-(--surface-muted) text-(--ink-muted)'
-            )}
           >
             {isPolling ? '자동 새로고침' : '새로고침 중지'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
             onClick={handleClearAll}
             disabled={isPending}
-            className={cn(
-              'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-              'bg-(--danger-soft) text-(--danger) hover:bg-(--danger)/10'
-            )}
           >
             전체 클리어
-          </button>
+          </Button>
           {onClose && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className={cn(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
-              )}
             >
               닫기
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -150,22 +143,22 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
       {/* 요약 카드 */}
       {summary && (
         <div className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-4')}>
-          <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-5')}>
-            <h3 className={cn('text-sm font-medium text-(--ink-muted) mb-4')}>전체 상태</h3>
+          <div className={cn('rounded-2xl border border-border-light bg-surface p-5')}>
+            <h3 className={cn('text-sm font-medium text-ink-muted mb-4')}>전체 상태</h3>
             <div className={cn('grid grid-cols-5 gap-2')}>
               {(['failed', 'active', 'delayed', 'waiting', 'completed'] as const).map((status) => (
                 <div key={status} className={cn('text-center')}>
-                  <div className={cn('text-xl font-bold text-(--ink)')}>
+                  <div className={cn('text-xl font-bold text-ink')}>
                     {summary.total[status]}
                   </div>
-                  <div className={cn('text-xs text-(--ink-muted)')}>{STATUS_LABELS[status]}</div>
+                  <div className={cn('text-xs text-ink-muted')}>{STATUS_LABELS[status]}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-5')}>
-            <h3 className={cn('text-sm font-medium text-(--ink-muted) mb-4')}>타입별 (대기중)</h3>
+          <div className={cn('rounded-2xl border border-border-light bg-surface p-5')}>
+            <h3 className={cn('text-sm font-medium text-ink-muted mb-4')}>타입별 (대기중)</h3>
             <div className={cn('flex gap-4')}>
               {(['post', 'comment', 'reply'] as const).map((type) => {
                 const pending =
@@ -174,40 +167,44 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
                   summary.byType[type].active;
                 return (
                   <div key={type} className={cn('flex-1 text-center')}>
-                    <div className={cn('text-xl font-bold text-(--ink)')}>{pending}</div>
-                    <div className={cn('text-xs text-(--ink-muted)')}>{TYPE_LABELS[type]}</div>
+                    <div className={cn('text-xl font-bold text-ink')}>{pending}</div>
+                    <div className={cn('text-xs text-ink-muted')}>{TYPE_LABELS[type]}</div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-5')}>
-            <h3 className={cn('text-sm font-medium text-(--ink-muted) mb-4')}>카페별 (대기중)</h3>
+          <div className={cn('rounded-2xl border border-border-light bg-surface p-5')}>
+            <h3 className={cn('text-sm font-medium text-ink-muted mb-4')}>카페별 (대기중)</h3>
             <div className={cn('space-y-2')}>
               {summary.byCafe.slice(0, 3).map((cafe) => (
                 <div key={cafe.cafeId} className={cn('flex justify-between text-sm')}>
-                  <span className={cn('text-(--ink) truncate flex-1')}>{cafe.cafeName}</span>
-                  <span className={cn('font-semibold text-(--ink)')}>{cafe.count}</span>
+                  <span className={cn('text-ink truncate flex-1')}>{cafe.cafeName}</span>
+                  <span className={cn('font-semibold text-ink')}>{cafe.count}</span>
                 </div>
               ))}
               {summary.byCafe.length === 0 && (
-                <p className={cn('text-sm text-(--ink-muted)')}>대기 중인 작업 없음</p>
+                <p className={cn('text-sm text-ink-muted')}>대기 중인 작업 없음</p>
               )}
             </div>
           </div>
 
-          <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-5')}>
-            <h3 className={cn('text-sm font-medium text-(--ink-muted) mb-4')}>계정별 (대기중)</h3>
+          <div className={cn('rounded-2xl border border-border-light bg-surface p-5')}>
+            <h3 className={cn('text-sm font-medium text-ink-muted mb-4')}>계정별 (대기중)</h3>
             <div className={cn('space-y-2')}>
               {summary.byAccount.slice(0, 3).map((acc) => (
-                <div key={acc.accountId} className={cn('flex justify-between text-sm')}>
-                  <span className={cn('text-(--ink) truncate flex-1')}>{acc.accountId}</span>
-                  <span className={cn('font-semibold text-(--ink)')}>{acc.count}</span>
-                </div>
+                <Link
+                  key={acc.accountId}
+                  href={`/queue/task_${acc.accountId}`}
+                  className={cn('flex justify-between text-sm hover:bg-surface-muted rounded-lg px-2 py-1 -mx-2 transition-colors')}
+                >
+                  <span className={cn('text-ink truncate flex-1')}>{acc.accountId}</span>
+                  <span className={cn('font-semibold text-ink')}>{acc.count}</span>
+                </Link>
               ))}
               {summary.byAccount.length === 0 && (
-                <p className={cn('text-sm text-(--ink-muted)')}>대기 중인 작업 없음</p>
+                <p className={cn('text-sm text-ink-muted')}>대기 중인 작업 없음</p>
               )}
             </div>
           </div>
@@ -215,7 +212,7 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
       )}
 
       {/* 필터 */}
-      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-4 flex flex-wrap gap-4 items-center')}>
+      <div className={cn('rounded-2xl border border-border-light bg-surface p-4 flex flex-wrap gap-4 items-center')}>
         <Select
           label="상태"
           value={filter.status || 'all'}
@@ -247,24 +244,24 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
         />
 
         {jobsData && (
-          <div className={cn('ml-auto text-sm text-(--ink-muted)')}>
+          <div className={cn('ml-auto text-sm text-ink-muted')}>
             총 {jobsData.total}건
           </div>
         )}
       </div>
 
       {/* Jobs 테이블 */}
-      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) overflow-hidden')}>
+      <div className={cn('rounded-2xl border border-border-light bg-surface overflow-hidden')}>
         <div className={cn('overflow-x-auto')}>
           <table className={cn('w-full text-sm')}>
             <thead>
-              <tr className={cn('border-b border-(--border-light) bg-(--surface-muted)')}>
-                <th className={cn('px-5 py-4 text-left font-medium text-(--ink-muted)')}>상태</th>
-                <th className={cn('px-5 py-4 text-left font-medium text-(--ink-muted)')}>타입</th>
-                <th className={cn('px-5 py-4 text-left font-medium text-(--ink-muted)')}>계정</th>
-                <th className={cn('px-5 py-4 text-left font-medium text-(--ink-muted)')}>카페</th>
-                <th className={cn('px-5 py-4 text-left font-medium text-(--ink-muted)')}>내용</th>
-                <th className={cn('px-5 py-4 text-left font-medium text-(--ink-muted)')}>예정/시간</th>
+              <tr className={cn('border-b border-border-light bg-surface-muted')}>
+                <th className={cn('px-5 py-4 text-left font-medium text-ink-muted')}>상태</th>
+                <th className={cn('px-5 py-4 text-left font-medium text-ink-muted')}>타입</th>
+                <th className={cn('px-5 py-4 text-left font-medium text-ink-muted')}>계정</th>
+                <th className={cn('px-5 py-4 text-left font-medium text-ink-muted')}>카페</th>
+                <th className={cn('px-5 py-4 text-left font-medium text-ink-muted')}>내용</th>
+                <th className={cn('px-5 py-4 text-left font-medium text-ink-muted')}>예정/시간</th>
               </tr>
             </thead>
             <tbody>
@@ -273,7 +270,7 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
               ))}
               {(!jobsData || jobsData.jobs.length === 0) && (
                 <tr>
-                  <td colSpan={6} className={cn('px-5 py-12 text-center text-(--ink-muted)')}>
+                  <td colSpan={6} className={cn('px-5 py-12 text-center text-ink-muted')}>
                     {isPending ? '로딩 중...' : '작업이 없습니다'}
                   </td>
                 </tr>
@@ -284,69 +281,57 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
 
         {/* 페이지네이션 */}
         {jobsData && jobsData.totalPages > 1 && (
-          <div className={cn('flex items-center justify-between border-t border-(--border-light) px-5 py-4')}>
-            <div className={cn('text-sm text-(--ink-muted)')}>
+          <div className={cn('flex items-center justify-between border-t border-border-light px-5 py-4')}>
+            <div className={cn('text-sm text-ink-muted')}>
               {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, jobsData.total)} / {jobsData.total}
             </div>
             <div className={cn('flex gap-1')}>
-              <button
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setPage(1)}
                 disabled={page === 1}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm transition-all',
-                  page === 1 ? 'text-(--ink-tertiary)' : 'text-(--ink-muted) hover:bg-(--surface-muted)'
-                )}
               >
                 ««
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm transition-all',
-                  page === 1 ? 'text-(--ink-tertiary)' : 'text-(--ink-muted) hover:bg-(--surface-muted)'
-                )}
               >
                 «
-              </button>
+              </Button>
               {Array.from({ length: Math.min(5, jobsData.totalPages) }, (_, i) => {
                 const pageNum = Math.max(1, Math.min(page - 2, jobsData.totalPages - 4)) + i;
                 if (pageNum > jobsData.totalPages) return null;
                 return (
-                  <button
+                  <Button
                     key={pageNum}
+                    variant={page === pageNum ? 'primary' : 'ghost'}
+                    size="xs"
                     onClick={() => setPage(pageNum)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                      page === pageNum
-                        ? 'bg-(--accent) text-white'
-                        : 'text-(--ink-muted) hover:bg-(--surface-muted)'
-                    )}
                   >
                     {pageNum}
-                  </button>
+                  </Button>
                 );
               })}
-              <button
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setPage((p) => Math.min(jobsData.totalPages, p + 1))}
                 disabled={page === jobsData.totalPages}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm transition-all',
-                  page === jobsData.totalPages ? 'text-(--ink-tertiary)' : 'text-(--ink-muted) hover:bg-(--surface-muted)'
-                )}
               >
                 »
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setPage(jobsData.totalPages)}
                 disabled={page === jobsData.totalPages}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm transition-all',
-                  page === jobsData.totalPages ? 'text-(--ink-tertiary)' : 'text-(--ink-muted) hover:bg-(--surface-muted)'
-                )}
               >
                 »»
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -360,21 +345,21 @@ const JobRow = ({ job }: { job: JobDetail }) => {
     if (job.type === 'post') {
       return (
         <div>
-          <div className={cn('font-medium text-(--ink) truncate max-w-[200px]')}>
+          <div className={cn('font-medium text-ink truncate max-w-50')}>
             {job.subject || job.keyword || '-'}
           </div>
           {job.keyword && job.subject && (
-            <div className={cn('text-xs text-(--ink-muted)')}>키워드: {job.keyword}</div>
+            <div className={cn('text-xs text-ink-muted')}>키워드: {job.keyword}</div>
           )}
         </div>
       );
     }
     return (
       <div>
-        <div className={cn('text-(--ink) truncate max-w-[200px]')} title={job.content}>
+        <div className={cn('text-ink truncate max-w-50')} title={job.content}>
           {job.content || '-'}
         </div>
-        <div className={cn('text-xs text-(--ink-muted)')}>
+        <div className={cn('text-xs text-ink-muted')}>
           #{job.articleId}
           {job.type === 'reply' && ` (댓글 ${job.commentIndex})`}
         </div>
@@ -385,22 +370,22 @@ const JobRow = ({ job }: { job: JobDetail }) => {
   const getTimeDisplay = () => {
     if (job.status === 'delayed' && job.delay) {
       return (
-        <div className={cn('text-(--info) font-medium')}>
+        <div className={cn('text-info font-medium')}>
           {formatDelay(job.delay)} 후
         </div>
       );
     }
     if (job.status === 'active') {
-      return <div className={cn('text-(--warning)')}>처리중...</div>;
+      return <div className={cn('text-warning')}>처리중...</div>;
     }
     if (job.finishedOn) {
-      return <div className={cn('text-(--ink-muted)')}>{formatTime(job.finishedOn)}</div>;
+      return <div className={cn('text-ink-muted')}>{formatTime(job.finishedOn)}</div>;
     }
-    return <div className={cn('text-(--ink-muted)')}>{formatTime(job.createdAt)}</div>;
+    return <div className={cn('text-ink-muted')}>{formatTime(job.createdAt)}</div>;
   };
 
   return (
-    <tr className={cn('border-b border-(--border-light) hover:bg-(--surface-muted) transition-all')}>
+    <tr className={cn('border-b border-border-light hover:bg-surface-muted transition-all')}>
       <td className={cn('px-5 py-4')}>
         <span className={cn('px-2.5 py-1 rounded-lg text-xs font-medium', STATUS_COLORS[job.status])}>
           {STATUS_LABELS[job.status]}
@@ -411,9 +396,16 @@ const JobRow = ({ job }: { job: JobDetail }) => {
           {TYPE_LABELS[job.type]}
         </span>
       </td>
-      <td className={cn('px-5 py-4 text-(--ink)')}>{job.accountId}</td>
-      <td className={cn('px-5 py-4 text-(--ink)')}>
-        <span className={cn('truncate max-w-[120px] block')} title={job.cafeName}>
+      <td className={cn('px-5 py-4')}>
+        <Link
+          href={`/queue/task_${job.accountId}`}
+          className={cn('text-ink hover:text-accent underline-offset-2 hover:underline transition-colors')}
+        >
+          {job.accountId}
+        </Link>
+      </td>
+      <td className={cn('px-5 py-4 text-ink')}>
+        <span className={cn('truncate max-w-30 block')} title={job.cafeName}>
           {job.cafeName || job.cafeId}
         </span>
       </td>
