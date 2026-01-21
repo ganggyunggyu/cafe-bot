@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button, Checkbox } from '@/shared/ui';
 import {
   getAccountsAction,
   addAccountAction,
@@ -312,26 +312,16 @@ export const AccountManagerUI = () => {
           <p className={cn('text-sm text-(--ink-muted) mt-1')}>{accounts.length}개 계정</p>
         </div>
         <div className={cn('flex gap-2')}>
-          <button
+          <Button
+            variant="secondary"
             onClick={handleMigrate}
             disabled={isPending}
-            className={cn(
-              'rounded-xl px-4 py-2.5 text-sm font-medium transition-all',
-              'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)',
-              'disabled:cursor-not-allowed disabled:opacity-50'
-            )}
           >
             설정 가져오기
-          </button>
-          <button
-            onClick={openAddForm}
-            className={cn(
-              'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
-              'bg-(--accent) text-white hover:bg-(--accent-hover)'
-            )}
-          >
+          </Button>
+          <Button onClick={openAddForm}>
             계정 추가
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -356,12 +346,13 @@ export const AccountManagerUI = () => {
             <h3 className={cn('text-base font-semibold text-(--ink)')}>
               {editingId ? '계정 수정' : '새 계정 추가'}
             </h3>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowForm(false)}
-              className={cn('text-sm text-(--ink-muted) hover:text-(--ink)')}
             >
               취소
-            </button>
+            </Button>
           </div>
 
           {/* 기본 정보 */}
@@ -427,19 +418,16 @@ export const AccountManagerUI = () => {
             <label className={labelClassName}>휴식 요일</label>
             <div className={cn('flex gap-2')}>
               {DAYS.map((day) => (
-                <button
+                <Button
                   key={day.value}
                   type="button"
+                  variant={formData.restDays.includes(day.value) ? 'primary' : 'ghost'}
+                  size="sm"
                   onClick={() => toggleRestDay(day.value)}
-                  className={cn(
-                    'w-10 h-10 rounded-xl text-sm font-medium transition-all',
-                    formData.restDays.includes(day.value)
-                      ? 'bg-(--accent) text-white'
-                      : 'bg-(--surface-muted) text-(--ink-muted) hover:bg-(--border-light)'
-                  )}
+                  className="w-10 h-10"
                 >
                   {day.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -468,30 +456,20 @@ export const AccountManagerUI = () => {
           </div>
 
           {/* 메인 계정 */}
-          <label className={cn('flex items-center gap-3 cursor-pointer')}>
-            <input
-              type="checkbox"
-              checked={formData.isMain}
-              onChange={(e) => setFormData((p) => ({ ...p, isMain: e.target.checked }))}
-              className={cn(
-                'w-5 h-5 rounded border-2 border-(--border)',
-                'checked:bg-(--accent) checked:border-(--accent)'
-              )}
-            />
-            <span className={cn('text-sm text-(--ink)')}>메인 계정으로 설정</span>
-          </label>
+          <Checkbox
+            label="메인 계정으로 설정"
+            checked={formData.isMain}
+            onChange={(e) => setFormData((p) => ({ ...p, isMain: e.target.checked }))}
+          />
 
-          <button
+          <Button
             onClick={handleSubmit}
             disabled={isPending}
-            className={cn(
-              'w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all',
-              'bg-(--accent) hover:bg-(--accent-hover)',
-              'disabled:cursor-not-allowed disabled:opacity-50'
-            )}
+            size="lg"
+            fullWidth
           >
             {editingId ? '수정' : '추가'}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -547,37 +525,29 @@ export const AccountManagerUI = () => {
                   </div>
                 </div>
                 <div className={cn('flex gap-2 shrink-0')}>
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => openEditForm(account)}
-                    className={cn(
-                      'rounded-lg px-3 py-2 text-sm font-medium transition-all',
-                      'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
-                    )}
                   >
                     편집
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => handleLogin(account.id, account.password)}
                     disabled={isPending || loginStatus[account.id] === 'loading'}
-                    className={cn(
-                      'rounded-lg px-3 py-2 text-sm font-medium transition-all',
-                      'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)',
-                      'disabled:cursor-not-allowed disabled:opacity-50'
-                    )}
                   >
                     테스트
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={() => handleDelete(account.id)}
                     disabled={isPending}
-                    className={cn(
-                      'rounded-lg px-3 py-2 text-sm font-medium transition-all',
-                      'border border-(--danger)/30 text-(--danger) hover:bg-(--danger-soft)',
-                      'disabled:cursor-not-allowed disabled:opacity-50'
-                    )}
                   >
                     삭제
-                  </button>
+                  </Button>
                 </div>
               </div>
             </li>

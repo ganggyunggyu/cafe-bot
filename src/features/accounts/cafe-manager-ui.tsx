@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Checkbox, Button } from '@/shared/ui';
 import {
   getCafesAction,
   addCafeAction,
@@ -58,6 +59,35 @@ const serializeCategoryMenuIds = (obj?: Record<string, string>): string => {
   return Object.entries(obj)
     .map(([cat, menuId]) => `${cat}:${menuId}`)
     .join(', ');
+};
+
+const parseCafeUrl = (url: string): { cafeUrl: string; cafeId: string } | null => {
+  try {
+    // https://cafe.naver.com/btaku?iframe_url=/MyCafeIntro.nhn%3Fclubid=31642514
+    const urlObj = new URL(url);
+
+    // cafe.naver.com/xxxxx 에서 xxxxx 추출
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+    const cafeUrl = pathParts[0] || '';
+
+    // clubid 파라미터 추출
+    let cafeId = '';
+    const iframeUrl = urlObj.searchParams.get('iframe_url');
+    if (iframeUrl) {
+      const decodedIframeUrl = decodeURIComponent(iframeUrl);
+      const clubidMatch = decodedIframeUrl.match(/clubid=(\d+)/);
+      if (clubidMatch) {
+        cafeId = clubidMatch[1];
+      }
+    }
+
+    if (cafeUrl && cafeId) {
+      return { cafeUrl, cafeId };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 };
 
 export const CafeManagerUI = () => {
@@ -163,15 +193,9 @@ export const CafeManagerUI = () => {
       <div className={cn('flex justify-between items-center')}>
         <h3 className={cn('text-lg font-semibold text-(--ink)')}>카페 관리</h3>
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className={cn(
-              'px-4 py-2 text-sm font-medium rounded-xl transition-all',
-              'bg-(--accent) text-white hover:bg-(--accent-hover)'
-            )}
-          >
+          <Button onClick={() => setShowForm(true)}>
             카페 추가
-          </button>
+          </Button>
         )}
       </div>
 
@@ -180,6 +204,26 @@ export const CafeManagerUI = () => {
           <div className={cn('text-base font-semibold text-(--ink)')}>
             {editingId ? '카페 수정' : '새 카페 추가'}
           </div>
+
+          {!editingId && (
+            <div className={cn('space-y-2')}>
+              <label className={labelClassName}>카페 링크로 자동 입력</label>
+              <input
+                type="text"
+                onChange={(e) => {
+                  const parsed = parseCafeUrl(e.target.value);
+                  if (parsed) {
+                    setForm({ ...form, cafeId: parsed.cafeId, cafeUrl: parsed.cafeUrl });
+                  }
+                }}
+                className={inputClassName}
+                placeholder="https://cafe.naver.com/btaku?iframe_url=/MyCafeIntro.nhn%3Fclubid=31642514"
+              />
+              <p className={helperClassName}>
+                카페 관리 페이지 URL을 붙여넣으면 카페 ID와 URL이 자동으로 입력됩니다
+              </p>
+            </div>
+          )}
 
           <div className={cn('grid grid-cols-2 gap-4')}>
             <div className={cn('space-y-2')}>
@@ -254,42 +298,28 @@ export const CafeManagerUI = () => {
             </p>
           </div>
 
-          <label className={cn('flex items-center gap-3 cursor-pointer')}>
-            <input
-              type="checkbox"
-              checked={form.isDefault}
-              onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-              className={cn(
-                'w-5 h-5 rounded border-2 border-(--border)',
-                'checked:bg-(--accent) checked:border-(--accent)',
-                'focus:ring-2 focus:ring-(--accent)/20'
-              )}
-            />
-            <span className={labelClassName}>기본 카페로 설정</span>
-          </label>
+          <Checkbox
+            label="기본 카페로 설정"
+            checked={form.isDefault}
+            onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
+          />
 
           <div className={cn('flex gap-3 pt-2')}>
-            <button
+            <Button
               onClick={handleSubmit}
               disabled={isPending}
-              className={cn(
-                'flex-1 rounded-xl py-3 text-sm font-semibold transition-all',
-                'bg-(--accent) text-white hover:bg-(--accent-hover)',
-                'disabled:opacity-50 disabled:cursor-not-allowed'
-              )}
+              isLoading={isPending}
+              className="flex-1"
             >
-              {isPending ? '저장 중...' : editingId ? '수정' : '추가'}
-            </button>
-            <button
+              {editingId ? '수정' : '추가'}
+            </Button>
+            <Button
+              variant="secondary"
               onClick={resetForm}
               disabled={isPending}
-              className={cn(
-                'rounded-xl px-6 py-3 text-sm font-medium transition-all',
-                'border border-(--border) text-(--ink) hover:bg-(--surface-muted)'
-              )}
             >
               취소
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -338,24 +368,20 @@ export const CafeManagerUI = () => {
                   </div>
                 </div>
                 <div className={cn('flex gap-2')}>
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={() => openEditForm(cafe)}
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
-                      'border border-(--border) text-(--ink) hover:bg-(--surface-muted)'
-                    )}
                   >
                     수정
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="xs"
                     onClick={() => handleDelete(cafe.cafeId)}
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
-                      'border border-(--danger)/30 text-(--danger) hover:bg-(--danger-soft)'
-                    )}
                   >
                     삭제
-                  </button>
+                  </Button>
                 </div>
               </div>
 

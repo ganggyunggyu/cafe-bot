@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/shared/lib/mongodb';
 import { Cafe } from '@/shared/models';
+import { getCurrentUserId } from '@/shared/config/user';
 
 export const GET = async () => {
   try {
     await connectDB();
-    const cafes = await Cafe.find({ isActive: true })
+    const userId = await getCurrentUserId();
+    const cafes = await Cafe.find({ userId, isActive: true })
       .sort({ isDefault: -1, createdAt: 1 })
       .select('cafeId name isDefault')
       .lean();
