@@ -98,7 +98,7 @@ const saveArticleOnly = async (
         replyCount: 0,
       });
 
-      await incrementTodayPostCount(writerAccountId);
+      await incrementTodayPostCount(writerAccountId, cafeId);
       console.log(`[WORKER] 원고 저장 완료 (글만 발행): #${articleId}`);
     }
   } catch (dbError) {
@@ -281,7 +281,7 @@ const handlePostSuccess = async (
         comments: [],
       });
 
-      await incrementTodayPostCount(writerAccountId);
+      await incrementTodayPostCount(writerAccountId, cafeId);
       console.log(`[WORKER] 원고 저장 완료: #${articleId}, _id=${created._id}`);
     } else {
       console.log(`[WORKER] MongoDB 미연결 - 원고 저장 스킵: #${articleId}`);

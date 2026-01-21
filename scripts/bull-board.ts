@@ -4,7 +4,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
-import { getAllAccounts } from '../src/shared/config/accounts';
+import { getAllAccountsForMonitoring } from '../src/shared/config/accounts';
 import { connectDB } from '../src/shared/lib/mongodb';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -17,7 +17,7 @@ async function main() {
     maxRetriesPerRequest: null,
   });
 
-  const accounts = await getAllAccounts();
+  const accounts = await getAllAccountsForMonitoring();
   const accountIds = accounts.map((a) => a.id);
 
   const queues: Queue[] = [];
