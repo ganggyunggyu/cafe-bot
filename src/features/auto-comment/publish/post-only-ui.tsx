@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
+import { useAtom } from 'jotai';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
-import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
+import {
+  postOptionsAtom,
+  cafesAtom,
+  selectedCafeIdAtom,
+  cafesInitializedAtom,
+  selectedCafeAtom,
+} from '@/entities/store';
 import { runPostOnlyAction, getPostQueueStatusAction, type QueueBatchResult, type QueueStatusResult } from './queue-actions';
-
-interface CafeConfig {
-  cafeId: string;
-  name: string;
-  categories: string[];
-  isDefault?: boolean;
-}
 
 export const PostOnlyUI = () => {
   const [isPending, startTransition] = useTransition();
@@ -21,7 +21,7 @@ export const PostOnlyUI = () => {
   const [selectedCafeId, setSelectedCafeId] = useState('');
   const [keywordsText, setKeywordsText] = useState('');
   const [ref, setRef] = useState('');
-  const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
+  const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [result, setResult] = useState<QueueBatchResult | null>(null);
   const [queueStatus, setQueueStatus] = useState<QueueStatusResult | null>(null);
   const [isPolling, setIsPolling] = useState(false);
@@ -124,17 +124,15 @@ export const PostOnlyUI = () => {
         </div>
       </div>
 
-      <button
+      <Button
         onClick={handleSubmit}
-        disabled={isPending || !keywordsText.trim()}
-        className={cn(
-          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-          'bg-(--accent) hover:bg-(--accent-hover)',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        disabled={!keywordsText.trim()}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {isPending ? '발행 중...' : '글만 발행'}
-      </button>
+        글만 발행
+      </Button>
 
       {result && (
         <div
@@ -164,15 +162,13 @@ export const PostOnlyUI = () => {
             <div className={cn('mt-4 space-y-3')}>
               <div className={cn('flex items-center justify-between')}>
                 <h4 className={cn('text-sm font-medium text-(--ink)')}>진행 상황</h4>
-                <button
+                <Button
+                  variant="secondary"
+                  size="xs"
                   onClick={() => setIsPolling(false)}
-                  className={cn(
-                    'text-xs px-3 py-1.5 rounded-lg font-medium transition-all',
-                    'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
-                  )}
                 >
                   폴링 중지
-                </button>
+                </Button>
               </div>
               {Object.entries(queueStatus).map(([accountId, status]) => {
                 const total = status.waiting + status.active + status.completed + status.failed;

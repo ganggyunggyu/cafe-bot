@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button, Checkbox } from '@/shared/ui';
 import { generateKeywords, type GeneratedKeyword } from '@/shared/api/keyword-gen-api';
 import { getCafesAction } from '@/features/accounts/actions';
 
@@ -38,12 +38,12 @@ export const KeywordGeneratorUI = () => {
   const categories = selectedCafe?.categories || [];
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
-    'placeholder:text-(--ink-tertiary) transition-all',
-    'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/10'
+    'w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink',
+    'placeholder:text-ink-tertiary transition-all',
+    'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
   );
 
-  const labelClassName = cn('text-sm font-medium text-(--ink)');
+  const labelClassName = cn('text-sm font-medium text-ink');
 
   const handleGenerate = () => {
     if (categories.length === 0) {
@@ -119,19 +119,11 @@ export const KeywordGeneratorUI = () => {
           />
         </div>
         <div className={cn('space-y-2 flex items-end pb-1')}>
-          <label className={cn('flex items-center gap-3 cursor-pointer')}>
-            <input
-              type="checkbox"
-              checked={shuffle}
-              onChange={(e) => setShuffle(e.target.checked)}
-              className={cn(
-                'w-5 h-5 rounded border-2 border-(--border)',
-                'checked:bg-(--accent) checked:border-(--accent)',
-                'focus:ring-2 focus:ring-(--accent)/20'
-              )}
-            />
-            <span className={labelClassName}>뒤죽박죽 섞기</span>
-          </label>
+          <Checkbox
+            label="뒤죽박죽 섞기"
+            checked={shuffle}
+            onChange={(e) => setShuffle(e.target.checked)}
+          />
         </div>
       </div>
 
@@ -146,56 +138,40 @@ export const KeywordGeneratorUI = () => {
         />
       </div>
 
-      <button
+      <Button
         onClick={handleGenerate}
-        disabled={isPending || categories.length === 0}
-        className={cn(
-          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-          'bg-(--accent) hover:bg-(--accent-hover)',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        disabled={categories.length === 0}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {isPending ? '생성 중...' : `키워드 ${count}개 생성`}
-      </button>
+        {`키워드 ${count}개 생성`}
+      </Button>
 
       {error && (
-        <div className={cn('rounded-xl border border-(--danger)/30 bg-(--danger-soft) px-4 py-3')}>
-          <p className={cn('text-sm text-(--danger)')}>{error}</p>
+        <div className={cn('rounded-xl border border-danger/30 bg-danger-soft px-4 py-3')}>
+          <p className={cn('text-sm text-danger')}>{error}</p>
         </div>
       )}
 
       {result && (
         <div className={cn('space-y-4')}>
           <div className={cn('flex items-center justify-between')}>
-            <h3 className={cn('text-base font-semibold text-(--ink)')}>
+            <h3 className={cn('text-base font-semibold text-ink')}>
               생성 결과 ({result.length}개)
             </h3>
             <div className={cn('flex gap-2')}>
-              <button
-                onClick={copyKeywordsOnly}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-xs font-medium transition-all',
-                  'border border-(--border) text-(--ink) hover:bg-(--surface-muted)'
-                )}
-              >
+              <Button variant="secondary" size="xs" onClick={copyKeywordsOnly}>
                 키워드만 복사
-              </button>
-              <button
-                onClick={copyToClipboard}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-xs font-medium transition-all',
-                  copied
-                    ? 'bg-(--success) text-white'
-                    : 'bg-(--accent) text-white hover:bg-(--accent-hover)'
-                )}
-              >
+              </Button>
+              <Button variant={copied ? 'teal' : 'primary'} size="xs" onClick={copyToClipboard}>
                 {copied ? '복사됨!' : '카테고리 포함 복사'}
-              </button>
+              </Button>
             </div>
           </div>
           <div
             className={cn(
-              'max-h-[300px] overflow-y-auto rounded-xl border border-(--border-light) bg-(--surface) p-4'
+              'max-h-[300px] overflow-y-auto rounded-xl border border-border-light bg-surface p-4'
             )}
           >
             <div className={cn('flex flex-wrap gap-2')}>
@@ -204,11 +180,11 @@ export const KeywordGeneratorUI = () => {
                   key={i}
                   className={cn(
                     'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs',
-                    'bg-(--surface-muted) border border-(--border-light)'
+                    'bg-surface-muted border border-border-light'
                   )}
                 >
-                  <span className={cn('text-(--ink)')}>{k.keyword}</span>
-                  <span className={cn('text-(--ink-muted)')}>:{k.category}</span>
+                  <span className={cn('text-ink')}>{k.keyword}</span>
+                  <span className={cn('text-ink-muted')}>:{k.category}</span>
                 </span>
               ))}
             </div>

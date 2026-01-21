@@ -154,9 +154,9 @@ export const runBatchJob = async (
       }
 
       if (dbConnected && enableDailyPostLimit) {
-        const canPost = await canPostToday(writerAccount.id, writerAccount.dailyPostLimit);
+        const canPost = await canPostToday(writerAccount.id, cafeId, writerAccount.dailyPostLimit);
         if (!canPost) {
-          console.log(`[BATCH] ${writerAccount.id} 일일 포스트 제한 도달 - 스킵`);
+          console.log(`[BATCH] ${writerAccount.id} 일일 포스트 제한 도달 (카페: ${cafeId}) - 스킵`);
           await recordUnexpectedFailure(rawKeyword, writerAccount.id, new Error('일일 포스트 제한 도달'));
           continue;
         }

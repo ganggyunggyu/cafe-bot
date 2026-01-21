@@ -124,10 +124,12 @@ export const changeNicknameByCafeAction = async (
     const { connectDB } = await import('@/shared/lib/mongodb');
     const { Account } = await import('@/shared/models/account');
     const { Cafe } = await import('@/shared/models/cafe');
+    const { getCurrentUserId } = await import('@/shared/config/user');
 
     await connectDB();
+    const userId = await getCurrentUserId();
 
-    const cafe = await Cafe.findOne({ cafeId, isActive: true }).lean();
+    const cafe = await Cafe.findOne({ userId, cafeId, isActive: true }).lean();
     if (!cafe) {
       return {
         success: false,
@@ -138,7 +140,7 @@ export const changeNicknameByCafeAction = async (
       };
     }
 
-    const accounts = await Account.find({ isActive: true }).lean();
+    const accounts = await Account.find({ userId, isActive: true }).lean();
     const naverAccounts = accounts.map((acc) => ({
       id: acc.accountId,
       password: acc.password,
@@ -167,10 +169,12 @@ export const changeNicknameByAccountAction = async (
     const { connectDB } = await import('@/shared/lib/mongodb');
     const { Account } = await import('@/shared/models/account');
     const { Cafe } = await import('@/shared/models/cafe');
+    const { getCurrentUserId } = await import('@/shared/config/user');
 
     await connectDB();
+    const userId = await getCurrentUserId();
 
-    const account = await Account.findOne({ accountId, isActive: true }).lean();
+    const account = await Account.findOne({ userId, accountId, isActive: true }).lean();
     if (!account) {
       return {
         success: false,
@@ -188,7 +192,7 @@ export const changeNicknameByAccountAction = async (
       isMain: account.isMain,
     };
 
-    const cafes = await Cafe.find({ isActive: true }).lean();
+    const cafes = await Cafe.find({ userId, isActive: true }).lean();
 
     return await changeByAccount(naverAccount, cafes);
   } catch (error) {

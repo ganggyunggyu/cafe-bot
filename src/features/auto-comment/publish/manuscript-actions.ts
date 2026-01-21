@@ -42,7 +42,7 @@ export const runManuscriptUploadAction = async (
   const accountRemainingPosts: Map<string, number> = new Map();
   if (enableDailyPostLimit) {
     for (const account of accounts) {
-      const remaining = await getRemainingPostsToday(account.id, account.dailyPostLimit);
+      const remaining = await getRemainingPostsToday(account.id, cafe.cafeId, account.dailyPostLimit);
       accountRemainingPosts.set(account.id, remaining);
     }
   }

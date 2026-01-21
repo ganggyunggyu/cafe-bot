@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import { getCafesAction } from '@/features/accounts/actions';
 import { runAutoCommentAction } from './actions';
 import type { CommentOnlyResult } from './types';
@@ -110,17 +110,14 @@ export const CommentOnlyUI = () => {
       )}
 
       {phase === 'ready' && (
-        <button
+        <Button
           onClick={handleExecute}
           disabled={isPending}
-          className={cn(
-            'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-            'bg-(--accent) hover:bg-(--accent-hover)',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
+          size="lg"
+          fullWidth
         >
           댓글 자동 달기
-        </button>
+        </Button>
       )}
 
       {phase === 'running' && (
@@ -198,15 +195,14 @@ export const CommentOnlyUI = () => {
             </div>
           </div>
 
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
             onClick={handleReset}
-            className={cn(
-              'w-full rounded-xl px-6 py-4 text-base font-semibold transition-all',
-              'border border-(--border) text-(--ink) hover:bg-(--surface-muted)'
-            )}
           >
             새로 시작
-          </button>
+          </Button>
         </Fragment>
       )}
     </div>

@@ -279,11 +279,14 @@ export const changeAll = async (
   const { connectDB } = await import('@/shared/lib/mongodb');
   const { Account } = await import('@/shared/models/account');
   const { Cafe } = await import('@/shared/models/cafe');
+  const { getCurrentUserId } = await import('@/shared/config/user');
 
   await connectDB();
+  const userId = await getCurrentUserId();
+  console.log('[NICKNAME] changeAll userId:', userId);
 
-  const accounts = await Account.find({ isActive: true }).lean();
-  const cafes = await Cafe.find({ isActive: true }).lean();
+  const accounts = await Account.find({ userId, isActive: true }).lean();
+  const cafes = await Cafe.find({ userId, isActive: true }).lean();
 
   resetUsedNicknames();
   const results: NicknameChangeResult[] = [];

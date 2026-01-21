@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback, DragEvent, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
@@ -230,28 +230,20 @@ export const ManuscriptUploadUI = () => {
   return (
     <div className={cn('space-y-6')}>
       <div className={cn('flex gap-2')}>
-        <button
+        <Button
+          variant={mode === 'publish' ? 'primary' : 'secondary'}
           onClick={() => { setMode('publish'); setResult(null); }}
-          className={cn(
-            'flex-1 rounded-xl py-3 text-sm font-medium transition-all',
-            mode === 'publish'
-              ? 'bg-(--accent) text-white'
-              : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
-          )}
+          className="flex-1"
         >
           발행 (새 글)
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={mode === 'modify' ? 'primary' : 'secondary'}
           onClick={() => { setMode('modify'); setResult(null); }}
-          className={cn(
-            'flex-1 rounded-xl py-3 text-sm font-medium transition-all',
-            mode === 'modify'
-              ? 'bg-(--accent) text-white'
-              : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
-          )}
+          className="flex-1"
         >
           수정 (기존 글)
-        </button>
+        </Button>
       </div>
 
       <div className={cn('space-y-4')}>
@@ -295,12 +287,13 @@ export const ManuscriptUploadUI = () => {
               <p className={cn('font-medium text-(--ink) mb-2')}>
                 {manuscripts.length}개 원고 준비됨
               </p>
-              <button
+              <Button
+                variant="danger"
+                size="xs"
                 onClick={handleClear}
-                className={cn('text-xs text-(--danger) hover:underline')}
               >
                 초기화
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -383,19 +376,15 @@ export const ManuscriptUploadUI = () => {
         )}
       </div>
 
-      <button
+      <Button
         onClick={handleSubmit}
-        disabled={isPending || manuscripts.length === 0}
-        className={cn(
-          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-          'bg-(--accent) hover:bg-(--accent-hover)',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        disabled={manuscripts.length === 0}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {isPending
-          ? (mode === 'publish' ? '업로드 중...' : '수정 중...')
-          : `${manuscripts.length}개 원고 ${mode === 'publish' ? '발행' : '수정'}`}
-      </button>
+        {`${manuscripts.length}개 원고 ${mode === 'publish' ? '발행' : '수정'}`}
+      </Button>
 
       {result && (
         <div

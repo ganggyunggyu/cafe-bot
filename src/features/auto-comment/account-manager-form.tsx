@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui/button';
 
 type AccountField = 'id' | 'password' | 'nickname';
 
@@ -20,15 +21,10 @@ export const AccountManagerForm = ({
   onSubmit,
 }: AccountManagerFormProps) => {
   const sectionClassName = cn(
-    'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
+    'rounded-2xl border border-(--border) bg-(--surface-muted) p-4 shadow-sm'
   );
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
-  );
-  const primaryButtonClassName = cn(
-    'rounded-2xl px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(216,92,47,0.35)] transition',
-    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-    'disabled:cursor-not-allowed disabled:opacity-60'
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
 
   return (
@@ -58,14 +54,15 @@ export const AccountManagerForm = ({
           onChange={(e) => onFieldChange('nickname', e.target.value)}
           className={inputClassName}
         />
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="md"
+          fullWidth
+          isLoading={isPending}
           onClick={onSubmit}
-          disabled={isPending}
-          className={primaryButtonClassName}
         >
-          {isPending ? '처리 중...' : '추가'}
-        </button>
+          추가
+        </Button>
       </div>
     </div>
   );

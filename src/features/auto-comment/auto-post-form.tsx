@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui/button';
 
 export type AutoPostMode = 'new' | 'existing';
 
@@ -46,30 +47,10 @@ export const AutoPostForm = ({
   onSubmit,
 }: AutoPostFormProps) => {
   const sectionClassName = cn(
-    'rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm'
+    'rounded-2xl border border-(--border) bg-(--surface-muted) p-4 shadow-sm'
   );
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
-  );
-  const tabClassName = (active: boolean) =>
-    cn(
-      'rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition',
-      active
-        ? 'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] text-white shadow-[0_12px_30px_rgba(216,92,47,0.35)]'
-        : 'border border-(--border) bg-white/70 text-(--ink-muted) hover:text-(--ink)'
-    );
-  const addButtonClassName = cn(
-    'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(31,111,103,0.35)] transition',
-    'bg-(--teal) hover:brightness-105'
-  );
-  const deleteButtonClassName = cn(
-    'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(181,65,50,0.35)] transition',
-    'bg-(--danger) hover:brightness-105'
-  );
-  const submitButtonClassName = cn(
-    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
-    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-    'disabled:cursor-not-allowed disabled:opacity-60'
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
   const { service, keyword, ref } = postInput;
 
@@ -89,20 +70,20 @@ export const AutoPostForm = ({
       </div>
 
       <div className={cn('flex flex-wrap gap-2')}>
-        <button
-          type="button"
+        <Button
+          variant={mode === 'new' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={() => onModeChange('new')}
-          className={tabClassName(mode === 'new')}
         >
           새 글 + 댓글
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant={mode === 'existing' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={() => onModeChange('existing')}
-          className={tabClassName(mode === 'existing')}
         >
           기존 글에 댓글만
-        </button>
+        </Button>
       </div>
 
       {mode === 'new' ? (
@@ -169,13 +150,9 @@ export const AutoPostForm = ({
           <h3 className={cn('text-sm font-semibold text-(--ink)')}>
             댓글 목록 (계정 순서대로 작성됨)
           </h3>
-          <button
-            type="button"
-            onClick={onAddComment}
-            className={addButtonClassName}
-          >
+          <Button variant="teal" size="xs" onClick={onAddComment}>
             + 댓글 추가
-          </button>
+          </Button>
         </div>
         <div className={cn('space-y-2')}>
           {comments.map((comment, index) => (
@@ -191,27 +168,28 @@ export const AutoPostForm = ({
                 rows={2}
               />
               {comments.length > 1 ? (
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
+                  size="xs"
                   onClick={() => onRemoveComment(index)}
-                  className={deleteButtonClassName}
                 >
                   삭제
-                </button>
+                </Button>
               ) : null}
             </div>
           ))}
         </div>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        isLoading={isPending}
         onClick={onSubmit}
-        disabled={isPending}
-        className={submitButtonClassName}
       >
-        {isPending ? '처리 중...' : mode === 'new' ? '글 작성 + 댓글 달기' : '댓글 달기'}
-      </button>
+        {mode === 'new' ? '글 작성 + 댓글 달기' : '댓글 달기'}
+      </Button>
 
       {result ? (
         <div

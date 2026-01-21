@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui/button';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 
 interface AccountManagerListProps {
@@ -16,21 +17,6 @@ export const AccountManagerList = ({
   onSetMain,
   onRemove,
 }: AccountManagerListProps) => {
-  const secondaryButtonClassName = cn(
-    'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(31,111,103,0.35)] transition',
-    'bg-(--teal) hover:brightness-105',
-    'disabled:cursor-not-allowed disabled:opacity-60'
-  );
-  const ghostButtonClassName = cn(
-    'rounded-full border border-(--border) bg-white/70 px-3 py-1 text-xs sm:text-sm font-semibold text-(--ink) transition hover:bg-white',
-    'disabled:cursor-not-allowed disabled:opacity-60'
-  );
-  const dangerButtonClassName = cn(
-    'rounded-full px-3 py-1 text-xs sm:text-sm font-semibold text-white shadow-[0_10px_24px_rgba(181,65,50,0.35)] transition',
-    'bg-(--danger) hover:brightness-105',
-    'disabled:cursor-not-allowed disabled:opacity-60'
-  );
-
   return (
     <div>
       <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>
@@ -44,9 +30,9 @@ export const AccountManagerList = ({
             <li
               key={account.id}
               className={cn(
-                'rounded-2xl border border-(--border) bg-white/70 px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3',
+                'rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3',
                 account.isMain &&
-                  'border-(--accent) bg-(--accent-soft)/70'
+                  'border-(--accent) bg-(--accent-soft)'
               )}
             >
               <div className={cn('flex flex-wrap items-center gap-2')}>
@@ -61,7 +47,7 @@ export const AccountManagerList = ({
                 {account.isMain ? (
                   <span
                     className={cn(
-                      'rounded-full bg-(--accent) px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white'
+                      'rounded-full bg-(--accent) px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-(--background)'
                     )}
                   >
                     메인
@@ -69,32 +55,32 @@ export const AccountManagerList = ({
                 ) : null}
               </div>
               <div className={cn('flex flex-wrap gap-2')}>
-                <button
-                  type="button"
+                <Button
+                  variant="teal"
+                  size="xs"
                   onClick={() => onLogin(account)}
                   disabled={isPending}
-                  className={secondaryButtonClassName}
                 >
                   로그인
-                </button>
+                </Button>
                 {!account.isMain ? (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={() => onSetMain(account.id)}
                     disabled={isPending}
-                    className={ghostButtonClassName}
                   >
                     메인 설정
-                  </button>
+                  </Button>
                 ) : null}
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
+                  size="xs"
                   onClick={() => onRemove(account.id)}
                   disabled={isPending}
-                  className={dangerButtonClassName}
                 >
                   삭제
-                </button>
+                </Button>
               </div>
             </li>
           ))}

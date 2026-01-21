@@ -210,7 +210,7 @@ export const processKeyword = async ({
         replyCount: 0,
       });
 
-      await incrementTodayPostCount(writerAccount.id);
+      await incrementTodayPostCount(writerAccount.id, cafeId);
     }
 
     await sleep(delays.afterPost);

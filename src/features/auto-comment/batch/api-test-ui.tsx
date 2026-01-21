@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { useAtom } from 'jotai';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import { runBatchPostAction } from './batch-actions';
 import { PostOptionsUI } from './post-options-ui';
-import { DEFAULT_POST_OPTIONS, type PostOptions } from './types';
+import { postOptionsAtom } from '@/entities/store';
 import type { QueueBatchResult } from './batch-queue';
 import { getCafesAction } from '@/features/accounts/actions';
 import type { CafeConfig } from '@/entities/cafe';
@@ -58,7 +59,7 @@ export const ApiTestUI = () => {
   const [model, setModel] = useState('');
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState('');
-  const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
+  const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [ref, setRef] = useState('');
   const [publishResult, setPublishResult] = useState<QueueBatchResult | null>(null);
 
@@ -73,7 +74,7 @@ export const ApiTestUI = () => {
   const selectedCafe = cafes.find((cafe) => cafe.cafeId === selectedCafeId);
 
   const inputClassName = cn(
-    'w-full rounded-xl border border-(--border) bg-white/80 px-3 py-2 text-sm',
+    'w-full rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm',
     'placeholder:text-(--ink-muted) shadow-sm transition',
     'focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)/20'
   );
@@ -211,27 +212,24 @@ export const ApiTestUI = () => {
       </div>
 
       {/* 탭 */}
-      <div className={cn('flex gap-1 p-1 rounded-xl bg-gray-100')}>
+      <div className={cn('flex gap-1 p-1 rounded-xl bg-(--surface-muted)')}>
         {TABS.map((tab) => (
-          <button
+          <Button
             key={tab.key}
+            variant={activeTab === tab.key ? 'primary' : 'ghost'}
+            size="sm"
             onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition',
-              activeTab === tab.key
-                ? 'bg-white text-(--ink) shadow-sm'
-                : 'text-(--ink-muted) hover:text-(--ink)'
-            )}
+            className="flex-1"
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 
       {/* 엔드포인트 표시 */}
-      <div className={cn('text-xs text-(--ink-muted) bg-gray-50 px-3 py-2 rounded-lg font-mono')}>
+      <div className={cn('text-xs text-(--ink-muted) bg-(--surface-muted) px-3 py-2 rounded-lg font-mono')}>
         POST {currentTab.endpoint}
-        <span className={cn('ml-2 text-gray-400')}>
+        <span className={cn('ml-2 text-(--ink-tertiary)')}>
           (기본: {MODELS.find((m) => m.value === currentTab.defaultModel)?.label})
         </span>
       </div>
@@ -265,7 +263,7 @@ export const ApiTestUI = () => {
       />
 
       {/* 실제 배치 발행 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-white/70 p-4 shadow-sm space-y-3')}>
+      <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4 shadow-sm space-y-3')}>
         <div className={cn('space-y-1')}>
           <p className={cn('text-xs uppercase tracking-[0.2em] text-(--ink-muted)')}>Batch Publish</p>
           <h3 className={cn('text-sm font-semibold text-(--ink)')}>커스텀 프롬프트로 배치 발행</h3>
@@ -304,23 +302,20 @@ export const ApiTestUI = () => {
                 원고 프롬프트만 사용, 댓글/대댓글은 기본 로직
               </span>
             </div>
-            <div className={cn('rounded-xl border border-(--border) bg-white/80 p-3')}>
+            <div className={cn('rounded-xl border border-(--border) bg-(--surface) p-3')}>
               <PostOptionsUI options={postOptions} onChange={setPostOptions} />
             </div>
           </div>
         </div>
 
-        <button
+        <Button
           onClick={handlePublish}
-          disabled={isPublishDisabled}
-          className={cn(
-            'w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition',
-            'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-            'disabled:opacity-60 disabled:cursor-not-allowed'
-          )}
+          disabled={keywordCount === 0 || !dailyPrompt.trim()}
+          isLoading={isPublishPending}
+          fullWidth
         >
-          {isPublishPending ? '큐에 추가 중...' : `배치 발행 (키워드 ${keywordCount}개)`}
-        </button>
+          {`배치 발행 (키워드 ${keywordCount}개)`}
+        </Button>
 
         {publishResult && (
           <div
@@ -341,17 +336,15 @@ export const ApiTestUI = () => {
       </div>
 
       {/* 테스트 버튼 */}
-      <button
+      <Button
         onClick={handleTest}
-        disabled={isPending || keywordCount === 0 || !prompt.trim()}
-        className={cn(
-          'w-full py-2.5 rounded-xl font-semibold text-sm transition',
-          'bg-(--accent) text-white hover:brightness-105',
-          'disabled:opacity-60 disabled:cursor-not-allowed'
-        )}
+        disabled={keywordCount === 0 || !prompt.trim()}
+        isLoading={isPending}
+        variant="secondary"
+        fullWidth
       >
-        {isPending ? '생성 중...' : `테스트 실행 (${keywordCount}개)`}
-      </button>
+        {`테스트 실행 (${keywordCount}개)`}
+      </Button>
 
       {/* 결과 */}
       {results.length > 0 && (

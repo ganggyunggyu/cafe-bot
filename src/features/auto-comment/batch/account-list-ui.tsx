@@ -80,7 +80,7 @@ export const AccountListUI = () => {
             disabled={isPending}
             className={cn(
               'rounded-lg px-4 py-2 text-xs font-semibold transition-all',
-              'border border-(--accent) text-(--accent) hover:bg-(--accent) hover:text-white',
+              'border border-accent text-accent hover:bg-accent hover:text-background',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           >
