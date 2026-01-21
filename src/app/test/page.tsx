@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { ApiTestUI } from '@/features/auto-comment/batch/api-test-ui';
 import { KeywordGeneratorUI } from '@/features/auto-comment/batch/keyword-generator-ui';
-import { PageLayout } from '@/shared/ui';
+import { PageLayout, Button } from '@/shared/ui';
 
 type TabType = 'keyword' | 'api';
 
@@ -23,18 +23,13 @@ export default function TestPage() {
     >
       <div className={cn('flex gap-2 mb-8')}>
         {TABS.map((tab) => (
-          <button
+          <Button
             key={tab.id}
+            variant={activeTab === tab.id ? 'primary' : 'secondary'}
             onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'px-5 py-2.5 rounded-xl text-sm font-medium transition-all',
-              activeTab === tab.id
-                ? 'bg-(--accent) text-white'
-                : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:text-(--ink) hover:bg-(--surface-muted)'
-            )}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 

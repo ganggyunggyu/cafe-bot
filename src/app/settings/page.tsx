@@ -10,7 +10,7 @@ export default function SettingsPage() {
     >
       <div
         className={cn(
-          'rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8 max-w-2xl'
+          'rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8'
         )}
       >
         <h2 className={cn('text-lg font-semibold text-(--ink) mb-6')}>큐 설정</h2>

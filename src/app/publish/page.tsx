@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { PostOnlyUI, CommentOnlyUI } from '@/features/auto-comment/publish';
-import { PageLayout } from '@/shared/ui';
+import { PageLayout, Button } from '@/shared/ui';
 
 type TabType = 'post' | 'comment';
 
@@ -22,18 +22,13 @@ export default function PublishPage() {
     >
       <div className={cn('flex gap-2 mb-8')}>
         {TABS.map((tab) => (
-          <button
+          <Button
             key={tab.id}
+            variant={activeTab === tab.id ? 'primary' : 'secondary'}
             onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'px-5 py-2.5 rounded-xl text-sm font-medium transition-all',
-              activeTab === tab.id
-                ? 'bg-(--accent) text-white'
-                : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:text-(--ink) hover:bg-(--surface-muted)'
-            )}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 

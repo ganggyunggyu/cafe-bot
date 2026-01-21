@@ -192,7 +192,7 @@ export default function CommentTestPage() {
       <h1 className={cn('text-2xl font-bold mb-6')}>댓글 생성 테스트</h1>
 
       {/* 설정 영역 */}
-      <div className={cn('bg-(--bg-component) rounded-xl p-4 mb-6 space-y-4')}>
+      <div className={cn('bg-surface rounded-xl p-4 mb-6 space-y-4')}>
         <div className={cn('grid grid-cols-2 gap-4')}>
           <div>
             <label className={cn('block text-sm font-medium mb-1')}>키워드</label>
@@ -200,7 +200,7 @@ export default function CommentTestPage() {
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className={cn('w-full px-3 py-2 rounded-lg bg-(--bg-subtle) border border-(--border-muted)')}
+              className={cn('w-full px-3 py-2 rounded-lg bg-surface-muted border border-border')}
               placeholder="호박차"
             />
           </div>
@@ -210,7 +210,7 @@ export default function CommentTestPage() {
               type="text"
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              className={cn('w-full px-3 py-2 rounded-lg bg-(--bg-subtle) border border-(--border-muted)')}
+              className={cn('w-full px-3 py-2 rounded-lg bg-surface-muted border border-border')}
               placeholder="글쓴이"
             />
           </div>
@@ -224,15 +224,15 @@ export default function CommentTestPage() {
               className={cn(
                 'px-2 py-1 rounded text-xs transition-colors mr-2',
                 contentPersonaId === null
-                  ? 'bg-(--accent) text-white'
-                  : 'bg-(--bg-subtle) hover:bg-(--bg-subtle-hover)'
+                  ? 'bg-accent text-background'
+                  : 'bg-surface-muted hover:bg-(--bg-subtle-hover)'
               )}
             >
               랜덤
             </button>
             {categories.map(cat => (
               <div key={cat} className={cn('flex flex-wrap gap-1 items-center')}>
-                <span className={cn('text-xs text-(--ink-muted) w-16')}>{cat}:</span>
+                <span className={cn('text-xs text-ink-muted w-16')}>{cat}:</span>
                 {PERSONAS.filter(p => p.category === cat).map((p) => (
                   <button
                     key={p.id}
@@ -240,8 +240,8 @@ export default function CommentTestPage() {
                     className={cn(
                       'px-2 py-0.5 rounded text-xs transition-colors',
                       contentPersonaId === p.id
-                        ? 'bg-(--accent) text-white'
-                        : 'bg-(--bg-subtle) hover:bg-(--bg-subtle-hover)'
+                        ? 'bg-accent text-background'
+                        : 'bg-surface-muted hover:bg-(--bg-subtle-hover)'
                     )}
                   >
                     {p.label}
@@ -257,7 +257,7 @@ export default function CommentTestPage() {
           disabled={isGeneratingContent || !keyword}
           className={cn(
             'w-full py-2 rounded-lg font-medium transition-colors',
-            'bg-(--accent) text-white hover:bg-(--accent-hover)',
+            'bg-accent text-background hover:bg-accent-hover',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >
@@ -267,9 +267,9 @@ export default function CommentTestPage() {
 
       {/* 원고 표시 */}
       {postContent && (
-        <div className={cn('bg-(--bg-component) rounded-xl p-4 mb-6')}>
+        <div className={cn('bg-surface rounded-xl p-4 mb-6')}>
           <h2 className={cn('font-bold mb-2')}>📝 생성된 원고</h2>
-          <div className={cn('text-sm text-(--ink-muted) whitespace-pre-wrap max-h-48 overflow-y-auto')}>
+          <div className={cn('text-sm text-ink-muted whitespace-pre-wrap max-h-48 overflow-y-auto')}>
             {postContent}
           </div>
         </div>
@@ -277,12 +277,12 @@ export default function CommentTestPage() {
 
       {/* 댓글 생성 */}
       {postContent && (
-        <div className={cn('bg-(--bg-component) rounded-xl p-4 mb-6')}>
+        <div className={cn('bg-surface rounded-xl p-4 mb-6')}>
           <h2 className={cn('font-bold mb-3')}>💬 새 댓글 추가</h2>
           <div className={cn('space-y-2 mb-3')}>
             {categories.map(cat => (
               <div key={cat} className={cn('flex flex-wrap gap-1 items-center')}>
-                <span className={cn('text-xs text-(--ink-muted) w-16')}>{cat}:</span>
+                <span className={cn('text-xs text-ink-muted w-16')}>{cat}:</span>
                 {PERSONAS.filter(p => p.category === cat).map((p) => (
                   <button
                     key={p.id}
@@ -290,8 +290,8 @@ export default function CommentTestPage() {
                     className={cn(
                       'px-2 py-0.5 rounded text-xs transition-colors',
                       commentPersonaId === p.id
-                        ? 'bg-(--accent) text-white'
-                        : 'bg-(--bg-subtle) hover:bg-(--bg-subtle-hover)'
+                        ? 'bg-accent text-background'
+                        : 'bg-surface-muted hover:bg-(--bg-subtle-hover)'
                     )}
                   >
                     {p.label}
@@ -306,13 +306,13 @@ export default function CommentTestPage() {
               disabled={isLoading !== null}
               className={cn(
                 'px-4 py-2 rounded-lg font-medium transition-colors',
-                'bg-green-600 text-white hover:bg-green-700',
+                'bg-green-600 text-background hover:bg-green-700',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
               {isLoading === 'comment' ? '생성 중...' : '+ 댓글 추가'}
             </button>
-            <span className={cn('text-xs text-(--ink-muted)')}>
+            <span className={cn('text-xs text-ink-muted')}>
               선택: {commentPersonaId}
             </span>
           </div>
@@ -325,27 +325,27 @@ export default function CommentTestPage() {
           <h2 className={cn('font-bold')}>댓글 목록 ({topLevelComments.length}개)</h2>
 
           {topLevelComments.map((comment, idx) => (
-            <div key={idx} className={cn('bg-(--bg-component) rounded-xl p-4')}>
+            <div key={idx} className={cn('bg-surface rounded-xl p-4')}>
               <div className={cn('flex items-start gap-3')}>
-                <div className={cn('w-8 h-8 rounded-full bg-(--accent) flex items-center justify-center text-white text-sm font-bold shrink-0')}>
+                <div className={cn('w-8 h-8 rounded-full bg-(--accent) flex items-center justify-center text-background text-sm font-bold shrink-0')}>
                   {comment.user.charAt(comment.user.length - 1)}
                 </div>
                 <div className={cn('flex-1 min-w-0')}>
                   <div className={cn('flex items-center gap-2 mb-1 flex-wrap')}>
                     <span className={cn('font-medium')}>{comment.user}</span>
-                    <span className={cn('text-xs text-(--ink-muted) bg-(--bg-subtle) px-2 py-0.5 rounded')}>
+                    <span className={cn('text-xs text-ink-muted bg-surface-muted px-2 py-0.5 rounded')}>
                       요청: {comment.personaId} → 응답: {comment.persona}
                     </span>
                   </div>
                   <p className={cn('text-sm mb-3')}>{comment.text}</p>
 
                   {/* 대댓글 입력 */}
-                  <div className={cn('bg-(--bg-subtle) rounded-lg p-3')}>
-                    <div className={cn('text-xs text-(--ink-muted) mb-2')}>답글 페르소나:</div>
+                  <div className={cn('bg-surface-muted rounded-lg p-3')}>
+                    <div className={cn('text-xs text-ink-muted mb-2')}>답글 페르소나:</div>
                     <div className={cn('space-y-1 mb-2')}>
                       {categories.slice(0, 6).map(cat => (
                         <div key={cat} className={cn('flex flex-wrap gap-1 items-center')}>
-                          <span className={cn('text-xs text-(--ink-muted) w-14')}>{cat}:</span>
+                          <span className={cn('text-xs text-ink-muted w-14')}>{cat}:</span>
                           {PERSONAS.filter(p => p.category === cat).slice(0, 3).map((p) => (
                             <button
                               key={p.id}
@@ -353,8 +353,8 @@ export default function CommentTestPage() {
                               className={cn(
                                 'px-1.5 py-0.5 rounded text-xs transition-colors',
                                 getReplyPersonaId(idx) === p.id
-                                  ? 'bg-(--accent) text-white'
-                                  : 'bg-(--bg-component) hover:bg-(--bg-component-hover)'
+                                  ? 'bg-accent text-background'
+                                  : 'bg-surface hover:bg-(--bg-component-hover)'
                               )}
                             >
                               {p.label}
@@ -369,13 +369,13 @@ export default function CommentTestPage() {
                         disabled={isLoading !== null}
                         className={cn(
                           'px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                          'bg-blue-600 text-white hover:bg-blue-700',
+                          'bg-blue-600 text-background hover:bg-blue-700',
                           'disabled:opacity-50 disabled:cursor-not-allowed'
                         )}
                       >
                         {isLoading === `reply-${idx}` ? '생성 중...' : '답글 달기'}
                       </button>
-                      <span className={cn('text-xs text-(--ink-muted)')}>
+                      <span className={cn('text-xs text-ink-muted')}>
                         선택: {getReplyPersonaId(idx)}
                       </span>
                     </div>
@@ -383,20 +383,20 @@ export default function CommentTestPage() {
 
                   {/* 대댓글 목록 */}
                   {getReplies(comment.user).length > 0 && (
-                    <div className={cn('mt-3 pl-4 border-l-2 border-(--border-muted) space-y-3')}>
+                    <div className={cn('mt-3 pl-4 border-l-2 border-border space-y-3')}>
                       {getReplies(comment.user).map((reply, rIdx) => (
                         <div key={rIdx} className={cn('flex items-start gap-2')}>
-                          <div className={cn('w-6 h-6 rounded-full bg-(--bg-subtle) flex items-center justify-center text-xs shrink-0')}>
+                          <div className={cn('w-6 h-6 rounded-full bg-surface-muted flex items-center justify-center text-xs shrink-0')}>
                             R
                           </div>
                           <div className={cn('flex-1 min-w-0')}>
                             <div className={cn('flex items-center gap-2 mb-0.5 flex-wrap')}>
                               <span className={cn('text-sm font-medium')}>{reply.user}</span>
-                              <span className={cn('text-xs text-(--ink-muted)')}>
+                              <span className={cn('text-xs text-ink-muted')}>
                                 요청: {reply.personaId} → 응답: {reply.persona}
                               </span>
                             </div>
-                            <p className={cn('text-sm text-(--ink-muted)')}>{reply.text}</p>
+                            <p className={cn('text-sm text-ink-muted')}>{reply.text}</p>
                           </div>
                         </div>
                       ))}
@@ -413,7 +413,7 @@ export default function CommentTestPage() {
       {comments.length > 0 && (
         <button
           onClick={() => { setComments([]); setReplyPersonaIds({}); }}
-          className={cn('mt-4 text-sm text-(--ink-muted) hover:underline')}
+          className={cn('mt-4 text-sm text-ink-muted hover:underline')}
         >
           전체 초기화
         </button>
