@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui';
 import {
   getViralDebugList,
   getViralDebugById,
@@ -14,6 +15,7 @@ export const ViralDebugUI = () => {
   const [selectedEntry, setSelectedEntry] = useState<ViralDebugEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'response' | 'prompt'>('response');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadEntries = async () => {
     setIsLoading(true);
@@ -49,29 +51,26 @@ export const ViralDebugUI = () => {
     });
   };
 
+  const filteredEntries = entries.filter((entry) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      entry.keyword.toLowerCase().includes(query) ||
+      entry.parsedTitle?.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className={cn('space-y-4')}>
       <div className={cn('flex items-center justify-between')}>
         <h3 className={cn('font-semibold text-(--ink)')}>AI 응답 디버그</h3>
         <div className={cn('flex gap-2')}>
-          <button
-            onClick={loadEntries}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium',
-              'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            )}
-          >
+          <Button variant="secondary" size="xs" onClick={loadEntries}>
             새로고침
-          </button>
-          <button
-            onClick={handleClear}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium',
-              'bg-rose-50 text-rose-600 hover:bg-rose-100'
-            )}
-          >
+          </Button>
+          <Button variant="danger" size="xs" onClick={handleClear}>
             전체 삭제
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -81,18 +80,30 @@ export const ViralDebugUI = () => {
             'col-span-1 rounded-xl border border-(--border) bg-white/50 overflow-hidden'
           )}
         >
-          <div className={cn('p-3 border-b border-(--border) bg-gray-50/50')}>
+          <div className={cn('p-3 border-b border-(--border) bg-gray-50/50 space-y-2')}>
             <p className={cn('text-xs font-medium text-(--ink-muted)')}>
-              로그 목록 ({entries.length}개)
+              로그 목록 ({filteredEntries.length}/{entries.length}개)
             </p>
+            <input
+              type="text"
+              placeholder="키워드 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={cn(
+                'w-full px-2.5 py-1.5 text-xs rounded-lg border border-(--border)',
+                'bg-white focus:outline-none focus:ring-1 focus:ring-(--accent)'
+              )}
+            />
           </div>
-          <div className={cn('overflow-y-auto h-[calc(100%-48px)]')}>
+          <div className={cn('overflow-y-auto h-[calc(100%-80px)]')}>
             {isLoading ? (
               <p className={cn('p-4 text-sm text-(--ink-muted)')}>로딩 중...</p>
-            ) : entries.length === 0 ? (
-              <p className={cn('p-4 text-sm text-(--ink-muted)')}>로그 없음</p>
+            ) : filteredEntries.length === 0 ? (
+              <p className={cn('p-4 text-sm text-(--ink-muted)')}>
+                {entries.length === 0 ? '로그 없음' : '검색 결과 없음'}
+              </p>
             ) : (
-              entries.map((entry) => (
+              filteredEntries.map((entry) => (
                 <button
                   key={entry.id}
                   onClick={() => handleSelect(entry.id)}
@@ -155,28 +166,20 @@ export const ViralDebugUI = () => {
                     </p>
                   </div>
                   <div className={cn('flex gap-1')}>
-                    <button
+                    <Button
+                      variant={activeTab === 'response' ? 'primary' : 'ghost'}
+                      size="xs"
                       onClick={() => setActiveTab('response')}
-                      className={cn(
-                        'px-3 py-1 rounded-lg text-xs font-medium transition',
-                        activeTab === 'response'
-                          ? 'bg-(--accent) text-white'
-                          : 'bg-gray-100 text-gray-600'
-                      )}
                     >
                       응답
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant={activeTab === 'prompt' ? 'primary' : 'ghost'}
+                      size="xs"
                       onClick={() => setActiveTab('prompt')}
-                      className={cn(
-                        'px-3 py-1 rounded-lg text-xs font-medium transition',
-                        activeTab === 'prompt'
-                          ? 'bg-(--accent) text-white'
-                          : 'bg-gray-100 text-gray-600'
-                      )}
                     >
                       프롬프트
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

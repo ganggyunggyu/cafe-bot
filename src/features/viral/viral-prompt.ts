@@ -4,7 +4,7 @@
 import type { ContentStyle, ViralPromptInput } from './prompts';
 import { buildCasualPrompt, buildInfoPrompt } from './prompts';
 
-export let CONTENT_STYLE: ContentStyle = '정보';
+export let CONTENT_STYLE: ContentStyle = '일상';
 
 // Re-export everything from prompts
 export * from './prompts';
