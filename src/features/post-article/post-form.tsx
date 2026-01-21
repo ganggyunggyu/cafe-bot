@@ -21,8 +21,8 @@ export const PostForm = () => {
     'w-full rounded-2xl border border-(--border) bg-white/80 px-4 py-3 text-sm text-(--ink) placeholder:text-(--ink-muted) shadow-sm transition focus:border-(--accent) focus:outline-none focus:ring-2 focus:ring-(--accent)'
   );
   const submitClassName = cn(
-    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
-    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)',
+    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-background shadow-[0_16px_40px_rgba(216,92,47,0.35)] transition',
+    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
     'disabled:cursor-not-allowed disabled:opacity-60'
   );
 

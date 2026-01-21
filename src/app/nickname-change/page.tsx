@@ -8,7 +8,7 @@ export default function NicknameChangePage() {
       title="닉네임 변경"
       subtitle="랜덤 닉네임으로 카페별 닉네임을 일괄 변경합니다"
     >
-      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8 max-w-3xl')}>
+      <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 lg:p-8')}>
         <div className={cn('space-y-6')}>
           <div>
             <h2 className={cn('text-lg font-semibold text-(--ink)')}>닉네임 일괄 변경</h2>
@@ -20,7 +20,7 @@ export default function NicknameChangePage() {
         </div>
       </div>
 
-      <details className={cn('mt-8 group max-w-3xl')}>
+      <details className={cn('mt-8 group')}>
         <summary
           className={cn(
             'flex items-center gap-2 cursor-pointer text-sm text-(--ink-muted) hover:text-(--ink) transition',

@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui/button';
 import { runCafeJoinBatchAction } from '@/features/auto-comment/batch/batch-actions';
 import { getAccountsAction, getCafesAction } from '@/features/accounts/actions';
 import type { BatchJoinResult } from '@/features/auto-comment/batch/cafe-join';
@@ -43,12 +44,6 @@ export const CafeJoinUI = () => {
     });
   };
 
-  const submitButtonClassName = cn(
-    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(20,184,166,0.35)] transition',
-    'bg-[linear-gradient(135deg,var(--teal),var(--teal-strong))] hover:brightness-105',
-    'disabled:cursor-not-allowed disabled:opacity-60'
-  );
-
   return (
     <div className={cn('space-y-6')}>
       <div className={cn('space-y-2')}>
@@ -65,7 +60,7 @@ export const CafeJoinUI = () => {
       </div>
 
       {/* 현재 설정 요약 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
+      <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
         <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>
           현재 설정
         </h3>
@@ -79,7 +74,7 @@ export const CafeJoinUI = () => {
                 <div
                   key={acc.id}
                   className={cn(
-                    'text-sm px-2 py-1 rounded-lg bg-white/80',
+                    'text-sm px-2 py-1 rounded-lg bg-(--surface-elevated)',
                     acc.isMain && 'border border-(--accent)'
                   )}
                 >
@@ -97,7 +92,7 @@ export const CafeJoinUI = () => {
                 <div
                   key={cafe.cafeId}
                   className={cn(
-                    'text-sm px-2 py-1 rounded-lg bg-white/80',
+                    'text-sm px-2 py-1 rounded-lg bg-(--surface-elevated)',
                     cafe.isDefault && 'border border-(--teal)'
                   )}
                 >
@@ -112,13 +107,15 @@ export const CafeJoinUI = () => {
         </p>
       </div>
 
-      <button
+      <Button
+        variant="teal"
+        size="lg"
+        fullWidth
+        isLoading={isPending}
         onClick={handleRun}
-        disabled={isPending}
-        className={submitButtonClassName}
       >
-        {isPending ? '가입 진행 중...' : '전체 카페 가입 실행'}
-      </button>
+        전체 카페 가입 실행
+      </Button>
 
       {/* 결과 */}
       {result && (
@@ -153,7 +150,7 @@ export const CafeJoinUI = () => {
               <div
                 key={i}
                 className={cn(
-                  'rounded-xl border border-(--border) bg-white/50 px-3 py-2'
+                  'rounded-xl border border-(--border) bg-(--surface-muted) px-3 py-2'
                 )}
               >
                 <div className={cn('flex items-center gap-2')}>

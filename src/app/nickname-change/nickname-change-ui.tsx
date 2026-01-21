@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import {
   changeNicknameByCafeAction,
   changeNicknameByAccountAction,
@@ -98,7 +98,7 @@ export const NicknameChangeUI = () => {
   };
 
   const submitButtonClassName = cn(
-    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(168,85,247,0.35)] transition',
+    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-(--background) shadow-[0_16px_40px_rgba(168,85,247,0.35)] transition',
     'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
     'disabled:cursor-not-allowed disabled:opacity-60'
   );
@@ -115,48 +115,33 @@ export const NicknameChangeUI = () => {
       </div>
 
       {/* 모드 선택 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
+      <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
         <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>변경 모드</h3>
         <div className={cn('grid gap-2 sm:grid-cols-3')}>
-          <button
+          <Button
+            variant={mode === 'by-cafe' ? 'primary' : 'secondary'}
             onClick={() => setMode('by-cafe')}
-            className={cn(
-              'rounded-xl px-4 py-3 text-sm font-medium transition',
-              mode === 'by-cafe'
-                ? 'bg-(--accent) text-white'
-                : 'bg-white/80 text-(--ink-muted) hover:bg-white'
-            )}
           >
             카페 기준
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={mode === 'by-account' ? 'primary' : 'secondary'}
             onClick={() => setMode('by-account')}
-            className={cn(
-              'rounded-xl px-4 py-3 text-sm font-medium transition',
-              mode === 'by-account'
-                ? 'bg-(--accent) text-white'
-                : 'bg-white/80 text-(--ink-muted) hover:bg-white'
-            )}
           >
             계정 기준
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={mode === 'all' ? 'primary' : 'secondary'}
             onClick={() => setMode('all')}
-            className={cn(
-              'rounded-xl px-4 py-3 text-sm font-medium transition',
-              mode === 'all'
-                ? 'bg-(--accent) text-white'
-                : 'bg-white/80 text-(--ink-muted) hover:bg-white'
-            )}
           >
             전체 순회
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 선택 옵션 */}
       {mode === 'by-cafe' && (
-        <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
+        <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
           <Select
             label="카페 선택"
             value={selectedCafeId}
@@ -171,7 +156,7 @@ export const NicknameChangeUI = () => {
       )}
 
       {mode === 'by-account' && (
-        <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
+        <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
           <Select
             label="계정 선택"
             value={selectedAccountId}
@@ -186,18 +171,20 @@ export const NicknameChangeUI = () => {
       )}
 
       {/* 현재 설정 요약 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-white/50 p-4')}>
+      <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
         <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>실행 요약</h3>
         <p className={cn('text-sm text-(--ink-muted)')}>{getModeDescription()}</p>
       </div>
 
-      <button
+      <Button
         onClick={handleRun}
-        disabled={isPending || accounts.length === 0 || cafes.length === 0}
-        className={submitButtonClassName}
+        disabled={accounts.length === 0 || cafes.length === 0}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {isPending ? '닉네임 변경 중...' : '닉네임 변경 실행'}
-      </button>
+        닉네임 변경 실행
+      </Button>
 
       {/* 결과 */}
       {result && (
@@ -231,7 +218,7 @@ export const NicknameChangeUI = () => {
               <div
                 key={i}
                 className={cn(
-                  'rounded-xl border border-(--border) bg-white/50 px-3 py-2'
+                  'rounded-xl border border-(--border) bg-(--surface-muted) px-3 py-2'
                 )}
               >
                 <div className={cn('flex items-center gap-2')}>

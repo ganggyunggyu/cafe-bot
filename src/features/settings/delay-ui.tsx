@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui';
 import { useDelaySettings, type DelaySettings } from '@/shared/hooks/use-delay-settings';
 
 const msToMinSec = (ms: number): string => {
@@ -201,14 +202,11 @@ export const DelaySettingsUI = () => {
                   limits: { ...settings.limits, enableDailyPostLimit: e.target.checked },
                 });
               }}
-              className={cn(
-                'w-5 h-5 rounded border-2 border-(--border)',
-                'checked:bg-(--accent) checked:border-(--accent)'
-              )}
+              className={cn('checkbox w-5 h-5')}
             />
             <div>
-              <span className={cn('text-sm text-(--ink)')}>일일 글 제한 활성화</span>
-              <p className={cn('text-xs text-(--ink-muted)')}>계정별 설정 적용</p>
+              <span className={cn('text-sm text-ink')}>일일 글 제한 활성화</span>
+              <p className={cn('text-xs text-ink-muted')}>계정별 설정 적용</p>
             </div>
           </label>
 
@@ -235,15 +233,13 @@ export const DelaySettingsUI = () => {
       </div>
 
       {/* 초기화 버튼 */}
-      <button
+      <Button
+        variant="secondary"
+        fullWidth
         onClick={reset}
-        className={cn(
-          'w-full rounded-xl px-4 py-3.5 text-sm font-medium transition-all',
-          'border border-(--border) text-(--ink-muted) hover:bg-(--surface-muted)'
-        )}
       >
         기본값으로 초기화
-      </button>
+      </Button>
     </div>
   );
 };

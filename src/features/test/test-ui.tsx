@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState, useTransition } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Checkbox, Button } from '@/shared/ui';
 import { runTestAction, runTestBatchAction, type TestType, type ModelType, type TestResult, type TestBatchResult } from './actions';
 import { getCafesAction } from '@/features/accounts/actions';
 import { generateKeywords, type GeneratedKeyword } from '@/shared/api/keyword-gen-api';
@@ -65,13 +65,6 @@ export const TestUI = () => {
 
   const labelClassName = cn('text-sm font-medium text-(--ink)');
 
-  const toggleClassName = (isActive: boolean) =>
-    cn(
-      'flex-1 rounded-xl px-4 py-3 text-sm font-medium transition-all',
-      isActive
-        ? 'bg-(--accent) text-white'
-        : 'bg-(--surface) text-(--ink-muted) hover:bg-(--surface-muted)'
-    );
 
   const clearResults = () => {
     setSingleResult(null);
@@ -122,12 +115,20 @@ export const TestUI = () => {
   return (
     <div className={cn('space-y-6')}>
       <div className={cn('flex gap-2 rounded-2xl border border-(--border-light) bg-(--surface) p-1')}>
-        <button onClick={() => setMode('single')} className={toggleClassName(isSingleMode)}>
+        <Button
+          variant={isSingleMode ? 'primary' : 'ghost'}
+          onClick={() => setMode('single')}
+          className="flex-1"
+        >
           단일 테스트
-        </button>
-        <button onClick={() => setMode('batch')} className={toggleClassName(!isSingleMode)}>
+        </Button>
+        <Button
+          variant={!isSingleMode ? 'primary' : 'ghost'}
+          onClick={() => setMode('batch')}
+          className="flex-1"
+        >
           배치 테스트
-        </button>
+        </Button>
       </div>
 
       <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-6 space-y-5')}>
@@ -137,18 +138,14 @@ export const TestUI = () => {
           <label className={labelClassName}>테스트 유형</label>
           <div className={cn('flex gap-2')}>
             {TEST_TYPES.map((t) => (
-              <button
+              <Button
                 key={t.value}
+                variant={testType === t.value ? 'primary' : 'secondary'}
                 onClick={() => setTestType(t.value)}
-                className={cn(
-                  'flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all',
-                  testType === t.value
-                    ? 'bg-(--accent) text-white'
-                    : 'bg-(--surface-muted) text-(--ink-muted) hover:text-(--ink) border border-(--border-light)'
-                )}
+                className="flex-1"
               >
                 {t.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -192,17 +189,15 @@ export const TestUI = () => {
         )}
       </div>
 
-      <button
+      <Button
         onClick={handleSubmit}
         disabled={isSubmitDisabled}
-        className={cn(
-          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-          'bg-(--accent) hover:bg-(--accent-hover)',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {submitLabel}
-      </button>
+        {isSingleMode ? '테스트 실행' : '배치 테스트 실행'}
+      </Button>
 
       {singleResult && isSingleMode && (
         <SingleResultUI result={singleResult} />
@@ -313,33 +308,23 @@ export const KeywordGeneratorUI = () => {
           />
         </div>
         <div className={cn('space-y-2 flex items-end pb-1')}>
-          <label className={cn('flex items-center gap-3 cursor-pointer')}>
-            <input
-              type="checkbox"
-              checked={shuffle}
-              onChange={(e) => setShuffle(e.target.checked)}
-              className={cn(
-                'w-5 h-5 rounded border-2 border-(--border)',
-                'checked:bg-(--accent) checked:border-(--accent)',
-                'focus:ring-2 focus:ring-(--accent)/20'
-              )}
-            />
-            <span className={labelClassName}>뒤죽박죽 섞기</span>
-          </label>
+          <Checkbox
+            label="뒤죽박죽 섞기"
+            checked={shuffle}
+            onChange={(e) => setShuffle(e.target.checked)}
+          />
         </div>
       </div>
 
-      <button
+      <Button
         onClick={handleGenerate}
-        disabled={isPending || categories.length === 0}
-        className={cn(
-          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-          'bg-(--accent) hover:bg-(--accent-hover)',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        disabled={categories.length === 0}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {isPending ? '생성 중...' : `키워드 ${count}개 생성`}
-      </button>
+        {`키워드 ${count}개 생성`}
+      </Button>
 
       {error && (
         <div className={cn('rounded-xl border border-(--danger)/30 bg-(--danger-soft) px-4 py-3')}>
@@ -354,26 +339,20 @@ export const KeywordGeneratorUI = () => {
               생성 결과 ({result.length}개)
             </h3>
             <div className={cn('flex gap-2')}>
-              <button
+              <Button
+                variant="secondary"
+                size="xs"
                 onClick={copyKeywordsOnly}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-xs font-medium transition-all',
-                  'border border-(--border) text-(--ink) hover:bg-(--surface-muted)'
-                )}
               >
                 키워드만 복사
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={copied ? 'teal' : 'primary'}
+                size="xs"
                 onClick={copyToClipboard}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-xs font-medium transition-all',
-                  copied
-                    ? 'bg-(--success) text-white'
-                    : 'bg-(--accent) text-white hover:bg-(--accent-hover)'
-                )}
               >
                 {copied ? '복사됨!' : '카테고리 포함 복사'}
-              </button>
+              </Button>
             </div>
           </div>
           <div className={cn('max-h-75 overflow-y-auto rounded-xl border border-(--border-light) bg-(--surface) p-4')}>
@@ -428,15 +407,14 @@ const SingleResultUI = ({ result }: { result: TestResult }) => {
       )}
 
       {result.success && (
-        <button
+        <Button
+          variant="secondary"
+          size="xs"
+          className="mt-4"
           onClick={() => navigator.clipboard.writeText(result.content)}
-          className={cn(
-            'mt-4 text-xs px-4 py-2 rounded-lg font-medium transition-all',
-            'border border-(--border) bg-(--surface) hover:bg-(--surface-muted)'
-          )}
         >
           복사
-        </button>
+        </Button>
       )}
     </div>
   );

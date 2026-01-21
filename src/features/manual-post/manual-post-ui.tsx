@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useTransition, useCallback, type DragEvent } from 'react';
+import { useAtom } from 'jotai';
 import { cn } from '@/shared/lib/cn';
-import { Select } from '@/shared/ui';
+import { Select, Button } from '@/shared/ui';
 import { runManualPublishAction, runManualModifyAction } from './manual-actions';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
-import { DEFAULT_POST_OPTIONS, type PostOptions } from '@/features/auto-comment/batch/types';
+import { postOptionsAtom } from '@/entities/store';
 import { getCafesAction } from '@/features/accounts/actions';
 import type { CafeConfig } from '@/entities/cafe';
 import type {
@@ -125,7 +126,7 @@ export const ManualPostUI = () => {
   const [manuscripts, setManuscripts] = useState<ManuscriptFolder[]>([]);
   const [cafes, setCafes] = useState<CafeConfig[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState('');
-  const [postOptions, setPostOptions] = useState<PostOptions>(DEFAULT_POST_OPTIONS);
+  const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [sortOrder, setSortOrder] = useState<SortOrder>('oldest');
   const [daysLimit, setDaysLimit] = useState<number | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
@@ -244,28 +245,22 @@ export const ManualPostUI = () => {
     <div className={cn('space-y-6')}>
       {/* 모드 선택 */}
       <div className={cn('flex gap-2 p-1 rounded-xl bg-(--surface-muted)')}>
-        <button
+        <Button
+          variant={mode === 'publish' ? 'primary' : 'ghost'}
+          size="sm"
           onClick={() => setMode('publish')}
-          className={cn(
-            'flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all',
-            mode === 'publish'
-              ? 'bg-(--surface) text-(--ink) shadow-sm'
-              : 'text-(--ink-muted) hover:text-(--ink)'
-          )}
+          className="flex-1"
         >
           발행
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={mode === 'modify' ? 'primary' : 'ghost'}
+          size="sm"
           onClick={() => setMode('modify')}
-          className={cn(
-            'flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all',
-            mode === 'modify'
-              ? 'bg-(--surface) text-(--ink) shadow-sm'
-              : 'text-(--ink-muted) hover:text-(--ink)'
-          )}
+          className="flex-1"
         >
           수정
-        </button>
+        </Button>
       </div>
 
       {/* 드래그앤드랍 영역 */}
@@ -295,12 +290,13 @@ export const ManualPostUI = () => {
             <p className={cn('text-base font-semibold text-(--success)')}>
               {manuscripts.length}개 원고 준비됨
             </p>
-            <button
+            <Button
+              variant="danger"
+              size="xs"
               onClick={clearManuscripts}
-              className={cn('text-sm text-(--danger) hover:underline')}
             >
               초기화
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -407,23 +403,18 @@ export const ManualPostUI = () => {
       </div>
 
       {/* 실행 버튼 */}
-      <button
+      <Button
         onClick={handleRun}
-        disabled={isPending || manuscripts.length === 0}
-        className={cn(
-          'w-full rounded-xl px-6 py-4 text-base font-semibold text-white transition-all',
-          'bg-(--accent) hover:bg-(--accent-hover)',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        disabled={manuscripts.length === 0}
+        isLoading={isPending}
+        size="lg"
+        fullWidth
       >
-        {isPending
-          ? (mode === 'publish' ? '발행 중...' : '수정 중...')
-          : (mode === 'publish'
-              ? `원고 발행 (${manuscripts.length}개)`
-              : `원고 수정 (${manuscripts.length}개)`
-            )
+        {mode === 'publish'
+          ? `원고 발행 (${manuscripts.length}개)`
+          : `원고 수정 (${manuscripts.length}개)`
         }
-      </button>
+      </Button>
 
       {/* 결과 */}
       {result && (
