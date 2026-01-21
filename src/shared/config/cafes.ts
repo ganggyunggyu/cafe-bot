@@ -6,7 +6,7 @@ import { getCurrentUserId } from './user';
 export const getAllCafes = async (userId?: string): Promise<CafeConfig[]> => {
   try {
     await connectDB();
-    const targetUserId = userId || getCurrentUserId();
+    const targetUserId = userId || (await getCurrentUserId());
     const dbCafes = await Cafe.find({ userId: targetUserId, isActive: true })
       .sort({ isDefault: -1, createdAt: 1 })
       .lean();

@@ -2,27 +2,17 @@
 
 import { connectDB } from '@/shared/lib/mongodb';
 import { Account } from '@/shared/models';
+import { getCurrentUserId } from '@/shared/config/user';
 import { revalidatePath } from 'next/cache';
 import type { AccountData, AccountInput } from '../model';
 
 export const getAccountsAction = async (): Promise<AccountData[]> => {
   await connectDB();
-  const dbAccounts = await Account.find({ isActive: true }).sort({ isMain: -1, createdAt: 1 }).lean();
+  const userId = await getCurrentUserId();
+  console.log('[ACCOUNT-ACTION] getAccountsAction 호출, userId:', userId);
 
-  if (dbAccounts.length === 0) {
-    const { NAVER_ACCOUNTS } = await import('@/shared/config/accounts');
-    return NAVER_ACCOUNTS.map((a) => ({
-      id: a.id,
-      password: a.password,
-      nickname: a.nickname,
-      isMain: a.isMain,
-      activityHours: a.activityHours,
-      restDays: a.restDays,
-      dailyPostLimit: a.dailyPostLimit,
-      personaId: a.personaId,
-      fromConfig: true,
-    }));
-  }
+  const dbAccounts = await Account.find({ userId, isActive: true }).sort({ isMain: -1, createdAt: 1 }).lean();
+  console.log('[ACCOUNT-ACTION] DB 계정 수:', dbAccounts.length);
 
   return dbAccounts.map((a) => ({
     id: a.accountId,
@@ -39,13 +29,15 @@ export const getAccountsAction = async (): Promise<AccountData[]> => {
 
 export const addAccountAction = async (input: AccountInput) => {
   await connectDB();
+  const userId = await getCurrentUserId();
 
-  const existing = await Account.findOne({ accountId: input.accountId });
+  const existing = await Account.findOne({ userId, accountId: input.accountId });
   if (existing) {
     return { success: false, error: '이미 존재하는 계정입니다' };
   }
 
   await Account.create({
+    userId,
     accountId: input.accountId,
     password: input.password,
     nickname: input.nickname,
@@ -62,9 +54,10 @@ export const addAccountAction = async (input: AccountInput) => {
 
 export const updateAccountAction = async (accountId: string, input: Partial<AccountInput>) => {
   await connectDB();
+  const userId = await getCurrentUserId();
 
   await Account.findOneAndUpdate(
-    { accountId },
+    { userId, accountId },
     { $set: input }
   );
 
@@ -75,9 +68,10 @@ export const updateAccountAction = async (accountId: string, input: Partial<Acco
 export const deleteAccountAction = async (accountId: string) => {
   try {
     await connectDB();
+    const userId = await getCurrentUserId();
 
     const result = await Account.findOneAndUpdate(
-      { accountId },
+      { userId, accountId },
       { $set: { isActive: false } },
       { new: true }
     );

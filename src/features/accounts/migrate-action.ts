@@ -2,10 +2,12 @@
 
 import { connectDB } from '@/shared/lib/mongodb';
 import { Account, Cafe } from '@/shared/models';
+import { getCurrentUserId } from '@/shared/config/user';
 import { revalidatePath } from 'next/cache';
 
 export const migrateFromConfigAction = async () => {
   await connectDB();
+  const userId = await getCurrentUserId();
 
   const { NAVER_ACCOUNTS } = await import('@/shared/config/accounts');
   const { CAFE_LIST } = await import('@/shared/config/cafes');
@@ -14,9 +16,10 @@ export const migrateFromConfigAction = async () => {
   let cafesAdded = 0;
 
   for (const acc of NAVER_ACCOUNTS) {
-    const exists = await Account.findOne({ accountId: acc.id });
+    const exists = await Account.findOne({ userId, accountId: acc.id });
     if (!exists) {
       await Account.create({
+        userId,
         accountId: acc.id,
         password: acc.password,
         nickname: acc.nickname,
@@ -31,9 +34,10 @@ export const migrateFromConfigAction = async () => {
   }
 
   for (const cafe of CAFE_LIST) {
-    const exists = await Cafe.findOne({ cafeId: cafe.cafeId });
+    const exists = await Cafe.findOne({ userId, cafeId: cafe.cafeId });
     if (!exists) {
       await Cafe.create({
+        userId,
         cafeId: cafe.cafeId,
         menuId: cafe.menuId,
         name: cafe.name,
