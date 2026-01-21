@@ -17,8 +17,13 @@
 - **Browser Automation**: Playwright
 - **Auth**: next-auth 5 (beta)
 
-### 유틸리티
+### UI/UX
 - clsx, tailwind-merge (스타일링)
+- Framer Motion (애니메이션)
+- Sonner (토스트 알림)
+- Lottie React (애니메이션 에셋)
+
+### 개발 도구
 - Bull Board (큐 모니터링)
 
 ## 아키텍처
@@ -75,10 +80,20 @@ src/
 │   │   ├── multi-session.ts
 │   │   ├── playwright.ts
 │   │   ├── mongodb.ts
-│   │   └── redis.ts
+│   │   ├── redis.ts
+│   │   └── toast.ts         # Sonner 토스트 유틸
 │   ├── models/           # Mongoose 모델
 │   ├── types/            # 타입 정의
 │   └── ui/               # 공통 UI 컴포넌트
+│       ├── animated-button.tsx
+│       ├── animated-card.tsx
+│       ├── animated-tabs.tsx
+│       ├── app-header.tsx
+│       ├── button.tsx
+│       ├── page-layout.tsx
+│       ├── page-transition.tsx
+│       ├── select.tsx
+│       └── theme-toggle.tsx
 │
 └── widgets/              # 조합된 UI 블록
 ```
@@ -187,3 +202,19 @@ CONTENT_API_URL=
 - 네이버 인기글 파싱
 - AI 기반 콘텐츠 생성
 - 배치 작업 처리
+
+## 주의사항
+
+### DB 마이그레이션
+**중요: 마이그레이션 스크립트 실행 시 반드시 Atlas URI 명시**
+
+로컬 MongoDB가 아닌 Atlas에 마이그레이션해야 함:
+```bash
+# 잘못된 방법 (로컬 DB에 적용됨)
+npx tsx scripts/migrate-xxx.ts
+
+# 올바른 방법 (Atlas에 적용)
+MONGODB_URI="mongodb+srv://..." npx tsx scripts/migrate-xxx.ts
+```
+
+.env.local의 MONGODB_URI 값을 환경변수로 직접 전달해야 함.
