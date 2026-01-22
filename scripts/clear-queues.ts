@@ -1,45 +1,42 @@
 import Redis from 'ioredis';
-import { getAllAccounts } from '../src/shared/config/accounts';
-import { connectDB } from '../src/shared/lib/mongodb';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 async function main() {
-  await connectDB();
-  const redis = new Redis(REDIS_URL);
+  const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
   console.log('\n=== Redis 큐 데이터 정리 ===\n');
 
-  const accounts = await getAllAccounts();
+  // 모든 bull 키 조회
+  const allKeys = await redis.keys('bull:*');
+  console.log(`총 ${allKeys.length}개 키 발견\n`);
 
-  // 계정별 큐 정리
-  for (const account of accounts) {
-    const queueName = `task_${account.id}`;
-    const keys = await redis.keys(`bull:${queueName}:*`);
+  if (allKeys.length === 0) {
+    console.log('정리할 데이터 없음');
+    await redis.quit();
+    process.exit(0);
+  }
 
-    if (keys.length > 0) {
-      await redis.del(...keys);
-      console.log(`[${account.id}] ${keys.length}개 키 삭제`);
-    } else {
-      console.log(`[${account.id}] 정리할 데이터 없음`);
+  // 큐 이름별로 그룹핑해서 표시
+  const queueCounts = new Map<string, number>();
+  allKeys.forEach(key => {
+    const match = key.match(/^bull:([^:]+):/);
+    if (match) {
+      const name = match[1];
+      queueCounts.set(name, (queueCounts.get(name) || 0) + 1);
     }
+  });
+
+  console.log('큐별 키 수:');
+  for (const [name, count] of queueCounts) {
+    console.log(`  ${name}: ${count}개`);
   }
 
-  // Generate 큐 정리
-  const generateKeys = await redis.keys('bull:generate:*');
-  if (generateKeys.length > 0) {
-    await redis.del(...generateKeys);
-    console.log(`[generate] ${generateKeys.length}개 키 삭제`);
-  }
+  // 전체 삭제
+  await redis.del(...allKeys);
+  console.log(`\n✓ ${allKeys.length}개 키 삭제 완료`);
 
-  // 기타 bull 관련 키 정리
-  const otherKeys = await redis.keys('bull:*');
-  if (otherKeys.length > 0) {
-    await redis.del(...otherKeys);
-    console.log(`[기타] ${otherKeys.length}개 키 삭제`);
-  }
-
-  console.log('\n완료! Bull Board 새로고침하면 초기화된 상태로 보일 거야.\n');
+  console.log('\nBull Board 새로고침하면 초기화된 상태로 보일 거야.\n');
 
   await redis.quit();
   process.exit(0);
