@@ -168,3 +168,18 @@ export const getArticleIdByKeyword = async (
 
   return article?.articleId ?? null;
 };
+
+export const getRecentWriters = async (
+  cafeId: string,
+  limit: number = 5
+): Promise<string[]> => {
+  const articles = await PublishedArticle.find(
+    { cafeId, writerAccountId: { $ne: '' } },
+    { writerAccountId: 1 }
+  )
+    .sort({ publishedAt: -1 })
+    .limit(limit)
+    .lean();
+
+  return articles.map((a) => a.writerAccountId);
+};

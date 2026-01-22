@@ -115,11 +115,16 @@ const addViralCommentJobs = async (
   articleId: number,
   accounts: NaverAccount[]
 ): Promise<void> => {
-  const { cafeId, keyword, accountId: writerAccountId, viralComments } = postData;
+  const { cafeId, keyword, accountId: writerAccountId, viralComments, commenterAccountIds } = postData;
   if (!viralComments || viralComments.comments.length === 0) return;
 
   const { comments } = viralComments;
-  const commenterAccounts = accounts.filter((a) => a.id !== writerAccountId);
+
+  // commenterAccountIds가 undefined면 전체 사용, 빈 배열이면 댓글 스킵
+  const commenterAccounts = commenterAccountIds === undefined
+    ? accounts.filter((a) => a.id !== writerAccountId)
+    : accounts.filter((a) => commenterAccountIds.includes(a.id) && a.id !== writerAccountId);
+
   if (commenterAccounts.length === 0) {
     console.log('[WORKER] 댓글 계정 없음 - viral 댓글 스킵');
     return;
@@ -291,7 +296,11 @@ const handlePostSuccess = async (
   }
 
   // 2. 댓글 job 추가
-  const commenterAccounts = accounts.filter((a) => a.id !== writerAccountId);
+  // commenterAccountIds가 undefined면 전체 사용, 빈 배열이면 댓글 스킵
+  const commenterAccounts = postData.commenterAccountIds === undefined
+    ? accounts.filter((a) => a.id !== writerAccountId)
+    : accounts.filter((a) => postData.commenterAccountIds!.includes(a.id) && a.id !== writerAccountId);
+
   if (commenterAccounts.length === 0) {
     console.log('[WORKER] 댓글 계정 없음 - 스킵');
     return;

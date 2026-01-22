@@ -26,6 +26,7 @@ export interface PostJobData {
   skipComments?: boolean;
   viralComments?: ViralCommentsData;
   images?: string[]; // Base64 이미지 배열
+  commenterAccountIds?: string[]; // 댓글 작성 계정 ID 목록
   rescheduleToken?: string;
   _retryCount?: number;
 }
