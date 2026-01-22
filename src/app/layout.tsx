@@ -12,8 +12,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Cafe Bot - 네이버 카페 자동 글쓰기',
-  description: '네이버 카페 자동 글 발행 봇',
+  title: 'Viro - 바이럴 자동화',
+  description: 'Viral + Auto, 네이버 카페 바이럴 자동화 플랫폼',
 };
 
 export default function RootLayout({
