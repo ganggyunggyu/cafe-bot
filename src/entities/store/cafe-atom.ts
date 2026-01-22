@@ -21,3 +21,11 @@ export const selectedCafeAtom = atom((get) => {
   const selectedId = get(selectedCafeIdAtom);
   return cafes.find((c) => c.cafeId === selectedId) || null;
 });
+
+// 카페 상태 리셋 (write-only atom)
+export const resetCafesAtom = atom(null, (_get, set) => {
+  set(cafesAtom, []);
+  set(selectedCafeIdAtom, '');
+  set(cafesLoadingAtom, false);
+  set(cafesInitializedAtom, false);
+});

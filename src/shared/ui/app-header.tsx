@@ -9,6 +9,7 @@ import { cn } from '@/shared/lib/cn';
 import { ThemeToggle } from './theme-toggle';
 import { logout } from '@/features/auth/actions';
 import { userAtom, userLoadingAtom, userInitializedAtom } from '@/shared/store';
+import { resetCafesAtom } from '@/entities/store';
 
 // 주요 메뉴
 const MAIN_NAV = [
@@ -31,6 +32,7 @@ export const AppHeader = () => {
   const [user, setUser] = useAtom(userAtom);
   const [isLoading] = useAtom(userLoadingAtom);
   const [, setIsInitialized] = useAtom(userInitializedAtom);
+  const [, resetCafes] = useAtom(resetCafesAtom);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +56,7 @@ export const AppHeader = () => {
     await logout();
     setUser(null);
     setIsInitialized(false);
+    resetCafes();
     setIsDropdownOpen(false);
     router.push('/login');
     router.refresh();
@@ -105,13 +108,13 @@ export const AppHeader = () => {
         <Link href="/" className={cn('flex items-center gap-2 shrink-0')}>
           <div
             className={cn(
-              'h-8 w-8 rounded-lg bg-(--accent) text-(--background)',
-              'flex items-center justify-center text-xs font-bold'
+              'h-8 w-8 rounded-lg bg-ink',
+              'flex items-center justify-center text-sm font-bold text-background'
             )}
           >
-            CB
+            V
           </div>
-          <span className={cn('font-semibold text-(--ink) hidden sm:block')}>Cafe Bot</span>
+          <span className={cn('font-semibold text-(--ink) hidden sm:block')}>Viro</span>
         </Link>
 
         <div className={cn('flex items-center gap-0.5')}>

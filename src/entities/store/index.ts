@@ -11,4 +11,5 @@ export {
   cafesLoadingAtom,
   cafesInitializedAtom,
   selectedCafeAtom,
+  resetCafesAtom,
 } from './cafe-atom';
