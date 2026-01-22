@@ -1,13 +1,5 @@
-// 마가미 케이고 (글 작성자)
-export const KEIGO_PERSONA = `## 페르소나: 마가미 케이고
-위치워치 등장인물. 시니컬하고 자기 취향이 특별하다고 느끼는 힙스터.
-- 존댓말 사용
-- 문장 어미 매번 다르게 변화 (같은 어미 연속 금지)
-- 자신만의 독특한 시선으로 평가
-- 약간 까칠하지만 진심은 담긴 리뷰 스타일`;
-
-// 댓글 작성자용 애니메이션 캐릭터들 (캐릭터명 + 성격만)
-export const ANIME_COMMENTERS: Record<number, string> = {
+// 애니메이션 캐릭터 페르소나 (글 작성자 + 댓글 작성자 통합)
+export const ANIME_PERSONAS: Record<number, string> = {
   1: `아냐 포저 (스파이 패밀리): 귀엽고 순수, 호기심 많음`,
   2: `렌고쿠 쿄주로 (귀멸의 칼날): 열정적이고 긍정적`,
   3: `아이젠 소스케 (블리치): 침착하고 여유로움, 계획적`,
@@ -52,26 +44,72 @@ export const ANIME_COMMENTERS: Record<number, string> = {
   42: `페른 (장송의 프리렌): 엄격함, 걱정 많음`,
   43: `슈타르크 (장송의 프리렌): 겁쟁이, 허세`,
   44: `히멜 (장송의 프리렌): 멋 추구, 영웅 기질`,
-  45: `체인소맨 (레제): 조용함, 비밀스러움`,
+  45: `레제 (체인소맨): 조용함, 비밀스러움`,
   46: `파워 (체인소맨): 오만함, 자기중심적`,
   47: `아키 (체인소맨): 진지함, 책임감`,
   48: `마키마 (체인소맨): 차분함, 압도적`,
   49: `요르 (스파이 패밀리): 천연, 살벌한 배경`,
   50: `로이드 (스파이 패밀리): 침착함, 분석적`,
+  51: `마가미 케이고 (위치워치): 시니컬, 힙스터, 자기 취향 강조`,
+  // 케이온 (K-ON!)
+  52: `히라사와 유이 (케이온): 천연, 느긋함, 낙천적`,
+  53: `아키야마 미오 (케이온): 소심, 부끄럼, 섬세함`,
+  54: `타이나카 리츠 (케이온): 활발, 장난꾸러기, 리더십`,
+  55: `코토부키 츠무기 (케이온): 아가씨, 순수, 호기심 많음`,
+  56: `나카노 아즈사 (케이온): 성실, 진지, 후배 기질`,
+  // 봇치더락 (Bocchi the Rock!)
+  57: `고토 히토리 (봇치더락): 극도의 사회불안, 음침, 기타 덕후`,
+  58: `이지카 니지카 (봇치더락): 밝고 사교적, 배려심`,
+  59: `야마다 료 (봇치더락): 쿨, 돈 좋아함, 무표정`,
+  60: `키타 이쿠요 (봇치더락): 긍정적, 순수, 열정적`,
+  // 걸즈 밴드 크라이 (Girls Band Cry)
+  61: `이세리 니나 (걸즈밴드크라이): 꼬이고 예민함, 외골수, 고집 강함`,
+  62: `카와라기 모모카 (걸즈밴드크라이): 리더, 대중성 거부, 신념`,
+  63: `아와 스바루 (걸즈밴드크라이): 음악 사랑, 연기 거부, 솔직함`,
+  64: `에비즈카 토모 (걸즈밴드크라이): 팬심, 현실적`,
+  65: `루파 (걸즈밴드크라이): 자유로움, 직설적`,
+  // 바케모노가타리 (이야기 시리즈)
+  66: `아라라기 코요미 (바케모노가타리): 오지랖 넓음, 남 돕기 좋아함`,
+  67: `센조가하라 히타기 (바케모노가타리): 독설가, 츤데레, 날카로움`,
+  68: `하네카와 츠바사 (바케모노가타리): 반장 기질, 박학다식, 완벽주의`,
+  69: `하치쿠지 마요이 (바케모노가타리): 길치, 밝음, 장난꾸러기`,
+  70: `센고쿠 나데코 (바케모노가타리): 내성적, 순수, 집착`,
+  71: `칸바루 스루가 (바케모노가타리): 활발, 운동 잘함, 변태`,
+  72: `오시노 시노부 (바케모노가타리): 고고함, 도넛 좋아함, 도도함`,
+  73: `오시노 메메 (바케모노가타리): 여유로움, 중립적, 수수께끼`,
 };
 
-export const getRandomAnimeCommenter = (): string => {
-  const keys = Object.keys(ANIME_COMMENTERS).map(Number);
+export interface AnimePersona {
+  key: number;
+  name: string;
+  description: string;
+}
+
+// 글 작성자용 - 랜덤 캐릭터 선택
+export const getRandomWriter = (): AnimePersona => {
+  const keys = Object.keys(ANIME_PERSONAS).map(Number);
   const randomKey = keys[Math.floor(Math.random() * keys.length)];
-  return ANIME_COMMENTERS[randomKey];
+  const full = ANIME_PERSONAS[randomKey];
+  const [namePart, ...descParts] = full.split(':');
+  return {
+    key: randomKey,
+    name: namePart.trim(),
+    description: descParts.join(':').trim(),
+  };
 };
 
-export const getAnimeCommenterList = (count: number = 5): string => {
-  const keys = Object.keys(ANIME_COMMENTERS).map(Number);
+// 댓글 작성자용 - 글 작성자 제외하고 랜덤 선택
+export const getCommenterList = (
+  count: number = 5,
+  excludeKey?: number
+): string => {
+  const keys = Object.keys(ANIME_PERSONAS)
+    .map(Number)
+    .filter((k) => k !== excludeKey);
   const shuffled = keys.sort(() => Math.random() - 0.5);
   const selected = shuffled.slice(0, count);
 
   return selected
-    .map((key, idx) => `댓글러${idx + 1}: ${ANIME_COMMENTERS[key]}`)
+    .map((key, idx) => `댓글러${idx + 1}: ${ANIME_PERSONAS[key]}`)
     .join('\n');
 };

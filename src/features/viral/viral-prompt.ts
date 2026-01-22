@@ -1,22 +1,22 @@
 // ★★★ 콘텐츠 스타일 토글 (최상단) ★★★
 // '정보' = 정보성 콘텐츠 (건강, 제품 추천 중심)
 // '일상' = 일상 콘텐츠 (개인 경험, 라이프스타일 중심)
-// '케이고' = 마가미 케이고 스타일 (일상 형식 + 케이고 말투 + 애니 댓글러)
+// '애니' = 애니메이션 스타일 (랜덤 애니 캐릭터 페르소나)
 import type { ContentStyle, ViralPromptInput } from './prompts';
 import {
   buildCasualPrompt,
   buildInfoPrompt,
-  buildKeigoPrompt,
+  buildAnimePrompt,
 } from './prompts';
 
-export let CONTENT_STYLE: ContentStyle = '케이고';
+export let CONTENT_STYLE: ContentStyle = '애니';
 
 // Re-export everything from prompts
 export * from './prompts';
 
 export const buildViralPrompt = (input: ViralPromptInput): string => {
-  if (CONTENT_STYLE === '케이고') {
-    return buildKeigoPrompt(input);
+  if (CONTENT_STYLE === '애니') {
+    return buildAnimePrompt(input);
   }
   if (CONTENT_STYLE === '일상') {
     return buildCasualPrompt(input);

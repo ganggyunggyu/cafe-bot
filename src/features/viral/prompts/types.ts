@@ -1,4 +1,4 @@
-export type ContentStyle = '정보' | '일상' | '케이고';
+export type ContentStyle = '정보' | '일상' | '애니';
 export type KeywordType = 'own' | 'competitor';
 export type ContentType = 'problem' | 'review' | 'lifestyle';
 

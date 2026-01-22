@@ -21,15 +21,15 @@ export {
 // Personas (일상용)
 export { getPersonaDescription } from './personas';
 
-// Anime Personas (케이고용)
+// Anime Personas (애니 스타일용)
 export {
-  KEIGO_PERSONA,
-  ANIME_COMMENTERS,
-  getRandomAnimeCommenter,
-  getAnimeCommenterList,
+  ANIME_PERSONAS,
+  getRandomWriter,
+  getCommenterList,
 } from './anime-personas';
+export type { AnimePersona } from './anime-personas';
 
 // Prompt Builders
 export { buildCasualPrompt } from './build-casual-prompt';
 export { buildInfoPrompt } from './build-info-prompt';
-export { buildKeigoPrompt } from './build-keigo-prompt';
+export { buildAnimePrompt } from './build-anime-prompt';
