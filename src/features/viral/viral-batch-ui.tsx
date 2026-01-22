@@ -14,7 +14,7 @@ import {
   cafesInitializedAtom,
   selectedCafeAtom,
 } from '@/entities/store';
-import { getCafesAction } from '@/features/accounts/actions';
+import { getCafesAction, getAccountsAction, type AccountData } from '@/features/accounts/actions';
 import { getDelaySettings } from '@/shared/hooks/use-delay-settings';
 import { generateKeywords } from '@/shared/api/keyword-gen-api';
 import type { ViralBatchResult } from './viral-batch-job';
@@ -43,7 +43,13 @@ export const ViralBatchUI = () => {
   const [result, setResult] = useState<ViralBatchResult | null>(null);
 
   const [enableImage, setEnableImage] = useState(false);
+  const [imageSource, setImageSource] = useState<'ai' | 'search'>('search');
   const [imageCount, setImageCount] = useState(0);
+
+  // 계정 역할 상태
+  type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
+  const [accounts, setAccounts] = useState<AccountData[]>([]);
+  const [accountRoles, setAccountRoles] = useState<Map<string, AccountRole>>(new Map());
 
   // 키워드 생성 상태
   const [showGenerator, setShowGenerator] = useState(false);
@@ -62,16 +68,27 @@ export const ViralBatchUI = () => {
   useEffect(() => {
     if (cafesInitialized) return;
 
-    const loadCafes = async () => {
-      const data = await getCafesAction();
-      setCafes(data);
-      const defaultCafe = data.find((c) => c.isDefault) || data[0];
+    const loadData = async () => {
+      const [cafeData, accountData] = await Promise.all([
+        getCafesAction(),
+        getAccountsAction(),
+      ]);
+
+      setCafes(cafeData);
+      const defaultCafe = cafeData.find((c) => c.isDefault) || cafeData[0];
       if (defaultCafe) {
         setSelectedCafeId(defaultCafe.cafeId);
       }
+
+      setAccounts(accountData);
+      // 기본값: 모든 계정이 글/댓글 둘 다 가능
+      const roles = new Map<string, AccountRole>();
+      accountData.forEach((a) => roles.set(a.id, 'both'));
+      setAccountRoles(roles);
+
       setCafesInitialized(true);
     };
-    loadCafes();
+    loadData();
   }, [cafesInitialized, setCafes, setSelectedCafeId, setCafesInitialized]);
 
   const categories = selectedCafe?.categories || [];
@@ -134,8 +151,15 @@ export const ViralBatchUI = () => {
             postOptions,
             model: model || undefined,
             enableImage,
+            imageSource: enableImage ? imageSource : undefined,
             imageCount: enableImage ? imageCount : 0,
             delays: delaySettings.delays,
+            writerAccountIds: accounts
+              .filter((a) => ['both', 'writer'].includes(accountRoles.get(a.id) || 'both'))
+              .map((a) => a.id),
+            commenterAccountIds: accounts
+              .filter((a) => ['both', 'commenter'].includes(accountRoles.get(a.id) || 'both'))
+              .map((a) => a.id),
           }),
         });
 
@@ -321,15 +345,86 @@ export const ViralBatchUI = () => {
           options={MODELS}
         />
 
-        {/* 이미지 생성 옵션 */}
+        {/* 계정 역할 선택 */}
+        {accounts.length > 0 && (
+          <div className={cn('space-y-3')}>
+            <span className={labelClassName}>계정 역할</span>
+            <div className={cn('rounded-xl border border-border-light bg-surface-muted p-4 space-y-3')}>
+              {accounts.map((account) => (
+                <div key={account.id} className={cn('flex items-center gap-3')}>
+                  <span className={cn('text-sm text-ink min-w-25 truncate')}>
+                    {account.nickname || account.id}
+                    {account.isMain && <span className={cn('ml-1 text-xs text-accent')}>(메인)</span>}
+                  </span>
+                  <select
+                    value={accountRoles.get(account.id) || 'both'}
+                    onChange={(e) => {
+                      const next = new Map(accountRoles);
+                      next.set(account.id, e.target.value as AccountRole);
+                      setAccountRoles(next);
+                    }}
+                    className={cn(
+                      'flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink',
+                      'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
+                    )}
+                  >
+                    <option value="both">글/댓글</option>
+                    <option value="writer">글만</option>
+                    <option value="commenter">댓글만</option>
+                    <option value="disabled">비활성화</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 이미지 옵션 */}
         <div className={cn('space-y-3')}>
           <Checkbox
-            label="이미지 생성"
+            label="이미지 첨부"
             checked={enableImage}
             onChange={(e) => setEnableImage(e.target.checked)}
           />
           {enableImage && (
-            <div className={cn('flex items-center gap-3 pl-8')}>
+            <div className={cn('pl-8 space-y-4')}>
+              {/* 이미지 소스 선택 */}
+              <div className={cn('flex gap-2')}>
+                <button
+                  type="button"
+                  onClick={() => setImageSource('search')}
+                  className={cn(
+                    'flex-1 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium',
+                    imageSource === 'search'
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-border-light bg-surface text-ink-muted hover:border-border'
+                  )}
+                >
+                  <div className={cn('flex flex-col items-center gap-1')}>
+                    <span className={cn('text-lg')}>🔍</span>
+                    <span>구글 검색</span>
+                    <span className={cn('text-xs opacity-70')}>랜덤 액자/필터</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageSource('ai')}
+                  className={cn(
+                    'flex-1 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium',
+                    imageSource === 'ai'
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-border-light bg-surface text-ink-muted hover:border-border'
+                  )}
+                >
+                  <div className={cn('flex flex-col items-center gap-1')}>
+                    <span className={cn('text-lg')}>🎨</span>
+                    <span>AI 생성</span>
+                    <span className={cn('text-xs opacity-70')}>DALL-E / Imagen</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* 장수 선택 */}
               <Select
                 label="장수"
                 value={String(imageCount)}

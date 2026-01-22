@@ -14,13 +14,14 @@ const getRandomDelay = (range: DelayRange): number => {
   return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
 };
 
-import { generateViralContent, generateImages } from '@/shared/api/content-api';
+import { generateViralContent, generateImages, searchRandomImages } from '@/shared/api/content-api';
 import { buildViralPrompt, detectKeywordType, type KeywordType } from './viral-prompt';
 import { parseViralResponse, validateParsedContent } from './viral-parser';
 import { saveViralDebug } from './viral-debug';
 import { addTaskJob, startAllTaskWorkers } from '@/shared/lib/queue';
 import type { PostJobData, ViralCommentsData } from '@/shared/lib/queue/types';
 import type { PostOptions, ProgressCallback } from '@/features/auto-comment/batch/types';
+import { getRecentWriters } from '@/shared/models';
 
 export interface DelayConfig {
   betweenPosts: DelayRange;
@@ -28,14 +29,19 @@ export interface DelayConfig {
   afterPost: DelayRange;
 }
 
+export type ImageSource = 'ai' | 'search';
+
 export interface ViralBatchInput {
   keywords: string[];
   cafeId?: string;
   postOptions?: PostOptions;
   model?: string;
   enableImage?: boolean;
+  imageSource?: ImageSource;
   imageCount?: number;
   delays?: DelayConfig;
+  writerAccountIds?: string[];
+  commenterAccountIds?: string[];
 }
 
 export interface ViralKeywordResult {
@@ -71,7 +77,18 @@ export const runViralBatch = async (
   input: ViralBatchInput,
   onProgress?: ProgressCallback
 ): Promise<ViralBatchResult> => {
-  const { keywords, cafeId: inputCafeId, postOptions, model, enableImage, imageCount, delays } = input;
+  const {
+    keywords,
+    cafeId: inputCafeId,
+    postOptions,
+    model,
+    enableImage,
+    imageSource = 'ai',
+    imageCount,
+    delays,
+    writerAccountIds,
+    commenterAccountIds,
+  } = input;
 
   console.log('[VIRAL] runViralBatch 시작');
   console.log('[VIRAL] 키워드 수:', keywords.length);
@@ -111,6 +128,10 @@ export const runViralBatch = async (
   await connectDB();
   await startAllTaskWorkers();
 
+  // 최근 발행자 조회 (연속 발행 방지)
+  const recentWriters = await getRecentWriters(cafe.cafeId, 3);
+  console.log(`[VIRAL] 최근 발행자: ${recentWriters.join(', ') || '없음'}`);
+
   // 기본 딜레이 설정 (클라이언트에서 전달받지 못한 경우)
   const defaultDelays: DelayConfig = {
     betweenPosts: { min: 30000, max: 60000 },
@@ -123,7 +144,7 @@ export const runViralBatch = async (
   let completed = 0;
   let failed = 0;
   let globalDelay = 0;
-  let lastWriterId: string | null = null;
+  let lastWriterId: string | null = recentWriters[0] || null;
 
   for (let i = 0; i < keywords.length; i++) {
     const { keyword, category } = parseKeywordInput(keywords[i]);
@@ -172,26 +193,44 @@ export const runViralBatch = async (
         console.warn('[VIRAL] 검증 경고:', validation.errors);
       }
 
-      const activeAccounts = accounts.filter(a => isAccountActive(a));
-      if (activeAccounts.length === 0) {
-        throw new Error('활동 가능한 계정 없음');
+      // 글 작성 계정 필터링: writerAccountIds가 있으면 해당 계정만, 없으면 전체
+      const writerCandidates = writerAccountIds?.length
+        ? accounts.filter(a => writerAccountIds.includes(a.id) && isAccountActive(a))
+        : accounts.filter(a => isAccountActive(a));
+
+      if (writerCandidates.length === 0) {
+        throw new Error('글 작성 가능한 계정 없음');
       }
 
-      // 라운드 로빈 + 랜덤: 마지막 글쓴이 제외하고 선택
+      // 최근 발행자들 피해서 선택 (가능한 경우)
       let writerAccount: NaverAccount;
-      if (activeAccounts.length === 1) {
-        writerAccount = activeAccounts[0];
+      if (writerCandidates.length === 1) {
+        writerAccount = writerCandidates[0];
       } else {
-        const availableWriters: NaverAccount[] = lastWriterId
-          ? activeAccounts.filter(a => a.id !== lastWriterId)
-          : activeAccounts;
+        // 1차: 최근 발행자 전부 제외 시도
+        let availableWriters = writerCandidates.filter(a => !recentWriters.includes(a.id));
+
+        // 2차: 남은 계정이 없으면 마지막 발행자만 제외
+        if (availableWriters.length === 0 && lastWriterId) {
+          availableWriters = writerCandidates.filter(a => a.id !== lastWriterId);
+        }
+
+        // 3차: 그래도 없으면 전체 후보에서 선택
+        if (availableWriters.length === 0) {
+          availableWriters = writerCandidates;
+        }
+
         // 키워드 인덱스 기반 순환 + 약간의 랜덤성
         const baseIndex = i % availableWriters.length;
         const randomOffset = Math.floor(Math.random() * Math.min(2, availableWriters.length));
         const writerIndex = (baseIndex + randomOffset) % availableWriters.length;
         writerAccount = availableWriters[writerIndex];
       }
+      // 최근 발행자 목록 갱신
+      recentWriters.unshift(writerAccount.id);
+      if (recentWriters.length > 3) recentWriters.pop();
       lastWriterId = writerAccount.id;
+      console.log(`[VIRAL] 글 작성자 선택: ${writerAccount.nickname || writerAccount.id} (최근: ${recentWriters.slice(0, 3).join(', ')})`);
 
       let menuId = cafe.menuId;
       if (category && cafe.categoryMenuIds) {
@@ -217,29 +256,28 @@ export const runViralBatch = async (
           ? imageCount
           : Math.floor(Math.random() * 2) + 1;
 
+        const imageSourceLabel = imageSource === 'search' ? '검색' : 'AI';
         onProgress?.({
           currentKeyword: keyword,
           keywordIndex: i,
           totalKeywords: keywords.length,
           phase: 'post',
-          message: `[${i + 1}/${keywords.length}] ${keyword} 이미지 ${finalCount}장 생성 중...`,
+          message: `[${i + 1}/${keywords.length}] ${keyword} ${imageSourceLabel} 이미지 ${finalCount}장...`,
         });
 
         try {
-          const imageResult = await generateImages({
-            keyword,
-            category,
-            count: finalCount,
-          });
+          const imageResult = imageSource === 'search'
+            ? await searchRandomImages({ keyword, count: finalCount })
+            : await generateImages({ keyword, category, count: finalCount });
 
           if (imageResult.success && imageResult.images?.length) {
             images = imageResult.images;
-            console.log(`[VIRAL] 이미지 ${images.length}장 생성 완료: ${keyword}`);
+            console.log(`[VIRAL] ${imageSourceLabel} 이미지 ${images.length}장 완료: ${keyword}`);
           } else {
-            console.warn(`[VIRAL] 이미지 생성 실패: ${keyword}`, imageResult.error);
+            console.warn(`[VIRAL] ${imageSourceLabel} 이미지 실패: ${keyword}`, imageResult.error);
           }
         } catch (imgError) {
-          console.warn(`[VIRAL] 이미지 생성 오류: ${keyword}`, imgError);
+          console.warn(`[VIRAL] ${imageSourceLabel} 이미지 오류: ${keyword}`, imgError);
         }
       }
 
@@ -257,6 +295,7 @@ export const runViralBatch = async (
         skipComments: true,
         viralComments,
         images,
+        commenterAccountIds: commenterAccountIds?.length ? commenterAccountIds : undefined,
       };
 
       await addTaskJob(writerAccount.id, postJobData, postDelay);
