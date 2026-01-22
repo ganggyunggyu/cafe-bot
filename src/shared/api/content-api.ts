@@ -1,31 +1,39 @@
-import type { GenerateContentRequest, GenerateContentResponse } from '@/shared/types';
+import type {
+  GenerateContentRequest,
+  GenerateContentResponse,
+} from '@/shared/types';
 
 const CONTENT_API_URL = process.env.CONTENT_API_URL || 'http://localhost:8000';
 
 export const generateContent = async (
   request: GenerateContentRequest
 ): Promise<GenerateContentResponse> => {
-  const response = await fetch(`${CONTENT_API_URL}/generate/gemini-cafe-daily`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      service: request.service,
-      keyword: request.keyword,
-      ref: request.ref || '',
-      persona_id: request.personaId ?? null,
-    }),
-  });
+  const response = await fetch(
+    `${CONTENT_API_URL}/generate/gemini-cafe-daily`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        service: request.service,
+        keyword: request.keyword,
+        ref: request.ref || '',
+        persona_id: request.personaId ?? null,
+      }),
+    }
+  );
 
   if (!response.ok) {
     const errorBody = await response.text();
     console.error('[CONTENT API] 에러 응답:', response.status, errorBody);
-    throw new Error(`Content generation failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `Content generation failed: ${response.status} - ${errorBody}`
+    );
   }
 
   return response.json();
-}
+};
 
 interface GenerateContentWithPromptRequest {
   prompt: string;
@@ -79,16 +87,19 @@ interface ViralContentResponse {
 export const generateViralContent = async (
   request: ViralContentRequest
 ): Promise<ViralContentResponse> => {
-  const response = await fetch(`${CONTENT_API_URL}/generate/gemini-3-flash-clean`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      service: request.service || 'viral',
-      keyword: request.prompt,
-    }),
-  });
+  const response = await fetch(
+    `${CONTENT_API_URL}/generate/gemini-3-flash-clean`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        service: request.service || 'viral',
+        keyword: request.prompt,
+      }),
+    }
+  );
 
   if (!response.ok) {
     throw new Error(`Viral content generation failed: ${response.status}`);
@@ -123,7 +134,8 @@ const downloadImageAsBase64 = async (url: string): Promise<string | null> => {
     const base64 = buffer.toString('base64');
     // MIME 타입 추정 (URL 확장자 기반)
     const ext = url.split('.').pop()?.toLowerCase() || 'png';
-    const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const mimeType =
+      ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
     console.error('[IMAGE API] 이미지 다운로드 오류:', url, error);
@@ -176,3 +188,6 @@ export const generateImages = async (
 
 // 이미지 URL을 다운로드하여 base64로 변환 (업로드 시점에 사용)
 export { downloadImageAsBase64 };
+
+// Google 검색 이미지 API는 google-image-api.ts로 분리됨
+export { searchRandomImages } from './google-image-api';
