@@ -236,7 +236,7 @@ export const getDetailedJobs = async (
     filtered = filtered.filter((j) => j.cafeId === filter.cafeId);
   }
 
-  const statusOrder = { delayed: 0, waiting: 1, active: 2, completed: 3, failed: 4 };
+  const statusOrder = { active: 0, delayed: 1, waiting: 2, completed: 3, failed: 4 };
   filtered.sort((a, b) => {
     const orderDiff = statusOrder[a.status] - statusOrder[b.status];
     if (orderDiff !== 0) return orderDiff;
