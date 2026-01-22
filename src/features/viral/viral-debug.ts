@@ -1,9 +1,14 @@
 'use server';
 
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const DEBUG_DIR = path.join(process.cwd(), '.viral-debug');
+import { connectDB } from '@/shared/lib/mongodb';
+import {
+  saveViralResponse,
+  getViralResponseList,
+  getViralResponseById,
+  clearViralResponses,
+  type IViralResponse,
+} from '@/shared/models';
+import { getCurrentUserId } from '@/shared/config/user';
 
 export interface ViralDebugEntry {
   id: string;
@@ -14,84 +19,84 @@ export interface ViralDebugEntry {
   parsedBody?: string;
   parsedComments?: number;
   parseError?: string;
+  cafeId?: string;
+  contentStyle?: string;
+  writerPersona?: string;
   createdAt: string;
 }
 
-const ensureDebugDir = async () => {
-  try {
-    await fs.mkdir(DEBUG_DIR, { recursive: true });
-  } catch {
-    // ignore
-  }
+interface SaveDebugInput {
+  keyword: string;
+  prompt: string;
+  response: string;
+  parsedTitle?: string;
+  parsedBody?: string;
+  parsedComments?: number;
+  parseError?: string;
+  cafeId?: string;
+  contentStyle?: string;
+  writerPersona?: string;
 }
 
-export const saveViralDebug = async (entry: Omit<ViralDebugEntry, 'id' | 'createdAt'>): Promise<string> => {
-  await ensureDebugDir();
+const toDebugEntry = (doc: IViralResponse): ViralDebugEntry => ({
+  id: (doc._id as unknown as { toString(): string }).toString(),
+  keyword: doc.keyword,
+  prompt: doc.prompt,
+  response: doc.response,
+  parsedTitle: doc.parsedTitle,
+  parsedBody: doc.parsedBody,
+  parsedComments: doc.parsedComments,
+  parseError: doc.parseError,
+  cafeId: doc.cafeId,
+  contentStyle: doc.contentStyle,
+  writerPersona: doc.writerPersona,
+  createdAt: doc.createdAt.toISOString(),
+});
 
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const fullEntry: ViralDebugEntry = {
-    ...entry,
-    id,
-    createdAt: new Date().toISOString(),
-  };
+export const saveViralDebug = async (entry: SaveDebugInput): Promise<string> => {
+  await connectDB();
+  const userId = await getCurrentUserId();
 
-  const filePath = path.join(DEBUG_DIR, `${id}.json`);
-  await fs.writeFile(filePath, JSON.stringify(fullEntry, null, 2), 'utf-8');
+  return saveViralResponse({
+    userId,
+    keyword: entry.keyword,
+    prompt: entry.prompt,
+    response: entry.response,
+    parsedTitle: entry.parsedTitle,
+    parsedBody: entry.parsedBody,
+    parsedComments: entry.parsedComments,
+    parseError: entry.parseError,
+    cafeId: entry.cafeId,
+    contentStyle: entry.contentStyle,
+    writerPersona: entry.writerPersona,
+  });
+};
 
-  console.log(`[VIRAL-DEBUG] 저장됨: ${id}`);
-  return id;
-}
+export const getViralDebugList = async (keyword?: string): Promise<ViralDebugEntry[]> => {
+  await connectDB();
+  const userId = await getCurrentUserId();
 
-export const getViralDebugList = async (): Promise<ViralDebugEntry[]> => {
-  await ensureDebugDir();
+  const docs = await getViralResponseList({
+    userId,
+    keyword,
+    limit: 100,
+  });
 
-  try {
-    const files = await fs.readdir(DEBUG_DIR);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
-
-    const entries: ViralDebugEntry[] = [];
-    for (const file of jsonFiles) {
-      try {
-        const content = await fs.readFile(path.join(DEBUG_DIR, file), 'utf-8');
-        entries.push(JSON.parse(content));
-      } catch {
-        // skip invalid files
-      }
-    }
-
-    return entries.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } catch {
-    return [];
-  }
-}
+  return docs.map(toDebugEntry);
+};
 
 export const getViralDebugById = async (id: string): Promise<ViralDebugEntry | null> => {
-  await ensureDebugDir();
+  await connectDB();
 
-  try {
-    const filePath = path.join(DEBUG_DIR, `${id}.json`);
-    const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
+  const doc = await getViralResponseById(id);
+  if (!doc) return null;
+
+  return toDebugEntry(doc);
+};
 
 export const clearViralDebug = async (): Promise<number> => {
-  await ensureDebugDir();
+  await connectDB();
+  const userId = await getCurrentUserId();
 
-  try {
-    const files = await fs.readdir(DEBUG_DIR);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
-
-    for (const file of jsonFiles) {
-      await fs.unlink(path.join(DEBUG_DIR, file));
-    }
-
-    return jsonFiles.length;
-  } catch {
-    return 0;
-  }
-}
+  return clearViralResponses({ userId });
+};

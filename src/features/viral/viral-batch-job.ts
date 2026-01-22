@@ -168,6 +168,7 @@ export const runViralBatch = async (
           prompt,
           response: '',
           parseError: 'AI 응답 없음',
+          cafeId: cafe.cafeId,
         });
         throw new Error('AI 응답 없음');
       }
@@ -182,6 +183,7 @@ export const runViralBatch = async (
         parsedBody: parsed?.body,
         parsedComments: parsed?.comments.length,
         parseError: parsed ? undefined : '파싱 실패',
+        cafeId: cafe.cafeId,
       });
 
       if (!parsed) {

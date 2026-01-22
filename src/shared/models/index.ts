@@ -22,3 +22,13 @@ export {
   canPostToday,
   getRemainingPostsToday,
 } from './daily-post-count';
+export {
+  ViralResponse,
+  type IViralResponse,
+  saveViralResponse,
+  getViralResponseList,
+  getViralResponseById,
+  deleteViralResponse,
+  clearViralResponses,
+  getViralResponseStats,
+} from './viral-response';
