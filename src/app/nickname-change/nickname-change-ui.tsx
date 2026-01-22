@@ -27,10 +27,13 @@ interface Cafe {
   isDefault?: boolean;
 }
 
-export const NicknameChangeUI = () => {
+interface NicknameChangeUIProps {
+  mode: NicknameChangeMode;
+}
+
+export const NicknameChangeUI = ({ mode }: NicknameChangeUIProps) => {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<BatchNicknameResult | null>(null);
-  const [mode, setMode] = useState<NicknameChangeMode>('all');
   const [selectedCafeId, setSelectedCafeId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
@@ -97,51 +100,11 @@ export const NicknameChangeUI = () => {
     }
   };
 
-  const submitButtonClassName = cn(
-    'w-full rounded-2xl px-4 py-3 text-sm font-semibold text-(--background) shadow-[0_16px_40px_rgba(168,85,247,0.35)] transition',
-    'bg-[linear-gradient(135deg,var(--accent),var(--accent-strong))] hover:brightness-105',
-    'disabled:cursor-not-allowed disabled:opacity-60'
-  );
-
   return (
     <div className={cn('space-y-6')}>
-      <div className={cn('space-y-2')}>
-        <p className={cn('text-xs uppercase tracking-[0.3em] text-(--ink-muted)')}>
-          Nickname Change
-        </p>
-        <h2 className={cn('font-(--font-display) text-xl text-(--ink)')}>
-          카페 닉네임 변경
-        </h2>
-      </div>
-
-      {/* 모드 선택 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
-        <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>변경 모드</h3>
-        <div className={cn('grid gap-2 sm:grid-cols-3')}>
-          <Button
-            variant={mode === 'by-cafe' ? 'primary' : 'secondary'}
-            onClick={() => setMode('by-cafe')}
-          >
-            카페 기준
-          </Button>
-          <Button
-            variant={mode === 'by-account' ? 'primary' : 'secondary'}
-            onClick={() => setMode('by-account')}
-          >
-            계정 기준
-          </Button>
-          <Button
-            variant={mode === 'all' ? 'primary' : 'secondary'}
-            onClick={() => setMode('all')}
-          >
-            전체 순회
-          </Button>
-        </div>
-      </div>
-
       {/* 선택 옵션 */}
       {mode === 'by-cafe' && (
-        <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
+        <div className={cn('rounded-2xl border border-border bg-surface-muted p-4')}>
           <Select
             label="카페 선택"
             value={selectedCafeId}
@@ -156,7 +119,7 @@ export const NicknameChangeUI = () => {
       )}
 
       {mode === 'by-account' && (
-        <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
+        <div className={cn('rounded-2xl border border-border bg-surface-muted p-4')}>
           <Select
             label="계정 선택"
             value={selectedAccountId}
@@ -171,9 +134,9 @@ export const NicknameChangeUI = () => {
       )}
 
       {/* 현재 설정 요약 */}
-      <div className={cn('rounded-2xl border border-(--border) bg-(--surface-muted) p-4')}>
-        <h3 className={cn('text-sm font-semibold text-(--ink) mb-3')}>실행 요약</h3>
-        <p className={cn('text-sm text-(--ink-muted)')}>{getModeDescription()}</p>
+      <div className={cn('rounded-2xl border border-border bg-surface-muted p-4')}>
+        <h3 className={cn('text-sm font-semibold text-ink mb-3')}>실행 요약</h3>
+        <p className={cn('text-sm text-ink-muted')}>{getModeDescription()}</p>
       </div>
 
       <Button
@@ -192,50 +155,50 @@ export const NicknameChangeUI = () => {
           className={cn(
             'rounded-2xl border px-4 py-4',
             result.success
-              ? 'border-(--success) bg-(--success-soft)'
-              : 'border-(--warning) bg-(--warning-soft)'
+              ? 'border-success bg-success-soft'
+              : 'border-warning bg-warning-soft'
           )}
         >
           <div className={cn('flex items-center justify-between mb-3')}>
             <h3
               className={cn(
                 'font-semibold',
-                result.success ? 'text-(--success)' : 'text-(--warning)'
+                result.success ? 'text-success' : 'text-warning'
               )}
             >
               {result.success ? '변경 완료!' : '일부 실패'}
             </h3>
-            <div className={cn('text-sm text-(--ink-muted) space-x-2')}>
-              <span className={cn('text-(--success)')}>성공 {result.changed}</span>
+            <div className={cn('text-sm text-ink-muted space-x-2')}>
+              <span className={cn('text-success')}>성공 {result.changed}</span>
               {result.failed > 0 && (
-                <span className={cn('text-(--danger)')}>실패 {result.failed}</span>
+                <span className={cn('text-danger')}>실패 {result.failed}</span>
               )}
             </div>
           </div>
 
-          <div className={cn('space-y-2 max-h-[300px] overflow-y-auto')}>
+          <div className={cn('space-y-2 max-h-75 overflow-y-auto')}>
             {result.results.map((r, i) => (
               <div
                 key={i}
                 className={cn(
-                  'rounded-xl border border-(--border) bg-(--surface-muted) px-3 py-2'
+                  'rounded-xl border border-border bg-surface-muted px-3 py-2'
                 )}
               >
                 <div className={cn('flex items-center gap-2')}>
                   <span>{r.success ? '✅' : '❌'}</span>
-                  <span className={cn('font-medium text-sm text-(--ink)')}>
+                  <span className={cn('font-medium text-sm text-ink')}>
                     {r.accountId}
                   </span>
-                  <span className={cn('text-(--ink-muted)')}>→</span>
-                  <span className={cn('text-sm text-(--ink)')}>{r.cafeName}</span>
+                  <span className={cn('text-ink-muted')}>→</span>
+                  <span className={cn('text-sm text-ink')}>{r.cafeName}</span>
                 </div>
                 {r.success && r.oldNickname && r.newNickname && (
-                  <p className={cn('text-xs text-(--ink-muted) mt-1')}>
+                  <p className={cn('text-xs text-ink-muted mt-1')}>
                     {r.oldNickname} → {r.newNickname}
                   </p>
                 )}
                 {r.error && (
-                  <p className={cn('text-xs text-(--danger) mt-1')}>{r.error}</p>
+                  <p className={cn('text-xs text-danger mt-1')}>{r.error}</p>
                 )}
               </div>
             ))}

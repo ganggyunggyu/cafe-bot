@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition, useCallback, type DragEvent } from 'react';
 import { useAtom } from 'jotai';
+import { motion } from 'framer-motion';
 import { cn } from '@/shared/lib/cn';
 import { Select, Button } from '@/shared/ui';
 import { runManualPublishAction, runManualModifyAction } from './manual-actions';
@@ -252,23 +253,31 @@ export const ManualPostUI = () => {
   return (
     <div className={cn('space-y-6')}>
       {/* 모드 선택 */}
-      <div className={cn('flex gap-2 p-1 rounded-xl bg-(--surface-muted)')}>
-        <Button
-          variant={mode === 'publish' ? 'primary' : 'ghost'}
-          size="sm"
-          onClick={() => setMode('publish')}
-          className="flex-1"
-        >
-          발행
-        </Button>
-        <Button
-          variant={mode === 'modify' ? 'primary' : 'ghost'}
-          size="sm"
-          onClick={() => setMode('modify')}
-          className="flex-1"
-        >
-          수정
-        </Button>
+      <div className={cn('flex gap-2')}>
+        {[
+          { id: 'publish', label: '발행' },
+          { id: 'modify', label: '수정' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setMode(tab.id as Mode)}
+            className={cn(
+              'relative px-5 py-2.5 rounded-xl text-sm font-medium transition-colors',
+              mode === tab.id
+                ? 'text-(--background)'
+                : 'bg-(--surface) border border-(--border) text-(--ink-muted) hover:text-(--ink) hover:bg-(--surface-muted)'
+            )}
+          >
+            {mode === tab.id && (
+              <motion.div
+                layoutId="manualPostTab"
+                className={cn('absolute inset-0 bg-(--accent) rounded-xl')}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className={cn('relative z-10')}>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* 드래그앤드랍 영역 */}
