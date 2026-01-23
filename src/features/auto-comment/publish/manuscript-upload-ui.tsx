@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback, DragEvent, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select, Button } from '@/shared/ui';
+import { Select, Button, ConfirmModal, ExecuteConfirmModal } from '@/shared/ui';
 import { getCafesAction } from '@/features/accounts/actions';
 import { PostOptionsUI } from '../batch/post-options-ui';
 import { DEFAULT_POST_OPTIONS, type PostOptions } from '../batch/types';
@@ -71,6 +71,8 @@ export const ManuscriptUploadUI = () => {
   const [parseError, setParseError] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<ManuscriptSortOrder>('oldest');
   const [daysLimit, setDaysLimit] = useState<number>(0);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [showExecuteModal, setShowExecuteModal] = useState(false);
 
   useEffect(() => {
     const loadCafes = async () => {
@@ -218,6 +220,17 @@ export const ManuscriptUploadUI = () => {
     setManuscripts([]);
     setResult(null);
     setParseError(null);
+    setShowClearModal(false);
+  };
+
+  const handleSubmitClick = () => {
+    if (manuscripts.length === 0) return;
+    setShowExecuteModal(true);
+  };
+
+  const handleConfirmedSubmit = () => {
+    setShowExecuteModal(false);
+    handleSubmit();
   };
 
   const groupedByCategory = manuscripts.reduce((acc, m) => {
@@ -290,7 +303,7 @@ export const ManuscriptUploadUI = () => {
               <Button
                 variant="danger"
                 size="xs"
-                onClick={handleClear}
+                onClick={() => setShowClearModal(true)}
               >
                 초기화
               </Button>
@@ -376,8 +389,41 @@ export const ManuscriptUploadUI = () => {
         )}
       </div>
 
+      {/* 초기화 확인 모달 */}
+      <ConfirmModal
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={handleClear}
+        title="원고 목록을 초기화하시겠습니까?"
+        description={`${manuscripts.length}개 원고가 삭제됩니다.`}
+        variant="danger"
+        confirmText="초기화"
+        cancelText="취소"
+      />
+
+      {/* 실행 확인 모달 */}
+      <ExecuteConfirmModal
+        isOpen={showExecuteModal}
+        onClose={() => setShowExecuteModal(false)}
+        onConfirm={handleConfirmedSubmit}
+        title={mode === 'publish' ? '원고를 발행하시겠습니까?' : '원고를 수정하시겠습니까?'}
+        description="아래 설정으로 작업이 진행됩니다."
+        settings={[
+          { label: '원고 수', value: `${manuscripts.length}개`, highlight: true },
+          { label: '카페', value: selectedCafe?.name || '선택 안됨' },
+          ...(mode === 'modify'
+            ? [
+                { label: '정렬', value: sortOrder === 'oldest' ? '오래된 순' : sortOrder === 'newest' ? '최신 순' : '랜덤' },
+                { label: '기간', value: daysLimit > 0 ? `${daysLimit}일 이내` : '전체' },
+              ]
+            : []),
+        ]}
+        confirmText={mode === 'publish' ? '발행' : '수정'}
+        isLoading={isPending}
+      />
+
       <Button
-        onClick={handleSubmit}
+        onClick={handleSubmitClick}
         disabled={manuscripts.length === 0}
         isLoading={isPending}
         size="lg"

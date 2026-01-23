@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/shared/lib/cn';
-import { Button } from '@/shared/ui';
+import { Button, ConfirmModal } from '@/shared/ui';
 import {
   getViralDebugList,
   getViralDebugById,
@@ -18,6 +18,8 @@ export const ViralDebugUI = () => {
   const [activeTab, setActiveTab] = useState<'response' | 'prompt'>('response');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const loadEntries = useCallback(async () => {
     setIsLoading(true);
@@ -47,11 +49,15 @@ export const ViralDebugUI = () => {
   };
 
   const handleClear = async () => {
-    if (!confirm('모든 디버그 로그를 삭제하시겠습니까?')) return;
-    const count = await clearViralDebug();
-    alert(`${count}개 삭제됨`);
-    setEntries([]);
-    setSelectedEntry(null);
+    setIsClearing(true);
+    try {
+      await clearViralDebug();
+      setEntries([]);
+      setSelectedEntry(null);
+      setShowClearModal(false);
+    } finally {
+      setIsClearing(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -78,6 +84,19 @@ export const ViralDebugUI = () => {
 
   return (
     <div className={cn('space-y-4')}>
+      {/* 전체 삭제 확인 모달 */}
+      <ConfirmModal
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={handleClear}
+        title="모든 디버그 로그를 삭제하시겠습니까?"
+        description={`총 ${entries.length}개의 로그가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`}
+        variant="danger"
+        confirmText="전체 삭제"
+        cancelText="취소"
+        isLoading={isClearing}
+      />
+
       <div className={cn('flex items-center justify-between')}>
         <div className={cn('flex items-center gap-3')}>
           <h3 className={cn('font-semibold text-(--ink)')}>AI 응답 디버그</h3>
@@ -109,7 +128,7 @@ export const ViralDebugUI = () => {
           >
             {isRefreshing ? '로딩...' : '새로고침'}
           </Button>
-          <Button variant="danger" size="xs" onClick={handleClear}>
+          <Button variant="danger" size="xs" onClick={() => setShowClearModal(true)}>
             전체 삭제
           </Button>
         </div>

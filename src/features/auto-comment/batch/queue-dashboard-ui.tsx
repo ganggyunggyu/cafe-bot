@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { cn } from '@/shared/lib/cn';
-import { Select, Button } from '@/shared/ui';
+import { Select, Button, ConfirmModal } from '@/shared/ui';
 import {
   getDetailedJobs,
   getQueueSummary,
@@ -68,6 +68,7 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
   const [summary, setSummary] = useState<QueueSummary | null>(null);
   const [filter, setFilter] = useState<JobsFilter>({ status: 'all', type: 'all' });
   const [isPolling, setIsPolling] = useState(true);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   const loadData = async () => {
     const [jobsResult, summaryResult] = await Promise.all([
@@ -87,9 +88,9 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
   }, [filter, page, isPolling]);
 
   const handleClearAll = () => {
-    if (!confirm('모든 큐를 클리어하시겠습니까?')) return;
     startTransition(async () => {
       await clearAllQueues();
+      setShowClearModal(false);
       loadData();
     });
   };
@@ -104,8 +105,25 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
     'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
   );
 
+  const totalPending = summary
+    ? summary.total.delayed + summary.total.waiting + summary.total.active
+    : 0;
+
   return (
     <div className={cn('space-y-6')}>
+      {/* 전체 클리어 확인 모달 */}
+      <ConfirmModal
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={handleClearAll}
+        title="모든 큐를 클리어하시겠습니까?"
+        description={`대기 중인 작업 ${totalPending}건이 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`}
+        variant="danger"
+        confirmText="전체 클리어"
+        cancelText="취소"
+        isLoading={isPending}
+      />
+
       {/* 헤더 */}
       <div className={cn('flex items-center justify-between')}>
         <div>
@@ -123,7 +141,7 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
           <Button
             variant="danger"
             size="sm"
-            onClick={handleClearAll}
+            onClick={() => setShowClearModal(true)}
             disabled={isPending}
           >
             전체 클리어

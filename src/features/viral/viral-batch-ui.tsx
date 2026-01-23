@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/shared/lib/cn';
-import { Select, Button, Checkbox } from '@/shared/ui';
+import { Select, Button, Checkbox, ExecuteConfirmModal, type SettingItem } from '@/shared/ui';
 import { toast } from '@/shared/lib/toast';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
 import {
@@ -74,6 +74,7 @@ export const ViralBatchUI = () => {
     error?: string;
   }
   const [partialResults, setPartialResults] = useState<PartialResult[]>([]);
+  const [showExecuteModal, setShowExecuteModal] = useState(false);
 
   // 계정 역할 상태
   type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
@@ -157,14 +158,19 @@ export const ViralBatchUI = () => {
       .filter((line) => line.length > 0);
   };
 
-  const handleRun = () => {
+  const handleRunClick = () => {
     const parsedKeywords = parseKeywords();
     if (parsedKeywords.length === 0) {
       toast.warning('키워드를 입력해주세요');
       return;
     }
+    setShowExecuteModal(true);
+  };
 
+  const handleRun = () => {
+    const parsedKeywords = parseKeywords();
     const delaySettings = getDelaySettings();
+    setShowExecuteModal(false);
 
     startTransition(async () => {
       setResult(null);
@@ -525,9 +531,42 @@ export const ViralBatchUI = () => {
         </div>
       </div>
 
+      {/* 실행 확인 모달 */}
+      <ExecuteConfirmModal
+        isOpen={showExecuteModal}
+        onClose={() => setShowExecuteModal(false)}
+        onConfirm={handleRun}
+        title="바이럴 배치를 실행하시겠습니까?"
+        description="아래 설정으로 바이럴 콘텐츠가 생성됩니다."
+        settings={[
+          { label: '키워드', value: `${keywordCount}개`, highlight: true },
+          { label: '카페', value: selectedCafe?.name || '선택 안됨' },
+          {
+            label: 'AI 모델',
+            value: MODELS.find((m) => m.value === model)?.label || '기본 (Gemini 3 Pro)',
+          },
+          {
+            label: '이미지',
+            value: enableImage
+              ? `${imageSource === 'ai' ? 'AI 생성' : '구글 검색'} / ${imageCount === 0 ? '랜덤 1~2장' : `${imageCount}장`}`
+              : '사용 안함',
+          },
+          {
+            label: '글 작성 계정',
+            value: `${accounts.filter((a) => ['both', 'writer'].includes(accountRoles.get(a.id) || 'both')).length}개`,
+          },
+          {
+            label: '댓글 작성 계정',
+            value: `${accounts.filter((a) => ['both', 'commenter'].includes(accountRoles.get(a.id) || 'both')).length}개`,
+          },
+        ]}
+        confirmText="실행"
+        isLoading={isPending}
+      />
+
       {/* 실행 버튼 */}
       <Button
-        onClick={handleRun}
+        onClick={handleRunClick}
         disabled={keywordCount === 0}
         isLoading={isPending}
         size="lg"

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { Select, Button } from '@/shared/ui';
+import { Select, Button, ExecuteConfirmModal } from '@/shared/ui';
 import {
   changeNicknameByCafeAction,
   changeNicknameByAccountAction,
@@ -39,6 +39,7 @@ export const NicknameChangeUI = ({ mode }: NicknameChangeUIProps) => {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cafes, setCafes] = useState<Cafe[]>([]);
+  const [showExecuteModal, setShowExecuteModal] = useState(false);
 
   // 데이터 로드
   useEffect(() => {
@@ -66,7 +67,12 @@ export const NicknameChangeUI = ({ mode }: NicknameChangeUIProps) => {
     loadData();
   }, []);
 
+  const handleRunClick = () => {
+    setShowExecuteModal(true);
+  };
+
   const handleRun = () => {
+    setShowExecuteModal(false);
     startTransition(async () => {
       setResult(null);
 
@@ -139,8 +145,41 @@ export const NicknameChangeUI = ({ mode }: NicknameChangeUIProps) => {
         <p className={cn('text-sm text-ink-muted')}>{getModeDescription()}</p>
       </div>
 
+      {/* 실행 확인 모달 */}
+      <ExecuteConfirmModal
+        isOpen={showExecuteModal}
+        onClose={() => setShowExecuteModal(false)}
+        onConfirm={handleRun}
+        title="닉네임 변경을 실행하시겠습니까?"
+        description="아래 설정으로 닉네임이 변경됩니다."
+        settings={[
+          {
+            label: '모드',
+            value: mode === 'by-cafe' ? '카페별' : mode === 'by-account' ? '계정별' : '전체',
+            highlight: true,
+          },
+          ...(mode === 'by-cafe'
+            ? [{ label: '카페', value: cafes.find((c) => c.cafeId === selectedCafeId)?.name || selectedCafeId }]
+            : []),
+          ...(mode === 'by-account'
+            ? [{ label: '계정', value: selectedAccountId }]
+            : []),
+          {
+            label: '처리 대상',
+            value:
+              mode === 'by-cafe'
+                ? `${accounts.length}개 계정`
+                : mode === 'by-account'
+                ? `${cafes.length}개 카페`
+                : `${accounts.length * cafes.length}건`,
+          },
+        ]}
+        confirmText="실행"
+        isLoading={isPending}
+      />
+
       <Button
-        onClick={handleRun}
+        onClick={handleRunClick}
         disabled={accounts.length === 0 || cafes.length === 0}
         isLoading={isPending}
         size="lg"

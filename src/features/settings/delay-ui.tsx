@@ -1,7 +1,8 @@
 'use client';
 
 import { cn } from '@/shared/lib/cn';
-import { Button } from '@/shared/ui';
+import { useState } from 'react';
+import { Button, ConfirmModal } from '@/shared/ui';
 import { useDelaySettings, type DelaySettings } from '@/shared/hooks/use-delay-settings';
 
 const msToMinSec = (ms: number): string => {
@@ -70,6 +71,12 @@ const RangeSlider = ({ label, min, max, minValue, maxValue, step, onChange }: Ra
 
 export const DelaySettingsUI = () => {
   const { settings, updateSettings, reset, isLoaded } = useDelaySettings();
+  const [showResetModal, setShowResetModal] = useState(false);
+
+  const handleReset = () => {
+    reset();
+    setShowResetModal(false);
+  };
 
   const inputClassName = cn(
     'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
@@ -232,11 +239,23 @@ export const DelaySettingsUI = () => {
         </div>
       </div>
 
+      {/* 초기화 확인 모달 */}
+      <ConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleReset}
+        title="설정을 기본값으로 초기화하시겠습니까?"
+        description="모든 딜레이, 재시도, 제한 설정이 기본값으로 복원됩니다."
+        variant="warning"
+        confirmText="초기화"
+        cancelText="취소"
+      />
+
       {/* 초기화 버튼 */}
       <Button
         variant="secondary"
         fullWidth
-        onClick={reset}
+        onClick={() => setShowResetModal(true)}
       >
         기본값으로 초기화
       </Button>

@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition, useCallback, type DragEvent } from 
 import { useAtom } from 'jotai';
 import { motion } from 'framer-motion';
 import { cn } from '@/shared/lib/cn';
-import { Select, Button } from '@/shared/ui';
+import { Select, Button, ConfirmModal, ExecuteConfirmModal } from '@/shared/ui';
 import { runManualPublishAction, runManualModifyAction } from './manual-actions';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
 import {
@@ -138,6 +138,8 @@ export const ManualPostUI = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [publishResult, setPublishResult] = useState<ManualPublishResult | null>(null);
   const [modifyResult, setModifyResult] = useState<ManualModifyResult | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [showExecuteModal, setShowExecuteModal] = useState(false);
 
   const inputClassName = cn(
     'w-full rounded-xl border border-(--border) bg-(--surface) px-4 py-3 text-sm text-(--ink)',
@@ -246,6 +248,17 @@ export const ManualPostUI = () => {
     setManuscripts([]);
     setPublishResult(null);
     setModifyResult(null);
+    setShowClearModal(false);
+  };
+
+  const handleRunClick = () => {
+    if (manuscripts.length === 0) return;
+    setShowExecuteModal(true);
+  };
+
+  const handleConfirmedRun = () => {
+    setShowExecuteModal(false);
+    handleRun();
   };
 
   const result = mode === 'publish' ? publishResult : modifyResult;
@@ -310,7 +323,7 @@ export const ManualPostUI = () => {
             <Button
               variant="danger"
               size="xs"
-              onClick={clearManuscripts}
+              onClick={() => setShowClearModal(true)}
             >
               초기화
             </Button>
@@ -419,9 +432,42 @@ export const ManualPostUI = () => {
         </pre>
       </div>
 
+      {/* 초기화 확인 모달 */}
+      <ConfirmModal
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={clearManuscripts}
+        title="원고 목록을 초기화하시겠습니까?"
+        description={`${manuscripts.length}개 원고가 삭제됩니다.`}
+        variant="danger"
+        confirmText="초기화"
+        cancelText="취소"
+      />
+
+      {/* 실행 확인 모달 */}
+      <ExecuteConfirmModal
+        isOpen={showExecuteModal}
+        onClose={() => setShowExecuteModal(false)}
+        onConfirm={handleConfirmedRun}
+        title={mode === 'publish' ? '원고를 발행하시겠습니까?' : '원고를 수정하시겠습니까?'}
+        description="아래 설정으로 작업이 진행됩니다."
+        settings={[
+          { label: '원고 수', value: `${manuscripts.length}개`, highlight: true },
+          { label: '카페', value: cafes.find((c) => c.cafeId === selectedCafeId)?.name || '선택 안됨' },
+          ...(mode === 'modify'
+            ? [
+                { label: '정렬', value: sortOrder === 'oldest' ? '오래된 순' : sortOrder === 'newest' ? '최신 순' : '랜덤' },
+                { label: '기간', value: daysLimit ? `${daysLimit}일 이내` : '전체' },
+              ]
+            : []),
+        ]}
+        confirmText={mode === 'publish' ? '발행' : '수정'}
+        isLoading={isPending}
+      />
+
       {/* 실행 버튼 */}
       <Button
-        onClick={handleRun}
+        onClick={handleRunClick}
         disabled={manuscripts.length === 0}
         isLoading={isPending}
         size="lg"
