@@ -59,7 +59,7 @@ export const getViralResponseList = async (
     skip?: number;
   } = {}
 ): Promise<IViralResponse[]> => {
-  const { userId, cafeId, keyword, hasError, limit = 50, skip = 0 } = options;
+  const { userId, cafeId, keyword, hasError, limit, skip = 0 } = options;
 
   const filter: Record<string, unknown> = {};
   if (userId) filter.userId = userId;
@@ -68,11 +68,13 @@ export const getViralResponseList = async (
   if (hasError === true) filter.parseError = { $exists: true, $ne: null };
   if (hasError === false) filter.parseError = { $exists: false };
 
-  return ViralResponse.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  const query = ViralResponse.find(filter).sort({ createdAt: -1 }).skip(skip);
+
+  if (limit && limit > 0) {
+    query.limit(limit);
+  }
+
+  return query.lean();
 };
 
 // 바이럴 응답 단건 조회

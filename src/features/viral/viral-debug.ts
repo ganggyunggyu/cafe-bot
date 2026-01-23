@@ -79,7 +79,6 @@ export const getViralDebugList = async (keyword?: string): Promise<ViralDebugEnt
   const docs = await getViralResponseList({
     userId,
     keyword,
-    limit: 100,
   });
 
   return docs.map(toDebugEntry);
