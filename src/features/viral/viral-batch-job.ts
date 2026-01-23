@@ -160,7 +160,7 @@ export const runViralBatch = async (
 
     try {
       const prompt = buildViralPrompt({ keyword, keywordType });
-      const aiResponse = await generateViralContent({ prompt });
+      const aiResponse = await generateViralContent({ prompt, model });
 
       if (!aiResponse.content) {
         await saveViralDebug({
@@ -324,8 +324,10 @@ export const runViralBatch = async (
         currentKeyword: keyword,
         keywordIndex: i,
         totalKeywords: keywords.length,
-        phase: 'waiting',
-        message: `[${i + 1}/${keywords.length}] ${keyword} Job 추가 완료`,
+        phase: 'done',
+        message: `[${i + 1}/${keywords.length}] ${keyword} 완료`,
+        success: true,
+        title: parsed.title,
       });
 
     } catch (error) {
@@ -340,6 +342,16 @@ export const runViralBatch = async (
         error: errorMessage,
       });
       failed++;
+
+      onProgress?.({
+        currentKeyword: keyword,
+        keywordIndex: i,
+        totalKeywords: keywords.length,
+        phase: 'done',
+        message: `[${i + 1}/${keywords.length}] ${keyword} 실패`,
+        success: false,
+        error: errorMessage,
+      });
     }
   }
 

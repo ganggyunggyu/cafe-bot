@@ -101,8 +101,12 @@ export interface BatchProgress {
   currentKeyword: string;
   keywordIndex: number;
   totalKeywords: number;
-  phase: 'post' | 'comments' | 'replies' | 'waiting';
+  phase: 'post' | 'comments' | 'replies' | 'waiting' | 'done';
   message: string;
+  // 키워드 처리 완료 시 결과
+  success?: boolean;
+  error?: string;
+  title?: string;
 }
 
 export type ProgressCallback = (progress: BatchProgress) => void;

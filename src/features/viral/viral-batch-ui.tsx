@@ -20,14 +20,34 @@ import { generateKeywords } from '@/shared/api/keyword-gen-api';
 import type { ViralBatchResult } from './viral-batch-job';
 
 const MODELS = [
-  { value: '', label: '기본 모델' },
-  { value: 'chatgpt-4o-latest', label: 'GPT-4o' },
-  { value: 'gpt-5.2-2025-12-11', label: 'GPT-5.2' },
-  { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+  // 기본
+  { value: '', label: '기본 (Gemini 3 Pro)' },
+  // OpenAI
+  { value: 'gpt-5.2-2025-12-11', label: 'GPT 5.2' },
+  { value: 'gpt-5.1-2025-11-13', label: 'GPT 5.1' },
+  { value: 'gpt-5-2025-08-07', label: 'GPT 5' },
+  { value: 'gpt-5-mini-2025-08-07', label: 'GPT 5 Mini' },
+  { value: 'chatgpt-4o-latest', label: 'ChatGPT 4o' },
+  { value: 'gpt-4o', label: 'GPT-4o API' },
+  { value: 'gpt-4.1-2025-04-14', label: 'GPT 4.1' },
+  { value: 'gpt-4.1-mini-2025-04-14', label: 'GPT 4.1 Mini' },
+  // Google
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
+  { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+  // Anthropic
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+  { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
+  // Upstage
+  { value: 'solar-pro', label: 'Solar Pro (한국어)' },
+  { value: 'solar-pro2', label: 'Solar Pro 2 (한국어)' },
+  // xAI
+  { value: 'grok-4-1-fast-non-reasoning', label: 'Grok 4.1' },
+  { value: 'grok-4-1-fast-reasoning', label: 'Grok 4.1 추론' },
+  { value: 'grok-4-fast-non-reasoning', label: 'Grok 4' },
+  { value: 'grok-4-fast-reasoning', label: 'Grok 4 추론' },
+  // DeepSeek
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
   { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner' },
-  { value: 'grok-4-fast-reasoning', label: 'Grok 4' },
 ];
 
 export const ViralBatchUI = () => {
@@ -45,6 +65,15 @@ export const ViralBatchUI = () => {
   const [enableImage, setEnableImage] = useState(false);
   const [imageSource, setImageSource] = useState<'ai' | 'search'>('search');
   const [imageCount, setImageCount] = useState(0);
+
+  // 실시간 진행 결과
+  interface PartialResult {
+    keyword: string;
+    success: boolean;
+    title?: string;
+    error?: string;
+  }
+  const [partialResults, setPartialResults] = useState<PartialResult[]>([]);
 
   // 계정 역할 상태
   type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
@@ -139,6 +168,7 @@ export const ViralBatchUI = () => {
 
     startTransition(async () => {
       setResult(null);
+      setPartialResults([]);
       const loadingId = toast.loading(`0/${parsedKeywords.length} 처리 중...`);
 
       try {
@@ -187,6 +217,19 @@ export const ViralBatchUI = () => {
               const current = data.keywordIndex + 1;
               const total = data.totalKeywords;
               toast.loading(`${current}/${total} 처리 중... (${data.currentKeyword})`, { id: loadingId });
+
+              // 키워드 처리 완료 시 실시간 결과 추가
+              if (data.phase === 'done') {
+                setPartialResults((prev) => [
+                  ...prev,
+                  {
+                    keyword: data.currentKeyword,
+                    success: data.success ?? false,
+                    title: data.title,
+                    error: data.error,
+                  },
+                ]);
+              }
             } else if (data.type === 'complete') {
               const res = data.result as ViralBatchResult;
               setResult(res);
@@ -452,12 +495,33 @@ export const ViralBatchUI = () => {
         </div>
       </div>
 
-      {/* 키워드 타입 안내 */}
-      <div className={cn('rounded-xl border border-info/20 bg-info-soft p-4 space-y-2')}>
-        <p className={cn('text-sm font-semibold text-info')}>키워드 자동 분류</p>
-        <div className={cn('text-sm text-info/80 space-y-1')}>
-          <p><strong>자사 키워드</strong>: 기력보충, 흑염소, 피로회복 등 → 직접 제품 홍보</p>
-          <p><strong>타사 키워드</strong>: 경쟁 제품명 → 중립적 질문 후 대안 제시</p>
+      {/* 바이럴 배치 가이드 */}
+      <div className={cn('rounded-xl border border-info/20 bg-info-soft p-4 space-y-4')}>
+        {/* 키워드 분류 */}
+        <div className={cn('space-y-1.5')}>
+          <p className={cn('text-sm font-semibold text-info')}>키워드 자동 분류</p>
+          <div className={cn('text-xs text-info/80 space-y-0.5')}>
+            <p><strong>자사</strong>: 기력보충, 흑염소, 피로회복 등 → 직접 제품 홍보</p>
+            <p><strong>타사</strong>: 경쟁 제품명 → 중립적 질문 후 대안 제시</p>
+          </div>
+        </div>
+
+        {/* 댓글 태그 규칙 */}
+        <div className={cn('space-y-1.5')}>
+          <p className={cn('text-sm font-semibold text-info')}>댓글 태그 규칙</p>
+          <div className={cn('grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-info/80')}>
+            <p><code className={cn('bg-info/10 px-1 rounded')}>[댓글N]</code> 일반 댓글</p>
+            <p><code className={cn('bg-info/10 px-1 rounded')}>[작성자-N]</code> 글쓴이 대댓</p>
+            <p><code className={cn('bg-info/10 px-1 rounded')}>[댓글러-N]</code> 댓글 작성자 대댓</p>
+            <p><code className={cn('bg-info/10 px-1 rounded')}>[제3자-N]</code> 제3자 대댓</p>
+          </div>
+        </div>
+
+        {/* 특징 */}
+        <div className={cn('text-xs text-info/70 flex flex-wrap gap-2')}>
+          <span className={cn('bg-info/10 px-2 py-0.5 rounded-full')}>AI 1회 호출로 전체 생성</span>
+          <span className={cn('bg-info/10 px-2 py-0.5 rounded-full')}>맥락 기반 댓글 흐름</span>
+          <span className={cn('bg-info/10 px-2 py-0.5 rounded-full')}>태그 자동 파싱</span>
         </div>
       </div>
 
@@ -472,7 +536,51 @@ export const ViralBatchUI = () => {
         바이럴 배치 실행 ({keywordCount}개)
       </Button>
 
-      {/* 결과 */}
+      {/* 실시간 진행 결과 */}
+      <AnimatePresence>
+        {isPending && partialResults.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className={cn('space-y-2')}
+          >
+            <div className={cn('flex items-center justify-between')}>
+              <span className={cn('text-sm font-medium text-ink')}>진행 중...</span>
+              <span className={cn('text-xs text-ink-muted')}>
+                성공 {partialResults.filter((r) => r.success).length} / 실패{' '}
+                {partialResults.filter((r) => !r.success).length}
+              </span>
+            </div>
+            <div className={cn('space-y-1.5 max-h-60 overflow-y-auto')}>
+              {partialResults.map((r, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                    r.success ? 'bg-success/10' : 'bg-danger/10'
+                  )}
+                >
+                  <span className={r.success ? 'text-success' : 'text-danger'}>
+                    {r.success ? '✓' : '✗'}
+                  </span>
+                  <span className={cn('font-medium text-ink')}>{r.keyword}</span>
+                  {r.success && r.title && (
+                    <span className={cn('text-ink-muted truncate flex-1')}>{r.title}</span>
+                  )}
+                  {!r.success && r.error && (
+                    <span className={cn('text-danger/80 truncate flex-1')}>{r.error}</span>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 최종 결과 */}
       <AnimatePresence>
         {result && (
           <motion.div
