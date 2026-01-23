@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/cn';
 import { LoadingDots } from './loading-dots';
 import type { ButtonHTMLAttributes } from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'teal';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'warning' | 'teal';
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -30,6 +30,11 @@ const variantStyles: Record<ButtonVariant, string> = {
   danger: cn(
     'bg-danger text-background',
     'shadow-[0_10px_24px_rgba(181,65,50,0.35)]',
+    'hover:brightness-105'
+  ),
+  warning: cn(
+    'bg-warning text-background',
+    'shadow-[0_10px_24px_rgba(217,119,6,0.35)]',
     'hover:brightness-105'
   ),
   teal: cn(

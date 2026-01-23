@@ -9,3 +9,10 @@ export { AnimatedButton } from './animated-button';
 export { Button } from './button';
 export { LoadingDots } from './loading-dots';
 export { PageTransition, FadeIn, SlideUp, StaggerContainer, StaggerItem } from './page-transition';
+export {
+  ConfirmModal,
+  ExecuteConfirmModal,
+  type ConfirmModalProps,
+  type ExecuteConfirmModalProps,
+  type SettingItem,
+} from './confirm-modal';
