@@ -70,38 +70,39 @@ export const generateContentWithPrompt = async (
 
 interface ViralContentRequest {
   prompt: string;
-  service?: string;
+  ref?: string;
+  model?: string;
 }
 
 interface ViralContentResponse {
-  _id?: string;
   content: string;
-  createdAt?: string;
-  engine?: string;
-  service?: string;
-  category?: string;
   keyword?: string;
-  ref?: string;
+  model?: string;
+  char_count?: number;
+  elapsed?: number;
 }
 
 export const generateViralContent = async (
   request: ViralContentRequest
 ): Promise<ViralContentResponse> => {
   const response = await fetch(
-    `${CONTENT_API_URL}/generate/gemini-3-flash-clean`,
+    `${CONTENT_API_URL}/generate/cafe-total`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        service: request.service || 'viral',
         keyword: request.prompt,
+        ref: request.ref || '',
+        model: request.model,
       }),
     }
   );
 
   if (!response.ok) {
+    const errorBody = await response.text();
+    console.error('[VIRAL API] 에러 응답:', response.status, errorBody);
     throw new Error(`Viral content generation failed: ${response.status}`);
   }
 
