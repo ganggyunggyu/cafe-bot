@@ -68,5 +68,31 @@ export const getAllAccountsForMonitoring = async (): Promise<NaverAccount[]> => 
   }
 };
 
+// accountId로 직접 조회 (userId 없는 경우 fallback)
+export const getAccountById = async (accountId: string): Promise<NaverAccount | null> => {
+  try {
+    await connectDB();
+    console.log(`[ACCOUNTS] accountId 직접 조회: ${accountId}`);
+    const dbAccount = await Account.findOne({ accountId, isActive: true }).lean();
+    console.log(`[ACCOUNTS] 조회 결과:`, dbAccount ? `찾음 (${dbAccount.nickname})` : '없음');
+
+    if (!dbAccount) return null;
+
+    return {
+      id: dbAccount.accountId,
+      password: dbAccount.password,
+      nickname: dbAccount.nickname,
+      isMain: dbAccount.isMain,
+      activityHours: dbAccount.activityHours,
+      restDays: dbAccount.restDays,
+      dailyPostLimit: dbAccount.dailyPostLimit,
+      personaId: dbAccount.personaId,
+    };
+  } catch (error) {
+    console.error('[ACCOUNTS] accountId 조회 실패:', error);
+    return null;
+  }
+};
+
 // 하위 호환성을 위한 동기 버전 (빈 배열 반환, 사용 자제)
 export const NAVER_ACCOUNTS: NaverAccount[] = [];
