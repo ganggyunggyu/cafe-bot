@@ -1,6 +1,7 @@
 'use server';
 
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getCurrentUserId } from '@/shared/config/user';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { isAccountActive, getNextActiveTime, type NaverAccount } from '@/shared/lib/account-manager';
@@ -92,6 +93,9 @@ export const runViralBatch = async (
 
   console.log('[VIRAL] runViralBatch 시작');
   console.log('[VIRAL] 키워드 수:', keywords.length);
+
+  const userId = await getCurrentUserId();
+  console.log('[VIRAL] userId:', userId);
 
   const accounts = await getAllAccounts();
   if (accounts.length < 2) {
@@ -286,6 +290,7 @@ export const runViralBatch = async (
       const postJobData: PostJobData = {
         type: 'post',
         accountId: writerAccount.id,
+        userId,
         cafeId: cafe.cafeId,
         menuId,
         subject: parsed.title,

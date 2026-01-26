@@ -75,6 +75,7 @@ export const ViralBatchUI = () => {
   }
   const [partialResults, setPartialResults] = useState<PartialResult[]>([]);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
+  const [showAccountRoles, setShowAccountRoles] = useState(false);
 
   // 계정 역할 상태
   type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
@@ -397,33 +398,165 @@ export const ViralBatchUI = () => {
         {/* 계정 역할 선택 */}
         {accounts.length > 0 && (
           <div className={cn('space-y-3')}>
-            <span className={labelClassName}>계정 역할</span>
-            <div className={cn('rounded-xl border border-border-light bg-surface-muted p-4 space-y-3')}>
-              {accounts.map((account) => (
-                <div key={account.id} className={cn('flex items-center gap-3')}>
-                  <span className={cn('text-sm text-ink min-w-25 truncate')}>
-                    {account.nickname || account.id}
-                    {account.isMain && <span className={cn('ml-1 text-xs text-accent')}>(메인)</span>}
-                  </span>
-                  <select
-                    value={accountRoles.get(account.id) || 'both'}
-                    onChange={(e) => {
-                      const next = new Map(accountRoles);
-                      next.set(account.id, e.target.value as AccountRole);
-                      setAccountRoles(next);
-                    }}
-                    className={cn(
-                      'flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink',
-                      'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
-                    )}
-                  >
-                    <option value="both">글/댓글</option>
-                    <option value="writer">글만</option>
-                    <option value="commenter">댓글만</option>
-                    <option value="disabled">비활성화</option>
-                  </select>
+            <button
+              type="button"
+              onClick={() => setShowAccountRoles(!showAccountRoles)}
+              className={cn('flex items-center justify-between w-full')}
+            >
+              <div className={cn('flex items-center gap-2')}>
+                <span className={labelClassName}>계정 역할</span>
+                <span className={cn('text-xs text-ink-muted')}>
+                  글 {accounts.filter((a) => ['both', 'writer'].includes(accountRoles.get(a.id) || 'both')).length}개 /
+                  댓글 {accounts.filter((a) => ['both', 'commenter'].includes(accountRoles.get(a.id) || 'both')).length}개
+                </span>
+              </div>
+              <span className={cn('text-ink-muted text-sm transition-transform', showAccountRoles && 'rotate-180')}>
+                ▼
+              </span>
+            </button>
+
+            <div
+              className={cn(
+                'grid transition-all duration-300 ease-out',
+                showAccountRoles ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+              )}
+            >
+              <div className={cn('overflow-hidden')}>
+                <div className={cn('rounded-xl border border-border-light bg-surface-muted p-4 space-y-3')}>
+                  {/* 일괄 설정 버튼 */}
+                  <div className={cn('flex flex-wrap gap-2 pb-3 border-b border-border-light')}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Map<string, AccountRole>();
+                        accounts.forEach((a) => next.set(a.id, 'both'));
+                        setAccountRoles(next);
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                        'bg-accent/10 text-accent hover:bg-accent/20'
+                      )}
+                    >
+                      전체 글/댓글
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Map<string, AccountRole>();
+                        accounts.forEach((a) => next.set(a.id, 'writer'));
+                        setAccountRoles(next);
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                        'bg-info/10 text-info hover:bg-info/20'
+                      )}
+                    >
+                      전체 글만
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Map<string, AccountRole>();
+                        accounts.forEach((a) => next.set(a.id, 'commenter'));
+                        setAccountRoles(next);
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                        'bg-success/10 text-success hover:bg-success/20'
+                      )}
+                    >
+                      전체 댓글만
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Map<string, AccountRole>();
+                        accounts.forEach((a) => next.set(a.id, 'disabled'));
+                        setAccountRoles(next);
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                        'bg-danger/10 text-danger hover:bg-danger/20'
+                      )}
+                    >
+                      전체 비활성화
+                    </button>
+                  </div>
+
+                  {/* 헤더 */}
+                  <div className={cn('grid grid-cols-[1fr_60px_60px] gap-2 text-xs font-medium text-ink-muted px-1')}>
+                    <span>계정</span>
+                    <span className={cn('text-center')}>글</span>
+                    <span className={cn('text-center')}>댓글</span>
+                  </div>
+
+                  {/* 계정 목록 */}
+                  <div className={cn('space-y-1 max-h-60 overflow-y-auto')}>
+                    {accounts.map((account) => {
+                      const role = accountRoles.get(account.id) || 'both';
+                      const canWrite = role === 'both' || role === 'writer';
+                      const canComment = role === 'both' || role === 'commenter';
+
+                      const toggleWrite = () => {
+                        const next = new Map(accountRoles);
+                        if (canWrite && canComment) next.set(account.id, 'commenter');
+                        else if (canWrite && !canComment) next.set(account.id, 'disabled');
+                        else if (!canWrite && canComment) next.set(account.id, 'both');
+                        else next.set(account.id, 'writer');
+                        setAccountRoles(next);
+                      };
+
+                      const toggleComment = () => {
+                        const next = new Map(accountRoles);
+                        if (canWrite && canComment) next.set(account.id, 'writer');
+                        else if (!canWrite && canComment) next.set(account.id, 'disabled');
+                        else if (canWrite && !canComment) next.set(account.id, 'both');
+                        else next.set(account.id, 'commenter');
+                        setAccountRoles(next);
+                      };
+
+                      return (
+                        <div
+                          key={account.id}
+                          className={cn(
+                            'grid grid-cols-[1fr_60px_60px] gap-2 items-center py-1.5 px-1 rounded-lg',
+                            'hover:bg-surface transition-colors'
+                          )}
+                        >
+                          <span className={cn('text-sm text-ink truncate')}>
+                            {account.nickname || account.id}
+                            {account.isMain && <span className={cn('ml-1 text-xs text-accent')}>(메인)</span>}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={toggleWrite}
+                            className={cn(
+                              'w-6 h-6 mx-auto rounded-md border-2 transition-all flex items-center justify-center',
+                              canWrite
+                                ? 'bg-info border-info text-background'
+                                : 'border-border-light hover:border-info/50'
+                            )}
+                          >
+                            {canWrite && <span className={cn('text-xs')}>✓</span>}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={toggleComment}
+                            className={cn(
+                              'w-6 h-6 mx-auto rounded-md border-2 transition-all flex items-center justify-center',
+                              canComment
+                                ? 'bg-success border-success text-background'
+                                : 'border-border-light hover:border-success/50'
+                            )}
+                          >
+                            {canComment && <span className={cn('text-xs')}>✓</span>}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         )}
