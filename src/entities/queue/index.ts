@@ -23,4 +23,6 @@ export {
   clearAllQueues,
   getDetailedJobs,
   getQueueSummary,
+  removeJob,
+  getRelatedJobs,
 } from './api';

@@ -297,3 +297,76 @@ export const getQueueSummary = async (): Promise<QueueSummary> => {
 
   return summary;
 };
+
+export const removeJob = async (
+  accountId: string,
+  jobId: string
+): Promise<{ success: boolean; message: string }> => {
+  const queueName = getTaskQueueName(accountId);
+  const queue = new Queue(queueName, { connection: getRedisConnection() });
+
+  try {
+    const job = await queue.getJob(jobId);
+    if (!job) {
+      return { success: false, message: '작업을 찾을 수 없음' };
+    }
+
+    const state = await job.getState();
+    if (state === 'active') {
+      return { success: false, message: '진행 중인 작업은 삭제할 수 없음' };
+    }
+
+    await job.remove();
+    return { success: true, message: '작업 삭제 완료' };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류';
+    return { success: false, message: msg };
+  } finally {
+    await queue.close();
+  }
+};
+
+export const getRelatedJobs = async (articleId: number): Promise<JobDetail[]> => {
+  const accounts = await getAllAccounts();
+  const cafes = await getAllCafes();
+  const cafeMap = new Map(cafes.map((c) => [c.cafeId, c.name]));
+  const relatedJobs: JobDetail[] = [];
+
+  for (const account of accounts) {
+    const queueName = getTaskQueueName(account.id);
+    const queue = new Queue(queueName, { connection: getRedisConnection() });
+
+    try {
+      const [delayed, waiting, active, completed, failed] = await Promise.all([
+        queue.getDelayed(0, 1000) as Promise<Job<TaskJobData>[]>,
+        queue.getWaiting(0, 1000) as Promise<Job<TaskJobData>[]>,
+        queue.getActive(0, 100) as Promise<Job<TaskJobData>[]>,
+        queue.getCompleted(0, 100) as Promise<Job<TaskJobData>[]>,
+        queue.getFailed(0, 100) as Promise<Job<TaskJobData>[]>,
+      ]);
+
+      const processJobs = (jobs: Job<TaskJobData>[], status: JobDetail['status']) => {
+        for (const job of jobs) {
+          if (job.data.type !== 'post' && job.data.articleId === articleId) {
+            relatedJobs.push(jobToDetail(job, status, cafeMap));
+          }
+        }
+      };
+
+      processJobs(delayed, 'delayed');
+      processJobs(waiting, 'waiting');
+      processJobs(active, 'active');
+      processJobs(completed, 'completed');
+      processJobs(failed, 'failed');
+    } catch (error) {
+      console.error(`[QUEUE] ${account.id} 연관 작업 조회 실패:`, error);
+    } finally {
+      await queue.close();
+    }
+  }
+
+  const statusOrder = { active: 0, delayed: 1, waiting: 2, completed: 3, failed: 4 };
+  relatedJobs.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+
+  return relatedJobs;
+};
