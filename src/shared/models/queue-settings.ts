@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { connectDB } from '@/shared/lib/mongodb';
 
 export interface DelayRange {
   min: number; // ms
@@ -77,6 +78,7 @@ export const DEFAULT_QUEUE_SETTINGS = {
 };
 
 export const getQueueSettings = async (): Promise<IQueueSettings> => {
+  await connectDB();
   let settings = await QueueSettings.findOne().lean();
 
   if (!settings) {
@@ -90,6 +92,7 @@ export const getQueueSettings = async (): Promise<IQueueSettings> => {
 export const updateQueueSettings = async (
   updates: Partial<Omit<IQueueSettings, '_id' | 'updatedAt'>>
 ): Promise<IQueueSettings> => {
+  await connectDB();
   const settings = await QueueSettings.findOneAndUpdate(
     {},
     { $set: updates },

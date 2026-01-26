@@ -115,7 +115,7 @@ const addViralCommentJobs = async (
   articleId: number,
   accounts: NaverAccount[]
 ): Promise<void> => {
-  const { cafeId, keyword, accountId: writerAccountId, viralComments, commenterAccountIds } = postData;
+  const { cafeId, keyword, accountId: writerAccountId, userId, viralComments, commenterAccountIds } = postData;
   if (!viralComments || viralComments.comments.length === 0) return;
 
   const { comments } = viralComments;
@@ -168,6 +168,7 @@ const addViralCommentJobs = async (
       const commentJobData: CommentJobData = {
         type: 'comment',
         accountId: commenterId,
+        userId,
         cafeId,
         articleId,
         content: item.content,
@@ -235,6 +236,7 @@ const addViralCommentJobs = async (
     const replyJobData: ReplyJobData = {
       type: 'reply',
       accountId: replyerAccountId,
+      userId,
       cafeId,
       articleId,
       content: item.content,
@@ -261,7 +263,7 @@ const handlePostSuccess = async (
   accounts: NaverAccount[],
   settings: PostHandlerContext['settings']
 ): Promise<void> => {
-  const { cafeId, menuId, keyword, subject, content, rawContent, accountId: writerAccountId } = postData;
+  const { cafeId, menuId, keyword, subject, content, rawContent, accountId: writerAccountId, userId } = postData;
 
   console.log(`[WORKER] 글 발행 성공: #${articleId} - 체인 작업 시작`);
 
@@ -351,6 +353,7 @@ const handlePostSuccess = async (
     const commentJobData: CommentJobData = {
       type: 'comment',
       accountId: commenter.id,
+      userId,
       cafeId,
       articleId,
       content: commentText,
@@ -439,6 +442,7 @@ const handlePostSuccess = async (
     const replyJobData: ReplyJobData = {
       type: 'reply',
       accountId: writerAccountId,
+      userId,
       cafeId,
       articleId,
       content: replyText,
@@ -517,6 +521,7 @@ const handlePostSuccess = async (
     const replyJobData: ReplyJobData = {
       type: 'reply',
       accountId: replyer.id,
+      userId,
       cafeId,
       articleId,
       content: replyText,
