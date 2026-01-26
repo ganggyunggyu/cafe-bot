@@ -14,6 +14,7 @@ export interface ViralCommentsData {
 export interface PostJobData {
   type: 'post';
   accountId: string;
+  userId?: string;
   cafeId: string;
   menuId: string;
   subject: string;
@@ -34,6 +35,7 @@ export interface PostJobData {
 export interface CommentJobData {
   type: 'comment';
   accountId: string;
+  userId?: string;
   cafeId: string;
   articleId: number;
   content: string;
@@ -48,6 +50,7 @@ export interface CommentJobData {
 export interface ReplyJobData {
   type: 'reply';
   accountId: string;
+  userId?: string;
   cafeId: string;
   articleId: number;
   content: string;
