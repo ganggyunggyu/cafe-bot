@@ -1,5 +1,5 @@
 const GOOGLE_IMAGE_API_URL =
-  process.env.GOOGLE_IMAGE_API_URL || 'http://localhost:3001';
+  process.env.GOOGLE_IMAGE_API_URL || 'http://localhost:3939';
 
 interface SearchRandomImagesRequest {
   keyword: string;
