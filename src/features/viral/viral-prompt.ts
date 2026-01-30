@@ -1,7 +1,3 @@
-// ★★★ 콘텐츠 스타일 토글 (최상단) ★★★
-// '정보' = 정보성 콘텐츠 (건강, 제품 추천 중심)
-// '일상' = 일상 콘텐츠 (개인 경험, 라이프스타일 중심)
-// '애니' = 애니메이션 스타일 (랜덤 애니 캐릭터 페르소나)
 import type { ContentStyle, ViralPromptInput } from './prompts';
 import {
   buildCasualPrompt,
@@ -9,7 +5,7 @@ import {
   buildAnimePrompt,
 } from './prompts';
 
-export let CONTENT_STYLE: ContentStyle = '애니';
+export let CONTENT_STYLE: ContentStyle = '정보';
 
 // Re-export everything from prompts
 export * from './prompts';
