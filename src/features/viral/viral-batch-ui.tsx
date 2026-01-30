@@ -96,31 +96,33 @@ export const ViralBatchUI = () => {
 
   const labelClassName = cn('text-sm font-medium text-ink');
 
+  // 카페 초기화 (전역 상태)
   useEffect(() => {
     if (cafesInitialized) return;
 
-    const loadData = async () => {
-      const [cafeData, accountData] = await Promise.all([
-        getCafesAction(),
-        getAccountsAction(),
-      ]);
-
+    const loadCafes = async () => {
+      const cafeData = await getCafesAction();
       setCafes(cafeData);
       const defaultCafe = cafeData.find((c) => c.isDefault) || cafeData[0];
       if (defaultCafe) {
         setSelectedCafeId(defaultCafe.cafeId);
       }
+      setCafesInitialized(true);
+    };
+    loadCafes();
+  }, [cafesInitialized, setCafes, setSelectedCafeId, setCafesInitialized]);
 
+  // 계정 로딩 (로컬 상태 - 항상 실행)
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const accountData = await getAccountsAction();
       setAccounts(accountData);
-      // 기본값: 모든 계정이 글/댓글 둘 다 가능
       const roles = new Map<string, AccountRole>();
       accountData.forEach((a) => roles.set(a.id, 'both'));
       setAccountRoles(roles);
-
-      setCafesInitialized(true);
     };
-    loadData();
-  }, [cafesInitialized, setCafes, setSelectedCafeId, setCafesInitialized]);
+    loadAccounts();
+  }, []);
 
   const categories = selectedCafe?.categories || [];
 
