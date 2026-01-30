@@ -69,11 +69,12 @@ export const parseViralResponse = (
 }
 
 // 태그만 있는 줄 (내용이 다음 줄에 있는 경우)
+// 설명이 붙은 경우도 처리: [댓글1] 일반, [작성자-1] 글쓴이 답댓 등
 const TAG_ONLY_PATTERNS = {
-  comment: /^\[댓글(\d+)\]$/,
-  authorReply: /^\[작성자-(\d+)\]$/,
-  commenterReply: /^\[댓글러-(\d+)\]$/,
-  otherReply: /^\[제3자-(\d+)\]$/,
+  comment: /^\[댓글(\d+)\](?:\s+일반)?$/,
+  authorReply: /^\[작성자-(\d+)\](?:\s+글쓴이\s*답댓)?$/,
+  commenterReply: /^\[댓글러-(\d+)\](?:\s+원댓글\s*작성자\s*재답)?$/,
+  otherReply: /^\[제3자-(\d+)\](?:\s+다른\s*사람\s*답댓)?$/,
 };
 
 const parseComments = (raw: string): ParsedComment[] => {
