@@ -307,7 +307,14 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
             <div className={cn('space-y-2')}>
               {summary.byCafe.slice(0, 3).map((cafe) => (
                 <div key={cafe.cafeId} className={cn('flex justify-between text-sm')}>
-                  <span className={cn('text-ink truncate flex-1')}>{cafe.cafeName}</span>
+                  <a
+                    href={`https://cafe.naver.com/f-e/cafes/${cafe.cafeId}/menus/0`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn('text-ink truncate flex-1 hover:text-accent underline-offset-2 hover:underline transition-colors')}
+                  >
+                    {cafe.cafeName}
+                  </a>
                   <span className={cn('font-semibold text-ink')}>{cafe.count}</span>
                 </div>
               ))}
@@ -603,10 +610,16 @@ const JobRow = ({ job, onDelete, onViewRelated, isLoadingRelated }: JobRowProps)
           {job.accountId}
         </a>
       </td>
-      <td className={cn('px-5 py-4 text-ink')}>
-        <span className={cn('truncate max-w-30 block')} title={job.cafeName}>
+      <td className={cn('px-5 py-4')}>
+        <a
+          href={`https://cafe.naver.com/f-e/cafes/${job.cafeId}/menus/0`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn('text-ink truncate max-w-30 block hover:text-accent underline-offset-2 hover:underline transition-colors')}
+          title={job.cafeName}
+        >
           {job.cafeName || job.cafeId}
-        </span>
+        </a>
       </td>
       <td className={cn('px-5 py-4')}>{getContentDisplay()}</td>
       <td className={cn('px-5 py-4')}>{getTimeDisplay()}</td>
