@@ -1,7 +1,8 @@
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
-const redis = new Redis({ maxRetriesPerRequest: null });
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/1';
+const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
 async function drainAll() {
   console.log('모든 큐 비우는 중...\n');

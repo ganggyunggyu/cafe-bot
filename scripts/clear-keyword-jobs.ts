@@ -3,7 +3,8 @@ import Redis from 'ioredis';
 
 const keyword = process.argv[2] || '하수오';
 
-const redis = new Redis({ maxRetriesPerRequest: null });
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/1';
+const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
 async function clearKeywordJobs() {
   console.log(`키워드 "${keyword}" 관련 작업 삭제 중...`);

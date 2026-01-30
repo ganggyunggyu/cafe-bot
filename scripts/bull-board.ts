@@ -7,7 +7,7 @@ import { ExpressAdapter } from '@bull-board/express';
 import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/1';
 const PORT = process.env.BULL_BOARD_PORT || 3008;
 
 const activeWorkers: Map<string, Worker> = new Map();
