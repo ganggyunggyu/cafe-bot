@@ -66,6 +66,7 @@ export const Button = ({
       disabled={disabled || isLoading}
       className={cn(
         'font-semibold transition-all',
+        'flex items-center justify-center',
         'disabled:cursor-not-allowed disabled:opacity-60',
         variantStyles[variant],
         sizeStyles[size],
