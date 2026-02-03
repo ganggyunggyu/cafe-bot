@@ -5,7 +5,7 @@ import {
   buildAnimePrompt,
 } from './prompts';
 
-export let CONTENT_STYLE: ContentStyle = '정보';
+export let CONTENT_STYLE: ContentStyle = '애니';
 
 // Re-export everything from prompts
 export * from './prompts';

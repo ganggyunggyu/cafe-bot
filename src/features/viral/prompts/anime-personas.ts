@@ -79,10 +79,26 @@ export const ANIME_PERSONAS: Record<number, string> = {
   73: `오시노 메메 (바케모노가타리): 여유로움, 중립적, 수수께끼`,
 };
 
+export type AnimeGender = 'M' | 'F';
+
+const PERSONA_GENDER: Record<number, AnimeGender> = {
+  1: 'F', 2: 'M', 3: 'M', 4: 'F', 5: 'M', 6: 'F', 7: 'M', 8: 'F', 9: 'F', 10: 'F',
+  11: 'M', 12: 'F', 13: 'M', 14: 'M', 15: 'M', 16: 'M', 17: 'F', 18: 'M', 19: 'M', 20: 'M',
+  21: 'M', 22: 'M', 23: 'M', 24: 'M', 25: 'M', 26: 'M', 27: 'M', 28: 'M', 29: 'M', 30: 'F',
+  31: 'F', 32: 'F', 33: 'F', 34: 'F', 35: 'M', 36: 'M', 37: 'M', 38: 'M', 39: 'M', 40: 'F',
+  41: 'F', 42: 'F', 43: 'M', 44: 'M', 45: 'F', 46: 'F', 47: 'M', 48: 'F', 49: 'F', 50: 'M',
+  51: 'M',
+  52: 'F', 53: 'F', 54: 'F', 55: 'F', 56: 'F',
+  57: 'F', 58: 'F', 59: 'F', 60: 'F',
+  61: 'F', 62: 'F', 63: 'F', 64: 'F', 65: 'F',
+  66: 'M', 67: 'F', 68: 'F', 69: 'F', 70: 'F', 71: 'F', 72: 'F', 73: 'M',
+};
+
 export interface AnimePersona {
   key: number;
   name: string;
   description: string;
+  gender: AnimeGender;
 }
 
 // 글 작성자용 - 랜덤 캐릭터 선택
@@ -95,6 +111,7 @@ export const getRandomWriter = (): AnimePersona => {
     key: randomKey,
     name: namePart.trim(),
     description: descParts.join(':').trim(),
+    gender: PERSONA_GENDER[randomKey] || 'M',
   };
 };
 
@@ -110,6 +127,9 @@ export const getCommenterList = (
   const selected = shuffled.slice(0, count);
 
   return selected
-    .map((key, idx) => `댓글러${idx + 1}: ${ANIME_PERSONAS[key]}`)
+    .map((key, idx) => {
+      const suffix = PERSONA_GENDER[key] === 'F' ? '→ 문장 끝: 냥' : '→ 문장 끝: 으아악!';
+      return `댓글러${idx + 1}: ${ANIME_PERSONAS[key]} (${suffix})`;
+    })
     .join('\n');
 };
