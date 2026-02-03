@@ -4,14 +4,62 @@ import { join } from 'path';
 
 const SESSION_DIR = join(process.cwd(), '.playwright-session');
 
-let browser: Browser | null = null;
-const contexts: Map<string, BrowserContext> = new Map();
+// HMR에서 상태 유지 (Next.js dev 모듈 재평가 대응)
+const g = globalThis as typeof globalThis & {
+  __pwBrowser?: Browser | null;
+  __pwContexts?: Map<string, BrowserContext>;
+  __pwAccountLocks?: Map<string, Promise<void>>;
+  __pwLockResolvers?: Map<string, () => void>;
+  __pwLoginCache?: Map<string, number>;
+  __pwLastUsed?: Map<string, number>;
+  __pwIdleTimer?: ReturnType<typeof setInterval> | null;
+};
 
-const accountLocks: Map<string, Promise<void>> = new Map();
-const lockResolvers: Map<string, () => void> = new Map();
+if (!g.__pwContexts) g.__pwContexts = new Map();
+if (!g.__pwAccountLocks) g.__pwAccountLocks = new Map();
+if (!g.__pwLockResolvers) g.__pwLockResolvers = new Map();
+if (!g.__pwLoginCache) g.__pwLoginCache = new Map();
+if (!g.__pwLastUsed) g.__pwLastUsed = new Map();
 
-const loginStatusCache: Map<string, number> = new Map();
+const contexts = g.__pwContexts;
+const accountLocks = g.__pwAccountLocks;
+const lockResolvers = g.__pwLockResolvers;
+const loginStatusCache = g.__pwLoginCache;
+const lastUsedAt = g.__pwLastUsed;
+
 const LOGIN_CACHE_TTL = 30 * 60 * 1000;
+const IDLE_TTL = 5 * 60 * 1000; // 5분 미사용 시 context 정리
+const IDLE_CHECK_INTERVAL = 60 * 1000; // 1분마다 체크
+
+const startIdleCleanup = () => {
+  if (g.__pwIdleTimer) return;
+  g.__pwIdleTimer = setInterval(async () => {
+    const now = Date.now();
+    for (const [accountId, lastTime] of lastUsedAt) {
+      if (now - lastTime < IDLE_TTL) continue;
+      if (accountLocks.has(accountId)) continue; // 작업 중이면 스킵
+
+      const ctx = contexts.get(accountId);
+      if (!ctx) {
+        lastUsedAt.delete(accountId);
+        continue;
+      }
+
+      try {
+        await saveCookiesForAccount(accountId);
+        await ctx.close();
+        console.log(`[IDLE] ${accountId} context 정리 (${Math.round((now - lastTime) / 1000)}초 idle)`);
+      } catch {
+        // 이미 닫혀있을 수 있음
+      }
+      contexts.delete(accountId);
+      loginStatusCache.delete(accountId);
+      lastUsedAt.delete(accountId);
+    }
+  }, IDLE_CHECK_INTERVAL);
+};
+
+startIdleCleanup();
 
 export const acquireAccountLock = async (accountId: string): Promise<void> => {
   while (accountLocks.has(accountId)) {
@@ -52,20 +100,43 @@ const getSessionFile = (accountId: string): string => {
 }
 
 export const getBrowser = async (): Promise<Browser> => {
-  if (!browser) {
+  if (!g.__pwBrowser || !g.__pwBrowser.isConnected()) {
+    if (g.__pwBrowser) {
+      console.log('[BROWSER] 브라우저 연결 끊김 - 재시작');
+      contexts.clear();
+      loginStatusCache.clear();
+    }
     const isHeadless = process.env.PLAYWRIGHT_HEADLESS !== 'false';
     console.log(`[BROWSER] 브라우저 시작 (headless: ${isHeadless})`);
-    browser = await chromium.launch({
+    g.__pwBrowser = await chromium.launch({
       headless: isHeadless,
       slowMo: isHeadless ? 0 : 100,
     });
   }
-  return browser;
+  return g.__pwBrowser;
 }
 
+const isContextAlive = (ctx: BrowserContext): boolean => {
+  try {
+    ctx.pages();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const getContextForAccount = async (accountId: string): Promise<BrowserContext> => {
-  if (contexts.has(accountId)) {
-    return contexts.get(accountId)!;
+  lastUsedAt.set(accountId, Date.now());
+
+  const existing = contexts.get(accountId);
+  if (existing && isContextAlive(existing)) {
+    return existing;
+  }
+
+  if (existing) {
+    console.log(`[CONTEXT] ${accountId} 컨텍스트 죽음 감지 - 재생성`);
+    contexts.delete(accountId);
+    loginStatusCache.delete(accountId);
   }
 
   const b = await getBrowser();
@@ -87,7 +158,8 @@ export const getPageForAccount = async (accountId: string): Promise<Page> => {
   const ctx = await getContextForAccount(accountId);
   const pages = ctx.pages();
   if (pages.length > 0) {
-    return pages[0];
+    const page = pages[0];
+    if (!page.isClosed()) return page;
   }
   return ctx.newPage();
 }
@@ -146,9 +218,9 @@ export const closeAllContexts = async (): Promise<void> => {
   contexts.clear();
   loginStatusCache.clear();
 
-  if (browser) {
-    await browser.close();
-    browser = null;
+  if (g.__pwBrowser) {
+    await g.__pwBrowser.close();
+    g.__pwBrowser = null;
   }
 }
 
