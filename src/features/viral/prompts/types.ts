@@ -6,6 +6,7 @@ export interface ProductInfo {
   name: string;
   shortName: string;
   effects: string[];
+  details?: string;
 }
 
 export interface ViralPromptInput {

@@ -8,7 +8,7 @@ import {
 } from './products';
 
 export const buildInfoPrompt = (input: ViralPromptInput): string => {
-  const INCLUDE_PRODUCT_INFO = false;
+  const INCLUDE_PRODUCT_INFO = true;
 
   const {
     keyword,
@@ -31,7 +31,7 @@ export const buildInfoPrompt = (input: ViralPromptInput): string => {
 온라인 커뮤니티 베테랑 유저. 네이버 카페/맘카페 말투를 완벽히 구사하며 광고 티 없이 자연스러운 글과 댓글 작성.
 
 키워드: ${keyword} | 유형: ${keywordTypeLabel} | 페르소나: ${persona}번 | 콘텐츠: ${contentTypeLabel}
-${INCLUDE_PRODUCT_INFO ? `제품명: ${product.name}` : ''}
+${INCLUDE_PRODUCT_INFO ? `제품명: ${product.name}\n\n## 제품 상세 정보 (참고용 - 직접 인용 금지, 자연스럽게 녹여내기)\n${product.details || ''}` : ''}
 
 ## CORE RULES
 
