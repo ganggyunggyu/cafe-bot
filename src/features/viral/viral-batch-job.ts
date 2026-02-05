@@ -2,7 +2,7 @@
 
 import { getAllAccounts } from '@/shared/config/accounts';
 import { getCurrentUserId } from '@/shared/config/user';
-import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
+import { getDefaultCafe, getCafeById, type CafeConfig } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { isAccountActive, getNextActiveTime, type NaverAccount } from '@/shared/lib/account-manager';
 
@@ -35,6 +35,7 @@ export type ImageSource = 'ai' | 'search';
 export interface ViralBatchInput {
   keywords: string[];
   cafeId?: string;
+  cafeIds?: string[];
   postOptions?: PostOptions;
   model?: string;
   enableImage?: boolean;
@@ -81,6 +82,7 @@ export const runViralBatch = async (
   const {
     keywords,
     cafeId: inputCafeId,
+    cafeIds: inputCafeIds,
     postOptions,
     model,
     enableImage,
@@ -113,8 +115,21 @@ export const runViralBatch = async (
     };
   }
 
-  const cafe = inputCafeId ? await getCafeById(inputCafeId) : await getDefaultCafe();
-  if (!cafe) {
+  // 다중 카페 지원: cafeIds > cafeId > defaultCafe 순으로 우선순위
+  let cafes: CafeConfig[] = [];
+  if (inputCafeIds?.length) {
+    const cafePromises = inputCafeIds.map((id) => getCafeById(id));
+    const cafeResults = await Promise.all(cafePromises);
+    cafes = cafeResults.filter((c): c is CafeConfig => c !== null);
+  } else if (inputCafeId) {
+    const cafe = await getCafeById(inputCafeId);
+    if (cafe) cafes = [cafe];
+  } else {
+    const defaultCafe = await getDefaultCafe();
+    if (defaultCafe) cafes = [defaultCafe];
+  }
+
+  if (cafes.length === 0) {
     return {
       success: false,
       totalKeywords: keywords.length,
@@ -129,12 +144,18 @@ export const runViralBatch = async (
     };
   }
 
+  console.log(`[VIRAL] 대상 카페: ${cafes.map((c) => c.name).join(', ')}`);
+
   await connectDB();
   await startAllTaskWorkers();
 
-  // 최근 발행자 조회 (연속 발행 방지)
-  const recentWriters = await getRecentWriters(cafe.cafeId, 3);
-  console.log(`[VIRAL] 최근 발행자: ${recentWriters.join(', ') || '없음'}`);
+  // 카페별 최근 발행자 조회 (연속 발행 방지)
+  const recentWritersMap = new Map<string, string[]>();
+  for (const cafe of cafes) {
+    const recentWriters = await getRecentWriters(cafe.cafeId, 3);
+    recentWritersMap.set(cafe.cafeId, recentWriters);
+    console.log(`[VIRAL] ${cafe.name} 최근 발행자: ${recentWriters.join(', ') || '없음'}`);
+  }
 
   // 기본 딜레이 설정 (클라이언트에서 전달받지 못한 경우)
   const defaultDelays: DelayConfig = {
@@ -144,23 +165,35 @@ export const runViralBatch = async (
   };
   const effectiveDelays = delays || defaultDelays;
 
+  // 총 작업 수 = 키워드 수 × 카페 수
+  const totalTasks = keywords.length * cafes.length;
   const results: ViralKeywordResult[] = [];
   let completed = 0;
   let failed = 0;
   let globalDelay = 0;
-  let lastWriterId: string | null = recentWriters[0] || null;
+  const lastWriterIdMap = new Map<string, string | null>();
+  cafes.forEach((cafe) => {
+    const recentWriters = recentWritersMap.get(cafe.cafeId) || [];
+    lastWriterIdMap.set(cafe.cafeId, recentWriters[0] || null);
+  });
+
+  let taskIndex = 0;
 
   for (let i = 0; i < keywords.length; i++) {
     const { keyword, category } = parseKeywordInput(keywords[i]);
     const keywordType = detectKeywordType(keyword);
 
+    // AI 콘텐츠는 키워드당 1회만 생성 (모든 카페에 동일 콘텐츠 사용)
     onProgress?.({
       currentKeyword: keyword,
-      keywordIndex: i,
-      totalKeywords: keywords.length,
+      keywordIndex: taskIndex,
+      totalKeywords: totalTasks,
       phase: 'post',
-      message: `[${i + 1}/${keywords.length}] ${keyword} 콘텐츠 생성 중...`,
+      message: `[${taskIndex + 1}/${totalTasks}] ${keyword} 콘텐츠 생성 중...`,
     });
+
+    let parsed: Awaited<ReturnType<typeof parseViralResponse>> | null = null;
+    let images: string[] | undefined;
 
     try {
       const prompt = buildViralPrompt({ keyword, keywordType });
@@ -172,12 +205,12 @@ export const runViralBatch = async (
           prompt,
           response: '',
           parseError: 'AI 응답 없음',
-          cafeId: cafe.cafeId,
+          cafeId: cafes[0].cafeId,
         });
         throw new Error('AI 응답 없음');
       }
 
-      const parsed = parseViralResponse(aiResponse.content);
+      parsed = parseViralResponse(aiResponse.content);
 
       await saveViralDebug({
         keyword,
@@ -187,7 +220,7 @@ export const runViralBatch = async (
         parsedBody: parsed?.body,
         parsedComments: parsed?.comments.length,
         parseError: parsed ? undefined : '파싱 실패',
-        cafeId: cafe.cafeId,
+        cafeId: cafes[0].cafeId,
       });
 
       if (!parsed) {
@@ -199,65 +232,8 @@ export const runViralBatch = async (
         console.warn('[VIRAL] 검증 경고:', validation.errors);
       }
 
-      // 글 작성 계정 필터링: writerAccountIds가 있으면 해당 계정만, 없으면 전체
-      const writerCandidates = writerAccountIds?.length
-        ? accounts.filter(a => writerAccountIds.includes(a.id) && isAccountActive(a))
-        : accounts.filter(a => isAccountActive(a));
-
-      if (writerCandidates.length === 0) {
-        throw new Error('글 작성 가능한 계정 없음');
-      }
-
-      // 최근 발행자들 피해서 선택 (가능한 경우)
-      let writerAccount: NaverAccount;
-      if (writerCandidates.length === 1) {
-        writerAccount = writerCandidates[0];
-      } else {
-        // 1차: 최근 발행자 전부 제외 시도
-        let availableWriters = writerCandidates.filter(a => !recentWriters.includes(a.id));
-
-        // 2차: 남은 계정이 없으면 마지막 발행자만 제외
-        if (availableWriters.length === 0 && lastWriterId) {
-          availableWriters = writerCandidates.filter(a => a.id !== lastWriterId);
-        }
-
-        // 3차: 그래도 없으면 전체 후보에서 선택
-        if (availableWriters.length === 0) {
-          availableWriters = writerCandidates;
-        }
-
-        // 키워드 인덱스 기반 순환 + 약간의 랜덤성
-        const baseIndex = i % availableWriters.length;
-        const randomOffset = Math.floor(Math.random() * Math.min(2, availableWriters.length));
-        const writerIndex = (baseIndex + randomOffset) % availableWriters.length;
-        writerAccount = availableWriters[writerIndex];
-      }
-      // 최근 발행자 목록 갱신
-      recentWriters.unshift(writerAccount.id);
-      if (recentWriters.length > 3) recentWriters.pop();
-      lastWriterId = writerAccount.id;
-      console.log(`[VIRAL] 글 작성자 선택: ${writerAccount.nickname || writerAccount.id} (최근: ${recentWriters.slice(0, 3).join(', ')})`);
-
-      let menuId = cafe.menuId;
-      if (category && cafe.categoryMenuIds) {
-        const mappedMenuId = cafe.categoryMenuIds[category];
-        if (mappedMenuId) {
-          menuId = mappedMenuId;
-        }
-      }
-
-      const htmlContent = convertToHtml(parsed.body);
-      const writerActivityDelay = getNextActiveTime(writerAccount);
-      const postDelay = Math.max(globalDelay, writerActivityDelay);
-
-      const viralComments: ViralCommentsData = { comments: parsed.comments };
-      const commentCount = parsed.comments.filter(c => c.type === 'comment').length;
-      const replyCount = parsed.comments.length - commentCount;
-
-      // 이미지 생성 (옵션이 활성화된 경우)
-      let images: string[] | undefined;
+      // 이미지 생성 (옵션이 활성화된 경우) - 키워드당 1회만
       if (enableImage) {
-        // imageCount가 0이면 랜덤 1~2장, 0보다 크면 고정 개수
         const finalCount = imageCount && imageCount > 0
           ? imageCount
           : Math.floor(Math.random() * 2) + 1;
@@ -265,10 +241,10 @@ export const runViralBatch = async (
         const imageSourceLabel = imageSource === 'search' ? '검색' : 'AI';
         onProgress?.({
           currentKeyword: keyword,
-          keywordIndex: i,
-          totalKeywords: keywords.length,
+          keywordIndex: taskIndex,
+          totalKeywords: totalTasks,
           phase: 'post',
-          message: `[${i + 1}/${keywords.length}] ${keyword} ${imageSourceLabel} 이미지 ${finalCount}장...`,
+          message: `[${taskIndex + 1}/${totalTasks}] ${keyword} ${imageSourceLabel} 이미지 ${finalCount}장...`,
         });
 
         try {
@@ -286,83 +262,169 @@ export const runViralBatch = async (
           console.warn(`[VIRAL] ${imageSourceLabel} 이미지 오류: ${keyword}`, imgError);
         }
       }
-
-      const postJobData: PostJobData = {
-        type: 'post',
-        accountId: writerAccount.id,
-        userId,
-        cafeId: cafe.cafeId,
-        menuId,
-        subject: parsed.title,
-        content: htmlContent,
-        rawContent: parsed.body,
-        category,
-        keyword,
-        postOptions,
-        skipComments: true,
-        viralComments,
-        images,
-        commenterAccountIds: commenterAccountIds?.length ? commenterAccountIds : undefined,
-      };
-
-      await addTaskJob(writerAccount.id, postJobData, postDelay);
-      console.log(`[VIRAL] 글 발행 Job 추가: ${keyword}`);
-      console.log(`[VIRAL]   - 카테고리: ${category || '기본'}`);
-      console.log(`[VIRAL]   - 이미지: ${images?.length || 0}장`);
-      console.log(`[VIRAL]   - 댓글: ${commentCount}개, 대댓글: ${replyCount}개`);
-      console.log(`[VIRAL]   - 딜레이: ${Math.round(postDelay / 1000)}초`);
-
-      globalDelay = postDelay + getRandomDelay(effectiveDelays.betweenPosts);
-
-      results.push({
-        keyword,
-        category,
-        keywordType,
-        success: true,
-        title: parsed.title,
-        commentCount,
-        replyCount,
-      });
-      completed++;
-
-      onProgress?.({
-        currentKeyword: keyword,
-        keywordIndex: i,
-        totalKeywords: keywords.length,
-        phase: 'done',
-        message: `[${i + 1}/${keywords.length}] ${keyword} 완료`,
-        success: true,
-        title: parsed.title,
-      });
-
     } catch (error) {
+      // 콘텐츠 생성 실패 시 모든 카페에 대해 실패 처리
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-      console.error(`[VIRAL] ${keyword} 처리 실패:`, errorMessage);
+      console.error(`[VIRAL] ${keyword} 콘텐츠 생성 실패:`, errorMessage);
 
-      results.push({
-        keyword,
-        category,
-        keywordType,
-        success: false,
-        error: errorMessage,
-      });
-      failed++;
+      for (const cafe of cafes) {
+        results.push({
+          keyword: cafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
+          category,
+          keywordType,
+          success: false,
+          error: errorMessage,
+        });
+        failed++;
+        taskIndex++;
 
-      onProgress?.({
-        currentKeyword: keyword,
-        keywordIndex: i,
-        totalKeywords: keywords.length,
-        phase: 'done',
-        message: `[${i + 1}/${keywords.length}] ${keyword} 실패`,
-        success: false,
-        error: errorMessage,
-      });
+        onProgress?.({
+          currentKeyword: keyword,
+          keywordIndex: taskIndex - 1,
+          totalKeywords: totalTasks,
+          phase: 'done',
+          message: `[${taskIndex}/${totalTasks}] ${keyword} (${cafe.name}) 실패`,
+          success: false,
+          error: errorMessage,
+        });
+      }
+      continue;
+    }
+
+    // 각 카페에 발행
+    for (const cafe of cafes) {
+      const recentWriters = recentWritersMap.get(cafe.cafeId) || [];
+      const lastWriterId = lastWriterIdMap.get(cafe.cafeId);
+
+      try {
+        // 글 작성 계정 필터링
+        const writerCandidates = writerAccountIds?.length
+          ? accounts.filter(a => writerAccountIds.includes(a.id) && isAccountActive(a))
+          : accounts.filter(a => isAccountActive(a));
+
+        if (writerCandidates.length === 0) {
+          throw new Error('글 작성 가능한 계정 없음');
+        }
+
+        // 최근 발행자들 피해서 선택
+        let writerAccount: NaverAccount;
+        if (writerCandidates.length === 1) {
+          writerAccount = writerCandidates[0];
+        } else {
+          let availableWriters = writerCandidates.filter(a => !recentWriters.includes(a.id));
+
+          if (availableWriters.length === 0 && lastWriterId) {
+            availableWriters = writerCandidates.filter(a => a.id !== lastWriterId);
+          }
+
+          if (availableWriters.length === 0) {
+            availableWriters = writerCandidates;
+          }
+
+          const baseIndex = (i + cafes.indexOf(cafe)) % availableWriters.length;
+          const randomOffset = Math.floor(Math.random() * Math.min(2, availableWriters.length));
+          const writerIndex = (baseIndex + randomOffset) % availableWriters.length;
+          writerAccount = availableWriters[writerIndex];
+        }
+
+        // 최근 발행자 목록 갱신
+        recentWriters.unshift(writerAccount.id);
+        if (recentWriters.length > 3) recentWriters.pop();
+        lastWriterIdMap.set(cafe.cafeId, writerAccount.id);
+        console.log(`[VIRAL] ${cafe.name} 글 작성자: ${writerAccount.nickname || writerAccount.id}`);
+
+        let menuId = cafe.menuId;
+        if (category && cafe.categoryMenuIds) {
+          const mappedMenuId = cafe.categoryMenuIds[category];
+          if (mappedMenuId) {
+            menuId = mappedMenuId;
+          }
+        }
+
+        const htmlContent = convertToHtml(parsed!.body);
+        const writerActivityDelay = getNextActiveTime(writerAccount);
+        const postDelay = Math.max(globalDelay, writerActivityDelay);
+
+        const viralComments: ViralCommentsData = { comments: parsed!.comments };
+        const commentCount = parsed!.comments.filter(c => c.type === 'comment').length;
+        const replyCount = parsed!.comments.length - commentCount;
+
+        const postJobData: PostJobData = {
+          type: 'post',
+          accountId: writerAccount.id,
+          userId,
+          cafeId: cafe.cafeId,
+          menuId,
+          subject: parsed!.title,
+          content: htmlContent,
+          rawContent: parsed!.body,
+          category,
+          keyword,
+          postOptions,
+          skipComments: true,
+          viralComments,
+          images,
+          commenterAccountIds: commenterAccountIds?.length ? commenterAccountIds : undefined,
+        };
+
+        await addTaskJob(writerAccount.id, postJobData, postDelay);
+        console.log(`[VIRAL] ${cafe.name} 글 발행 Job 추가: ${keyword}`);
+        console.log(`[VIRAL]   - 딜레이: ${Math.round(postDelay / 1000)}초`);
+
+        globalDelay = postDelay + getRandomDelay(effectiveDelays.betweenPosts);
+
+        results.push({
+          keyword: cafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
+          category,
+          keywordType,
+          success: true,
+          title: parsed!.title,
+          commentCount,
+          replyCount,
+        });
+        completed++;
+        taskIndex++;
+
+        onProgress?.({
+          currentKeyword: keyword,
+          keywordIndex: taskIndex - 1,
+          totalKeywords: totalTasks,
+          phase: 'done',
+          message: `[${taskIndex}/${totalTasks}] ${keyword} (${cafe.name}) 완료`,
+          success: true,
+          title: parsed!.title,
+        });
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+        console.error(`[VIRAL] ${keyword} (${cafe.name}) 발행 실패:`, errorMessage);
+
+        results.push({
+          keyword: cafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
+          category,
+          keywordType,
+          success: false,
+          error: errorMessage,
+        });
+        failed++;
+        taskIndex++;
+
+        onProgress?.({
+          currentKeyword: keyword,
+          keywordIndex: taskIndex - 1,
+          totalKeywords: totalTasks,
+          phase: 'done',
+          message: `[${taskIndex}/${totalTasks}] ${keyword} (${cafe.name}) 실패`,
+          success: false,
+          error: errorMessage,
+        });
+      }
     }
   }
 
   return {
     success: failed === 0,
-    totalKeywords: keywords.length,
+    totalKeywords: totalTasks,
     completed,
     failed,
     results,

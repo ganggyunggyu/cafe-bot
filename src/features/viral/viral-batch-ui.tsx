@@ -10,14 +10,41 @@ import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
 import {
   postOptionsAtom,
   cafesAtom,
-  selectedCafeIdAtom,
   cafesInitializedAtom,
-  selectedCafeAtom,
 } from '@/entities/store';
 import { getCafesAction, getAccountsAction, type AccountData } from '@/features/accounts/actions';
 import { getDelaySettings } from '@/shared/hooks/use-delay-settings';
 import { generateKeywords } from '@/shared/api/keyword-gen-api';
 import type { ViralBatchResult } from './viral-batch-job';
+
+type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
+
+interface ViralPreset {
+  name: string;
+  cafeIds: string[];
+  model: string;
+  enableImage: boolean;
+  imageSource: 'ai' | 'search';
+  imageCount: number;
+  accountRoles: Record<string, AccountRole>;
+}
+
+const PRESET_STORAGE_KEY = 'viral-batch-presets';
+
+const loadPresets = (): ViralPreset[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem(PRESET_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePresets = (presets: ViralPreset[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+};
 
 const MODELS = [
   // 기본
@@ -56,9 +83,8 @@ export const ViralBatchUI = () => {
   const [keywords, setKeywords] = useState('');
   const [model, setModel] = useState('');
   const [cafes, setCafes] = useAtom(cafesAtom);
-  const [selectedCafeId, setSelectedCafeId] = useAtom(selectedCafeIdAtom);
   const [cafesInitialized, setCafesInitialized] = useAtom(cafesInitializedAtom);
-  const selectedCafe = useAtom(selectedCafeAtom)[0];
+  const [selectedCafeIds, setSelectedCafeIds] = useState<string[]>([]);
   const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [result, setResult] = useState<ViralBatchResult | null>(null);
 
@@ -78,13 +104,61 @@ export const ViralBatchUI = () => {
   const [showAccountRoles, setShowAccountRoles] = useState(false);
 
   // 계정 역할 상태
-  type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [accountRoles, setAccountRoles] = useState<Map<string, AccountRole>>(new Map());
 
+  // 프리셋 상태
+  const [presets, setPresets] = useState<ViralPreset[]>([]);
+  const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+
+  // 프리셋 로드 (클라이언트에서만)
+  useEffect(() => {
+    setPresets(loadPresets());
+  }, []);
+
+  const handleSavePreset = () => {
+    if (!newPresetName.trim()) {
+      toast.warning('프리셋 이름을 입력해주세요');
+      return;
+    }
+    const newPreset: ViralPreset = {
+      name: newPresetName.trim(),
+      cafeIds: selectedCafeIds,
+      model,
+      enableImage,
+      imageSource,
+      imageCount,
+      accountRoles: Object.fromEntries(accountRoles),
+    };
+    const updatedPresets = [...presets.filter((p) => p.name !== newPreset.name), newPreset];
+    setPresets(updatedPresets);
+    savePresets(updatedPresets);
+    setNewPresetName('');
+    toast.success(`프리셋 "${newPreset.name}" 저장됨`);
+  };
+
+  const handleLoadPreset = (preset: ViralPreset) => {
+    setSelectedCafeIds(preset.cafeIds);
+    setModel(preset.model);
+    setEnableImage(preset.enableImage);
+    setImageSource(preset.imageSource);
+    setImageCount(preset.imageCount);
+    setAccountRoles(new Map(Object.entries(preset.accountRoles) as [string, AccountRole][]));
+    toast.success(`프리셋 "${preset.name}" 불러옴`);
+    setShowPresetPanel(false);
+  };
+
+  const handleDeletePreset = (presetName: string) => {
+    const updatedPresets = presets.filter((p) => p.name !== presetName);
+    setPresets(updatedPresets);
+    savePresets(updatedPresets);
+    toast.success(`프리셋 "${presetName}" 삭제됨`);
+  };
+
   // 키워드 생성 상태
   const [showGenerator, setShowGenerator] = useState(false);
-  const [genCount, setGenCount] = useState(60);
+  const [genCount, setGenCount] = useState(30);
   const [genShuffle, setGenShuffle] = useState(true);
   const [genNote, setGenNote] = useState('');
 
@@ -105,12 +179,12 @@ export const ViralBatchUI = () => {
       setCafes(cafeData);
       const defaultCafe = cafeData.find((c) => c.isDefault) || cafeData[0];
       if (defaultCafe) {
-        setSelectedCafeId(defaultCafe.cafeId);
+        setSelectedCafeIds([defaultCafe.cafeId]);
       }
       setCafesInitialized(true);
     };
     loadCafes();
-  }, [cafesInitialized, setCafes, setSelectedCafeId, setCafesInitialized]);
+  }, [cafesInitialized, setCafes, setCafesInitialized]);
 
   // 계정 로딩 (로컬 상태 - 항상 실행)
   useEffect(() => {
@@ -124,10 +198,12 @@ export const ViralBatchUI = () => {
     loadAccounts();
   }, []);
 
-  const categories = selectedCafe?.categories || [];
+  // 선택된 카페들의 카테고리 합집합
+  const selectedCafes = cafes.filter((c) => selectedCafeIds.includes(c.cafeId));
+  const categories = [...new Set(selectedCafes.flatMap((c) => c.categories))];
 
   const handleGenerateKeywords = () => {
-    if (categories.length === 0) {
+    if (selectedCafeIds.length === 0) {
       toast.warning('카페를 먼저 선택해주세요');
       return;
     }
@@ -186,7 +262,7 @@ export const ViralBatchUI = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             keywords: parsedKeywords,
-            cafeId: selectedCafeId || undefined,
+            cafeIds: selectedCafeIds,
             postOptions,
             model: model || undefined,
             enableImage,
@@ -373,21 +449,162 @@ export const ViralBatchUI = () => {
         />
       </div>
 
+      {/* 프리셋 패널 */}
+      <div className={cn('rounded-2xl border border-border-light bg-surface p-4 space-y-3')}>
+        <button
+          type="button"
+          onClick={() => setShowPresetPanel(!showPresetPanel)}
+          className={cn('flex items-center justify-between w-full')}
+        >
+          <div className={cn('flex items-center gap-2')}>
+            <span className={cn('text-sm font-semibold text-ink')}>프리셋</span>
+            <span className={cn('text-xs text-ink-muted')}>
+              {presets.length}개 저장됨
+            </span>
+          </div>
+          <span className={cn('text-ink-muted text-sm transition-transform', showPresetPanel && 'rotate-180')}>
+            ▼
+          </span>
+        </button>
+
+        <div
+          className={cn(
+            'grid transition-all duration-300 ease-out',
+            showPresetPanel ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          )}
+        >
+          <div className={cn('overflow-hidden')}>
+            <div className={cn('space-y-3 pt-2')}>
+              {/* 저장된 프리셋 목록 */}
+              {presets.length > 0 && (
+                <div className={cn('flex flex-wrap gap-2')}>
+                  {presets.map((preset) => (
+                    <div
+                      key={preset.name}
+                      className={cn(
+                        'flex items-center gap-1 px-3 py-1.5 rounded-lg',
+                        'bg-accent/10 border border-accent/30'
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleLoadPreset(preset)}
+                        className={cn('text-sm font-medium text-accent hover:underline')}
+                      >
+                        {preset.name}
+                      </button>
+                      <span className={cn('text-xs text-ink-muted')}>
+                        ({preset.cafeIds.length}카페)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePreset(preset.name)}
+                        className={cn('text-ink-muted hover:text-danger ml-1')}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 새 프리셋 저장 */}
+              <div className={cn('flex gap-2')}>
+                <input
+                  type="text"
+                  value={newPresetName}
+                  onChange={(e) => setNewPresetName(e.target.value)}
+                  placeholder="프리셋 이름"
+                  className={cn(inputClassName, 'py-2 flex-1')}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSavePreset}
+                  disabled={!newPresetName.trim()}
+                >
+                  현재 설정 저장
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 설정 카드 */}
       <div className={cn('rounded-2xl border border-border-light bg-surface p-6 space-y-5')}>
         <h3 className={cn('text-base font-semibold text-ink')}>설정</h3>
 
-        {/* 카페 선택 */}
-        <Select
-          label="카페 선택"
-          value={selectedCafeId}
-          onChange={(e) => setSelectedCafeId(e.target.value)}
-          options={cafes.map((cafe) => ({
-            value: cafe.cafeId,
-            label: `${cafe.name}${cafe.isDefault ? ' (기본)' : ''}`,
-          }))}
-          helperText={selectedCafe && `카테고리: ${selectedCafe.categories.join(', ')}`}
-        />
+        {/* 카페 선택 (다중) */}
+        <div className={cn('space-y-3')}>
+          <div className={cn('flex items-center justify-between')}>
+            <span className={labelClassName}>카페 선택</span>
+            <div className={cn('flex items-center gap-2')}>
+              <span className={cn('text-xs text-ink-muted')}>
+                {selectedCafeIds.length}개 선택
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCafeIds(cafes.map((c) => c.cafeId))}
+                className={cn('text-xs text-accent hover:underline')}
+              >
+                전체 선택
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCafeIds([])}
+                className={cn('text-xs text-ink-muted hover:underline')}
+              >
+                선택 해제
+              </button>
+            </div>
+          </div>
+          <div className={cn('grid grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-xl border border-border-light bg-surface-muted p-3')}>
+            {cafes.map((cafe) => {
+              const isSelected = selectedCafeIds.includes(cafe.cafeId);
+              return (
+                <button
+                  key={cafe.cafeId}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCafeIds((prev) =>
+                      isSelected
+                        ? prev.filter((id) => id !== cafe.cafeId)
+                        : [...prev, cafe.cafeId]
+                    );
+                  }}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all',
+                    isSelected
+                      ? 'bg-accent/10 border-2 border-accent text-accent font-medium'
+                      : 'bg-surface border-2 border-transparent hover:border-border text-ink'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-4 h-4 rounded border-2 flex items-center justify-center text-xs flex-shrink-0',
+                      isSelected
+                        ? 'bg-accent border-accent text-background'
+                        : 'border-border-light'
+                    )}
+                  >
+                    {isSelected && '✓'}
+                  </span>
+                  <span className={cn('truncate')}>{cafe.name}</span>
+                  {cafe.isDefault && (
+                    <span className={cn('text-xs text-accent/70')}>(기본)</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {selectedCafes.length > 0 && (
+            <p className={cn('text-xs text-ink-muted')}>
+              카테고리: {categories.join(', ')}
+            </p>
+          )}
+        </div>
 
         {/* 모델 선택 */}
         <Select
@@ -675,7 +892,7 @@ export const ViralBatchUI = () => {
         description="아래 설정으로 바이럴 콘텐츠가 생성됩니다."
         settings={[
           { label: '키워드', value: `${keywordCount}개`, highlight: true },
-          { label: '카페', value: selectedCafe?.name || '선택 안됨' },
+          { label: '카페', value: selectedCafeIds.length > 0 ? `${selectedCafeIds.length}개 (${selectedCafes.map((c) => c.name).join(', ')})` : '선택 안됨' },
           {
             label: 'AI 모델',
             value: MODELS.find((m) => m.value === model)?.label || '기본 (Gemini 3 Pro)',
