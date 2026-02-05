@@ -4,6 +4,17 @@ import { waitForSequenceTurn, advanceSequence } from '../sequence';
 import { writeCommentWithAccount } from '@/features/auto-comment/comment-writer';
 import { NaverAccount } from '@/shared/lib/account-manager';
 import { hasCommented, addCommentToArticle, getArticleIdByKeyword } from '@/shared/models';
+import { getRedisConnection } from '@/shared/lib/redis';
+
+const WRITE_LOCK_TTL = 600; // 10분
+
+const acquireWriteLock = async (cafeId: number, articleId: number, accountId: string, content: string): Promise<boolean> => {
+  const redis = getRedisConnection();
+  const contentKey = content.slice(0, 30).replace(/\s+/g, '');
+  const lockKey = `write_lock:comment:${cafeId}:${articleId}:${accountId}:${contentKey}`;
+  const result = await redis.set(lockKey, '1', 'EX', WRITE_LOCK_TTL, 'NX');
+  return result === 'OK';
+};
 
 export interface CommentHandlerContext {
   account: NaverAccount;
@@ -29,7 +40,7 @@ export const handleCommentJob = async (
       console.log(`[WORKER] 순서 대기 - ${retryDelay / 1000}초 뒤 재스케줄: ${data.sequenceId}#${data.sequenceIndex}`);
       await addTaskJob(
         data.accountId,
-        { ...data, rescheduleToken: createRescheduleToken() },
+        { ...data, rescheduleToken: 'seqwait' },
         retryDelay
       );
       return {
@@ -91,6 +102,14 @@ export const handleCommentJob = async (
   const alreadyCommented = await hasCommented(data.cafeId, articleId, account.id, 'comment');
   if (alreadyCommented) {
     console.log(`[WORKER] 중복 댓글 스킵: ${account.id} → #${articleId}`);
+    await advanceIfNeeded();
+    return { success: true };
+  }
+
+  // Redis 락: 동일 댓글 동시 실행 방지 (stalled job 재실행 / retry 중복 차단)
+  const lockAcquired = await acquireWriteLock(data.cafeId, articleId, account.id, data.content);
+  if (!lockAcquired) {
+    console.log(`[WORKER] 댓글 작성 락 중복 - 스킵: ${account.id} → #${articleId}`);
     await advanceIfNeeded();
     return { success: true };
   }

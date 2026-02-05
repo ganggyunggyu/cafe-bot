@@ -4,6 +4,17 @@ import { waitForSequenceTurn, advanceSequence } from '../sequence';
 import { writeReplyWithAccount } from '@/features/auto-comment/comment-writer';
 import { NaverAccount } from '@/shared/lib/account-manager';
 import { addCommentToArticle, getArticleComments, getArticleIdByKeyword } from '@/shared/models';
+import { getRedisConnection } from '@/shared/lib/redis';
+
+const WRITE_LOCK_TTL = 600; // 10분
+
+const acquireWriteLock = async (cafeId: number, articleId: number, accountId: string, content: string): Promise<boolean> => {
+  const redis = getRedisConnection();
+  const contentKey = content.slice(0, 30).replace(/\s+/g, '');
+  const lockKey = `write_lock:reply:${cafeId}:${articleId}:${accountId}:${contentKey}`;
+  const result = await redis.set(lockKey, '1', 'EX', WRITE_LOCK_TTL, 'NX');
+  return result === 'OK';
+};
 
 export interface ReplyHandlerContext {
   account: NaverAccount;
@@ -29,7 +40,7 @@ export const handleReplyJob = async (
       console.log(`[WORKER] 순서 대기 - ${retryDelay / 1000}초 뒤 재스케줄: ${data.sequenceId}#${data.sequenceIndex}`);
       await addTaskJob(
         data.accountId,
-        { ...data, rescheduleToken: createRescheduleToken() },
+        { ...data, rescheduleToken: 'seqwait' },
         retryDelay
       );
       return {
@@ -110,6 +121,14 @@ export const handleReplyJob = async (
     } catch (error) {
       console.error('[WORKER] 부모 댓글 ID 조회 실패:', error);
     }
+  }
+
+  // Redis 락: 동일 대댓글 동시 실행 방지 (stalled job 재실행 / retry 중복 차단)
+  const lockAcquired = await acquireWriteLock(data.cafeId, articleId, account.id, data.content);
+  if (!lockAcquired) {
+    console.log(`[WORKER] 대댓글 작성 락 중복 - 스킵: ${account.id} → #${articleId}`);
+    await advanceIfNeeded();
+    return { success: true };
   }
 
   const result = await Promise.race([
