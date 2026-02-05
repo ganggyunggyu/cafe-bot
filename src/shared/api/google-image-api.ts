@@ -41,9 +41,13 @@ export const searchRandomImages = async (
     }
 
     const data = await response.json();
-    const imageUrls = (data.images || []).map(
-      (img: { url: string }) => img.url
-    );
+    const images = data.images || {};
+    const imageUrls = [
+      ...(images.body || []),
+      ...(images.individual || []),
+      ...(images.slide || []),
+      ...(images.collage || []),
+    ].filter((url: string) => typeof url === 'string' && url.startsWith('http'));
 
     console.log(
       `[GOOGLE IMAGE API] 검색 이미지 ${imageUrls.length}장 완료: ${request.keyword}`
