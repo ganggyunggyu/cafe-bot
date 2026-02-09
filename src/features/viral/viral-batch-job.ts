@@ -165,8 +165,26 @@ export const runViralBatch = async (
   };
   const effectiveDelays = delays || defaultDelays;
 
-  // 총 작업 수 = 키워드 수 × 카페 수
-  const totalTasks = keywords.length * cafes.length;
+  // 키워드별 대상 카페 매칭 함수
+  const getTargetCafes = (category: string | undefined): CafeConfig[] => {
+    if (!category) return cafes; // 카테고리 없으면 모든 카페
+
+    return cafes.filter((cafe) => {
+      // 1. 직접 카테고리 존재
+      if (cafe.categories.includes(category)) return true;
+      // 2. alias에 해당 카테고리가 있음 (다른 카페 카테고리 → 이 카페로 매핑)
+      if (cafe.categoryAliases && category in cafe.categoryAliases) return true;
+      return false;
+    });
+  };
+
+  // 총 작업 수 계산 (키워드별 대상 카페 수 합산)
+  let totalTasks = 0;
+  for (const kw of keywords) {
+    const { category } = parseKeywordInput(kw);
+    totalTasks += getTargetCafes(category).length;
+  }
+
   const results: ViralKeywordResult[] = [];
   let completed = 0;
   let failed = 0;
@@ -182,6 +200,12 @@ export const runViralBatch = async (
   for (let i = 0; i < keywords.length; i++) {
     const { keyword, category } = parseKeywordInput(keywords[i]);
     const keywordType = detectKeywordType(keyword);
+    const targetCafes = getTargetCafes(category);
+
+    if (targetCafes.length === 0) {
+      console.warn(`[VIRAL] ${keyword} (${category}) - 대상 카페 없음, 스킵`);
+      continue;
+    }
 
     // AI 콘텐츠는 키워드당 1회만 생성 (모든 카페에 동일 콘텐츠 사용)
     onProgress?.({
@@ -267,9 +291,9 @@ export const runViralBatch = async (
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       console.error(`[VIRAL] ${keyword} 콘텐츠 생성 실패:`, errorMessage);
 
-      for (const cafe of cafes) {
+      for (const cafe of targetCafes) {
         results.push({
-          keyword: cafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
+          keyword: targetCafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
           category,
           keywordType,
           success: false,
@@ -291,8 +315,8 @@ export const runViralBatch = async (
       continue;
     }
 
-    // 각 카페에 발행
-    for (const cafe of cafes) {
+    // 대상 카페에만 발행
+    for (const cafe of targetCafes) {
       const recentWriters = recentWritersMap.get(cafe.cafeId) || [];
       const lastWriterId = lastWriterIdMap.get(cafe.cafeId);
 
@@ -335,7 +359,18 @@ export const runViralBatch = async (
 
         let menuId = cafe.menuId;
         if (category && cafe.categoryMenuIds) {
-          const mappedMenuId = cafe.categoryMenuIds[category];
+          // 1. 직접 매핑 먼저 시도
+          let mappedMenuId = cafe.categoryMenuIds[category];
+
+          // 2. 없으면 alias로 변환 후 다시 시도
+          if (!mappedMenuId && cafe.categoryAliases) {
+            const aliasedCategory = cafe.categoryAliases[category];
+            if (aliasedCategory) {
+              mappedMenuId = cafe.categoryMenuIds[aliasedCategory];
+              console.log(`[VIRAL] ${cafe.name} 카테고리 alias: ${category} → ${aliasedCategory}`);
+            }
+          }
+
           if (mappedMenuId) {
             menuId = mappedMenuId;
           }
@@ -374,7 +409,7 @@ export const runViralBatch = async (
         globalDelay = postDelay + getRandomDelay(effectiveDelays.betweenPosts);
 
         results.push({
-          keyword: cafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
+          keyword: targetCafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
           category,
           keywordType,
           success: true,
@@ -400,7 +435,7 @@ export const runViralBatch = async (
         console.error(`[VIRAL] ${keyword} (${cafe.name}) 발행 실패:`, errorMessage);
 
         results.push({
-          keyword: cafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
+          keyword: targetCafes.length > 1 ? `${keyword} (${cafe.name})` : keyword,
           category,
           keywordType,
           success: false,

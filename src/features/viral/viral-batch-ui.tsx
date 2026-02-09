@@ -211,18 +211,38 @@ export const ViralBatchUI = () => {
     startGenerating(async () => {
       const loadingId = toast.loading('키워드 생성 중...');
       try {
-        const res = await generateKeywords({
-          categories,
-          count: genCount,
-          shuffle: genShuffle,
-          note: genNote.trim() || undefined,
-        });
+        // 카페별로 분리해서 키워드 생성
+        const countPerCafe = Math.ceil(genCount / selectedCafes.length);
+        const allKeywords: { keyword: string; category: string }[] = [];
 
-        const formatted = res.keywords.map((k) => `${k.keyword}:${k.category}`).join('\n');
+        for (const cafe of selectedCafes) {
+          if (cafe.categories.length === 0) continue;
+
+          toast.loading(`${cafe.name} 키워드 생성 중...`, { id: loadingId });
+
+          const res = await generateKeywords({
+            categories: cafe.categories,
+            count: countPerCafe,
+            shuffle: genShuffle,
+            note: genNote.trim() || undefined,
+          });
+
+          allKeywords.push(...res.keywords);
+        }
+
+        // 섞기 옵션이면 전체 셔플
+        if (genShuffle) {
+          for (let i = allKeywords.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allKeywords[i], allKeywords[j]] = [allKeywords[j], allKeywords[i]];
+          }
+        }
+
+        const formatted = allKeywords.map((k) => `${k.keyword}:${k.category}`).join('\n');
         setKeywords(formatted);
         setShowGenerator(false);
         toast.dismiss(loadingId);
-        toast.success(`${res.keywords.length}개 키워드 생성 완료`);
+        toast.success(`${allKeywords.length}개 키워드 생성 완료 (${selectedCafes.length}개 카페)`);
       } catch (err) {
         toast.dismiss(loadingId);
         toast.error('키워드 생성 실패', err instanceof Error ? err.message : undefined);
