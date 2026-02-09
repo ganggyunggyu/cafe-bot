@@ -24,6 +24,9 @@ export const getCafesAction = async (): Promise<CafeData[]> => {
     const categoryMenuIds = c.categoryMenuIds instanceof Map
       ? Object.fromEntries(c.categoryMenuIds)
       : c.categoryMenuIds;
+    const categoryAliases = c.categoryAliases instanceof Map
+      ? Object.fromEntries(c.categoryAliases)
+      : c.categoryAliases;
     return {
       cafeId: c.cafeId,
       cafeUrl: c.cafeUrl,
@@ -31,6 +34,7 @@ export const getCafesAction = async (): Promise<CafeData[]> => {
       name: c.name,
       categories: c.categories,
       categoryMenuIds,
+      categoryAliases,
       isDefault: c.isDefault,
       fromConfig: false,
     };
@@ -58,6 +62,7 @@ export const addCafeAction = async (input: CafeInput) => {
     name: input.name,
     categories: input.categories ?? [],
     categoryMenuIds: input.categoryMenuIds,
+    categoryAliases: input.categoryAliases,
     isDefault: input.isDefault ?? false,
   });
 

@@ -18,6 +18,7 @@ interface CafeData {
   name: string;
   categories: string[];
   categoryMenuIds?: Record<string, string>;
+  categoryAliases?: Record<string, string>;
   isDefault?: boolean;
   fromConfig?: boolean;
 }
@@ -29,6 +30,7 @@ interface CafeFormData {
   name: string;
   categories: string;
   categoryMenuIds: string;
+  categoryAliases: string;
   isDefault: boolean;
 }
 
@@ -39,6 +41,7 @@ const INITIAL_FORM: CafeFormData = {
   name: '',
   categories: '',
   categoryMenuIds: '',
+  categoryAliases: '',
   isDefault: false,
 };
 
@@ -135,6 +138,7 @@ export const CafeManagerUI = () => {
       name: cafe.name,
       categories: cafe.categories.join('\n'),
       categoryMenuIds: serializeCategoryMenuIds(cafe.categoryMenuIds),
+      categoryAliases: serializeCategoryMenuIds(cafe.categoryAliases),
       isDefault: cafe.isDefault ?? false,
     });
     setEditingId(cafe.cafeId);
@@ -154,6 +158,7 @@ export const CafeManagerUI = () => {
       name: form.name,
       categories: form.categories.split('\n').map((s) => s.trim()).filter(Boolean),
       categoryMenuIds: parseCategoryMenuIds(form.categoryMenuIds),
+      categoryAliases: parseCategoryMenuIds(form.categoryAliases),
       isDefault: form.isDefault,
     };
 
@@ -295,6 +300,20 @@ export const CafeManagerUI = () => {
             />
             <p className={helperClassName}>
               각 카테고리별로 다른 메뉴ID를 지정하고 싶을 때 사용
+            </p>
+          </div>
+
+          <div className={cn('space-y-2')}>
+            <label className={labelClassName}>카테고리 별명 (alias)</label>
+            <input
+              type="text"
+              value={form.categoryAliases}
+              onChange={(e) => setForm({ ...form, categoryAliases: e.target.value })}
+              className={inputClassName}
+              placeholder="건강:웰빙, 후기:리뷰"
+            />
+            <p className={helperClassName}>
+              다른 카페 카테고리 → 이 카페 카테고리로 매핑 (다중 카페 배치용)
             </p>
           </div>
 

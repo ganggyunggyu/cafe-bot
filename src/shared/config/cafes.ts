@@ -16,6 +16,10 @@ export const getAllCafes = async (userId?: string): Promise<CafeConfig[]> => {
         c.categoryMenuIds instanceof Map
           ? Object.fromEntries(c.categoryMenuIds)
           : c.categoryMenuIds;
+      const categoryAliases =
+        c.categoryAliases instanceof Map
+          ? Object.fromEntries(c.categoryAliases)
+          : c.categoryAliases;
 
       return {
         cafeId: c.cafeId,
@@ -25,6 +29,7 @@ export const getAllCafes = async (userId?: string): Promise<CafeConfig[]> => {
         categories: c.categories || [],
         isDefault: c.isDefault,
         categoryMenuIds,
+        categoryAliases,
       };
     });
   } catch (error) {

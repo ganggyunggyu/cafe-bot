@@ -8,6 +8,7 @@ export interface ICafe extends Document {
   name: string;
   categories: string[];
   categoryMenuIds?: Record<string, string>;
+  categoryAliases?: Record<string, string>;
   isDefault?: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -23,6 +24,7 @@ const CafeSchema = new Schema<ICafe>(
     name: { type: String, required: true },
     categories: { type: [String], default: [] },
     categoryMenuIds: { type: Map, of: String },
+    categoryAliases: { type: Map, of: String },
     isDefault: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
