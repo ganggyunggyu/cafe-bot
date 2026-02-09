@@ -14,6 +14,46 @@ import type { PostResult, PostOptions } from './types';
 import { DEFAULT_POST_OPTIONS } from './types';
 import { incrementActivity } from '@/shared/models/daily-activity';
 import { uploadImages, uploadSingleImage } from './image-uploader';
+import type { ElementHandle } from 'playwright';
+
+// 팝업 닫고 클릭 재시도 헬퍼
+const clickWithPopupRetry = async (
+  page: Page,
+  element: ElementHandle,
+  maxRetries = 3
+): Promise<void> => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await element.click({ timeout: 5000 });
+      return;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      // 타임아웃 또는 intercepts pointer events 에러인 경우
+      if (errorMessage.includes('Timeout') || errorMessage.includes('intercepts pointer')) {
+        console.log(`[POST] 클릭 실패 (${attempt + 1}/${maxRetries}) - 팝업 닫기 시도`);
+
+        // 팝업 닫기 버튼 클릭
+        const popupClose = await page.$('.se-popup-close-button');
+        if (popupClose) {
+          await popupClose.click().catch(() => {});
+          await page.waitForTimeout(500);
+        }
+
+        // ESC 키로 팝업 닫기
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+
+        // 마지막 시도면 force: true로 클릭
+        if (attempt === maxRetries - 1) {
+          await element.click({ force: true });
+          return;
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
+};
 
 // 체크박스 상태 설정 헬퍼
 const setCheckbox = async (page: Page, selector: string, checked: boolean) => {
@@ -224,6 +264,14 @@ export const writePostWithAccount = async (
 
     await page.waitForTimeout(3000);
 
+    // 스마트 에디터 팝업 닫기 (지도/장소 등)
+    const popupCloseButton = await page.$('.se-popup-close-button');
+    if (popupCloseButton) {
+      console.log(`[POST] ${id} 에디터 팝업 닫기`);
+      await popupCloseButton.click();
+      await page.waitForTimeout(500);
+    }
+
     console.log(`[POST] ${id} 카테고리 지정: "${category || '없음'}"`);
 
     // 게시판 선택 (드롭다운 클릭 → 카테고리 선택)
@@ -299,7 +347,8 @@ export const writePostWithAccount = async (
       };
     }
 
-    await contentArea.click();
+    // 지도/장소 오버레이가 클릭을 가로막는 경우 팝업 닫고 재시도
+    await clickWithPopupRetry(page, contentArea);
     await page.waitForTimeout(500);
 
     // HTML 태그를 plain text로 변환
@@ -388,7 +437,8 @@ export const writePostWithAccount = async (
       };
     }
 
-    await submitButton.click();
+    // 오버레이가 있을 수 있으니 팝업 닫고 재시도
+    await clickWithPopupRetry(page, submitButton);
 
     // 글 작성 후 URL 변화 대기 (글 상세 페이지로 리다이렉트)
     try {

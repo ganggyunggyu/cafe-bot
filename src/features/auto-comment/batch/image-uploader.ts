@@ -209,10 +209,22 @@ const uploadSingleImageFile = async (page: Page, filePath: string, index: number
     await closeImagePopup(page);
     await waitForPopupClose(page);
 
-    // 에디터 본문 클릭하여 포커스 복귀
+    // 이미지 업로드 후 다른 팝업(지도 등)이 열릴 수 있으므로 추가로 닫기
+    const anyPopupClose = await page.$('.se-popup-close-button');
+    if (anyPopupClose) {
+      console.log('[IMAGE] 추가 팝업 발견 - 닫기');
+      await anyPopupClose.click();
+      await page.waitForTimeout(500);
+    }
+
+    // ESC로 혹시 남은 팝업 닫기
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+
+    // 에디터 본문 클릭하여 포커스 복귀 (force로 오버레이 무시)
     const editorBody = await page.$('.se-component-content, .se-content');
     if (editorBody) {
-      await editorBody.click();
+      await editorBody.click({ force: true });
       await page.waitForTimeout(500);
     }
 
