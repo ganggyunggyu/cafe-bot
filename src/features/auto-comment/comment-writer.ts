@@ -185,7 +185,8 @@ export const writeCommentWithAccount = async (
 
     await commentInput.click();
     await page.waitForTimeout(500);
-    await commentInput.fill(content);
+    const sanitizedContent = content.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    await commentInput.fill(sanitizedContent);
     await page.waitForTimeout(500);
 
     // 댓글 등록 버튼 셀렉터: btn_cancel이 없는 CommentWriter (대댓글 제외)
@@ -404,7 +405,8 @@ export const writeReplyWithAccount = async (
 
     await replyInput.click();
     await page.waitForTimeout(500);
-    await replyInput.fill(content);
+    const sanitizedReplyContent = content.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    await replyInput.fill(sanitizedReplyContent);
     await page.waitForTimeout(500);
 
     const submitButton = await root.$('.CommentWriter:has(.btn_cancel) a.btn_register');

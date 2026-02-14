@@ -53,7 +53,7 @@ export const generateComment = async (
     throw new Error('댓글 생성 실패');
   }
 
-  return data.comment;
+  return data.comment.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 };
 
 export const generateReply = async (
@@ -89,7 +89,7 @@ export const generateReply = async (
     throw new Error('대댓글 생성 실패');
   }
 
-  return data.comment;
+  return data.comment.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 };
 
 export const generateAuthorReply = async (
@@ -125,5 +125,5 @@ export const generateAuthorReply = async (
     throw new Error('글쓴이 대댓글 생성 실패');
   }
 
-  return data.comment;
+  return data.comment.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 };
