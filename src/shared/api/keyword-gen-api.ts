@@ -1,3 +1,5 @@
+import type { KeywordPromptProfile } from '@/shared/config/user-profile';
+
 const CONTENT_API_URL = process.env.CONTENT_API_URL || 'http://localhost:8000';
 
 export interface KeywordGenerateRequest {
@@ -7,6 +9,7 @@ export interface KeywordGenerateRequest {
   exclude_keywords?: string[];
   shuffle?: boolean;
   note?: string;
+  prompt_profile?: KeywordPromptProfile;
 }
 
 export interface GeneratedKeyword {
@@ -35,6 +38,7 @@ export const generateKeywords = async (
       exclude_keywords: request.exclude_keywords ?? [],
       shuffle: request.shuffle ?? true,
       note: request.note ?? '',
+      prompt_profile: request.prompt_profile ?? 'default',
     }),
   });
 

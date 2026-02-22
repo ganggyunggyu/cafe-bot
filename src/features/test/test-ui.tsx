@@ -1,11 +1,14 @@
 'use client';
 
 import { Fragment, useEffect, useState, useTransition } from 'react';
+import { useAtom } from 'jotai';
 import { cn } from '@/shared/lib/cn';
 import { Select, Checkbox, Button } from '@/shared/ui';
 import { runTestAction, runTestBatchAction, type TestType, type ModelType, type TestResult, type TestBatchResult } from './actions';
 import { getCafesAction } from '@/features/accounts/actions';
 import { generateKeywords, type GeneratedKeyword } from '@/shared/api/keyword-gen-api';
+import { userAtom } from '@/shared/store';
+import { getKeywordPromptProfileForLoginId } from '@/shared/config/user-profile';
 
 type TestMode = 'single' | 'batch';
 
@@ -219,6 +222,7 @@ export const KeywordGeneratorUI = () => {
   const [result, setResult] = useState<GeneratedKeyword[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [user] = useAtom(userAtom);
 
   useEffect(() => {
     const loadCafes = async () => {
@@ -254,7 +258,8 @@ export const KeywordGeneratorUI = () => {
       setCopied(false);
 
       try {
-        const res = await generateKeywords({ categories, count, shuffle });
+        const promptProfile = getKeywordPromptProfileForLoginId(user?.loginId);
+        const res = await generateKeywords({ categories, count, shuffle, prompt_profile: promptProfile });
         setResult(res.keywords);
       } catch (err) {
         setError(err instanceof Error ? err.message : '키워드 생성 실패');

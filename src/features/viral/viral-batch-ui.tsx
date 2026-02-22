@@ -15,6 +15,8 @@ import {
 import { getCafesAction, getAccountsAction, type AccountData } from '@/features/accounts/actions';
 import { getDelaySettings } from '@/shared/hooks/use-delay-settings';
 import { generateKeywords } from '@/shared/api/keyword-gen-api';
+import { userAtom } from '@/shared/store';
+import { getKeywordPromptProfileForLoginId } from '@/shared/config/user-profile';
 import type { ViralBatchResult } from './viral-batch-job';
 
 type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
@@ -87,6 +89,7 @@ export const ViralBatchUI = () => {
   const [selectedCafeIds, setSelectedCafeIds] = useState<string[]>([]);
   const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [result, setResult] = useState<ViralBatchResult | null>(null);
+  const [user] = useAtom(userAtom);
 
   const [enableImage, setEnableImage] = useState(false);
   const [imageSource, setImageSource] = useState<'ai' | 'search'>('search');
@@ -211,6 +214,7 @@ export const ViralBatchUI = () => {
     startGenerating(async () => {
       const loadingId = toast.loading('키워드 생성 중...');
       try {
+        const promptProfile = getKeywordPromptProfileForLoginId(user?.loginId);
         // 카페별로 분리해서 키워드 생성
         const countPerCafe = Math.ceil(genCount / selectedCafes.length);
         const allKeywords: { keyword: string; category: string }[] = [];
@@ -225,6 +229,7 @@ export const ViralBatchUI = () => {
             count: countPerCafe,
             shuffle: genShuffle,
             note: genNote.trim() || undefined,
+            prompt_profile: promptProfile,
           });
 
           allKeywords.push(...res.keywords);

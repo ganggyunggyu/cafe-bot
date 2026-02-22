@@ -5,16 +5,19 @@ import {
   buildAnimePrompt,
 } from './prompts';
 
-export let CONTENT_STYLE: ContentStyle = '정보';
+export const CONTENT_STYLE: ContentStyle = '정보';
 
 // Re-export everything from prompts
 export * from './prompts';
 
-export const buildViralPrompt = (input: ViralPromptInput): string => {
-  if (CONTENT_STYLE === '애니') {
+export const buildViralPrompt = (
+  input: ViralPromptInput,
+  contentStyle: ContentStyle = CONTENT_STYLE
+): string => {
+  if (contentStyle === '애니') {
     return buildAnimePrompt(input);
   }
-  if (CONTENT_STYLE === '일상') {
+  if (contentStyle === '일상') {
     return buildCasualPrompt(input);
   }
   return buildInfoPrompt(input);

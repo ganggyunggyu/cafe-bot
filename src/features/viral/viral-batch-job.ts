@@ -22,7 +22,8 @@ import { saveViralDebug } from './viral-debug';
 import { addTaskJob, startAllTaskWorkers } from '@/shared/lib/queue';
 import type { PostJobData, ViralCommentsData } from '@/shared/lib/queue/types';
 import type { PostOptions, ProgressCallback } from '@/features/auto-comment/batch/types';
-import { getRecentWriters } from '@/shared/models';
+import { getRecentWriters, User } from '@/shared/models';
+import { getViralContentStyleForLoginId } from '@/shared/config/user-profile';
 
 export interface DelayConfig {
   betweenPosts: DelayRange;
@@ -114,6 +115,10 @@ export const runViralBatch = async (
       })),
     };
   }
+
+  const user = await User.findOne({ userId }, { loginId: 1 }).lean();
+  const contentStyle = getViralContentStyleForLoginId(user?.loginId);
+  console.log('[VIRAL] promptProfile:', { loginId: user?.loginId, contentStyle });
 
   // 다중 카페 지원: cafeIds > cafeId > defaultCafe 순으로 우선순위
   let cafes: CafeConfig[] = [];
@@ -220,7 +225,7 @@ export const runViralBatch = async (
     let images: string[] | undefined;
 
     try {
-      const prompt = buildViralPrompt({ keyword, keywordType });
+      const prompt = buildViralPrompt({ keyword, keywordType }, contentStyle);
       const aiResponse = await generateViralContent({ prompt, model });
 
       if (!aiResponse.content) {
@@ -230,6 +235,7 @@ export const runViralBatch = async (
           response: '',
           parseError: 'AI 응답 없음',
           cafeId: cafes[0].cafeId,
+          contentStyle,
         });
         throw new Error('AI 응답 없음');
       }
@@ -245,6 +251,7 @@ export const runViralBatch = async (
         parsedComments: parsed?.comments.length,
         parseError: parsed ? undefined : '파싱 실패',
         cafeId: cafes[0].cafeId,
+        contentStyle,
       });
 
       if (!parsed) {

@@ -9,6 +9,7 @@ export interface LoginResult {
   error?: string;
   user?: {
     userId: string;
+    loginId: string;
     displayName: string;
   };
 }
@@ -33,6 +34,7 @@ export const login = async (loginId: string, password: string): Promise<LoginRes
       success: true,
       user: {
         userId: user.userId,
+        loginId: user.loginId,
         displayName: user.displayName,
       },
     };
@@ -63,6 +65,7 @@ export const getCurrentUser = async () => {
 
     return {
       userId: user.userId,
+      loginId: user.loginId,
       displayName: user.displayName,
     };
   } catch {
@@ -96,7 +99,7 @@ export const register = async (
 
     return {
       success: true,
-      user: { userId, displayName },
+      user: { userId, loginId, displayName },
     };
   } catch (error) {
     console.error('[AUTH] 회원가입 실패:', error);

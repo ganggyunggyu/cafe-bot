@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
+import { useAtom } from 'jotai';
 import { cn } from '@/shared/lib/cn';
 import { Select, Button, Checkbox } from '@/shared/ui';
 import { generateKeywords, type GeneratedKeyword } from '@/shared/api/keyword-gen-api';
 import { getCafesAction } from '@/features/accounts/actions';
+import { userAtom } from '@/shared/store';
+import { getKeywordPromptProfileForLoginId } from '@/shared/config/user-profile';
 
 interface CafeConfig {
   cafeId: string;
@@ -23,6 +26,7 @@ export const KeywordGeneratorUI = () => {
   const [result, setResult] = useState<GeneratedKeyword[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [user] = useAtom(userAtom);
 
   useEffect(() => {
     const loadCafes = async () => {
@@ -57,11 +61,13 @@ export const KeywordGeneratorUI = () => {
       setCopied(false);
 
       try {
+        const promptProfile = getKeywordPromptProfileForLoginId(user?.loginId);
         const res = await generateKeywords({
           categories,
           count,
           shuffle,
           note: note.trim() || undefined,
+          prompt_profile: promptProfile,
         });
 
         setResult(res.keywords);

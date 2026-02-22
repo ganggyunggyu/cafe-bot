@@ -4,6 +4,7 @@ import { atom } from 'jotai';
 
 export interface UserState {
   userId: string;
+  loginId: string;
   displayName: string;
 }
 
