@@ -100,6 +100,7 @@ const generateJobId = (data: TaskJobData): string => {
     case 'like': {
       const hash = getContentHash(`${data.cafeId}_${data.articleId}`);
       return `like_${data.accountId}_${hash}${getRescheduleSuffix(data)}`;
+    }
   }
 };
 
