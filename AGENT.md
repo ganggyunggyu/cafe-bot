@@ -1,7 +1,8 @@
-# Cafe Bot - 네이버 카페 자동화 봇
+# Viro - 네이버 카페 바이럴 자동화 플랫폼
 
 ## 프로젝트 개요
 네이버 카페 자동 글/댓글 발행 봇. Playwright 기반 브라우저 자동화와 BullMQ 작업 큐를 활용한 배치 처리 시스템.
+앱 이름: **Viro** (Viral + Auto)
 
 ## 기술 스택
 
@@ -13,127 +14,169 @@
 
 ### 인프라
 - **Database**: MongoDB (Mongoose 9)
-- **Queue**: BullMQ + Redis (ioredis)
-- **Browser Automation**: Playwright
+- **Queue**: BullMQ 5 + Redis (ioredis 5)
+- **Browser Automation**: Playwright 1.57
 - **Auth**: next-auth 5 (beta)
 
 ### UI/UX
-- clsx, tailwind-merge (스타일링)
-- Framer Motion (애니메이션)
-- Sonner (토스트 알림)
+- clsx + tailwind-merge (스타일링)
+- Framer Motion 12 (애니메이션)
+- Sonner 2 (토스트 알림)
 - Lottie React (애니메이션 에셋)
+- JetBrains Mono (폰트)
+
+### 상태 관리
+- **Jotai 2** (클라이언트 상태)
+- Server Actions (서버 상태 변경)
 
 ### 개발 도구
-- Bull Board (큐 모니터링)
+- Bull Board (큐 모니터링, port 3008)
+- concurrently (dev 서버 + bull-board 동시 실행)
 
 ## 아키텍처
 FSD (Feature-Sliced Design) 기반 구조
 
 ```
 src/
-├── app/                  # Next.js App Router
+├── app/                  # Next.js App Router (pages + API routes)
+│   ├── api/
+│   │   ├── auth/         # next-auth 인증 API
+│   │   ├── accounts/     # 계정 CRUD API
+│   │   ├── cafes/        # 카페 API
+│   │   └── viral/        # 바이럴 API
 │   ├── accounts/         # 계정 관리 페이지
-│   ├── api/              # API 라우트
-│   │   ├── auth/         # 인증 API
-│   │   ├── accounts/     # 계정 API
-│   │   └── cafes/        # 카페 API
-│   ├── batch/            # 배치 작업 페이지
 │   ├── cafe-join/        # 카페 가입 페이지
-│   ├── comment-test/     # 댓글 테스트
+│   ├── comment-test/     # 댓글 테스트 페이지
 │   ├── login/            # 로그인 페이지
-│   ├── manuscript/       # 원고 관리
-│   ├── nickname-change/  # 닉네임 변경
+│   ├── manual-post/      # 수동 발행 페이지
+│   ├── manuscript/       # 원고 관리 페이지
+│   ├── nickname-change/  # 닉네임 변경 페이지
 │   ├── publish/          # 발행 페이지
 │   ├── queue/            # 큐 관리 페이지
 │   ├── settings/         # 설정 페이지
 │   ├── test/             # 테스트 페이지
-│   └── viral/            # 바이럴 마케팅
-│       └── debug/        # 바이럴 디버그
+│   └── viral/            # 바이럴 마케팅 메인 (기본 리다이렉트 대상)
 │
-├── entities/             # 비즈니스 엔티티
-│   ├── account/          # 계정 엔티티
-│   ├── cafe/             # 카페 엔티티
-│   └── queue/            # 큐 엔티티
+├── entities/             # 비즈니스 엔티티 (데이터 + API)
+│   ├── account/
+│   ├── cafe/
+│   ├── queue/
+│   └── store/
 │
-├── features/             # 기능 모듈
-│   ├── accounts/         # 계정 관리 기능
+├── features/             # 기능 모듈 (UI + Actions)
+│   ├── accounts/         # 계정 관리 (account-manager-ui, cafe-manager-ui)
+│   ├── auth/             # 인증 (auth-guard, actions)
 │   ├── auto-comment/     # 자동 댓글 시스템
-│   │   ├── batch/        # 배치 처리 로직
-│   │   └── publish/      # 발행 기능
 │   ├── comment/          # 댓글 기능
-│   ├── post-article/     # 글 발행 기능
-│   ├── settings/         # 설정 기능
+│   ├── manual-post/      # 수동 발행
+│   ├── post-article/     # 글 발행 (post-form, actions)
+│   ├── settings/         # 설정 (delay-ui, actions)
 │   ├── test/             # 테스트 기능
-│   └── viral/            # 바이럴 마케팅 기능
+│   └── viral/            # 바이럴 마케팅 (parser, batch, debug)
 │
 ├── shared/               # 공유 모듈
-│   ├── api/              # API 클라이언트
-│   ├── config/           # 설정 파일
-│   ├── lib/              # 유틸리티
-│   │   ├── queue/        # BullMQ 큐 관리
+│   ├── api/              # 외부 API 클라이언트
+│   │   ├── naver-cafe-api.ts
+│   │   ├── naver-comment-api.ts
+│   │   ├── content-api.ts
+│   │   ├── comment-gen-api.ts
+│   │   ├── keyword-gen-api.ts
+│   │   └── google-image-api.ts
+│   ├── config/           # 설정 파일 (accounts, cafes, user)
+│   ├── hooks/            # 커스텀 훅 (use-delay-settings)
+│   ├── lib/              # 핵심 유틸리티
+│   │   ├── queue/        # BullMQ 큐 시스템
 │   │   │   ├── handlers/ # 작업 핸들러
 │   │   │   ├── index.ts  # 큐 생성/관리
-│   │   │   ├── workers.ts # 워커 관리
-│   │   │   ├── sequence.ts # 시퀀스 처리
-│   │   │   └── types.ts  # 큐 타입 정의
+│   │   │   ├── workers.ts
+│   │   │   ├── sequence.ts
+│   │   │   └── types.ts
 │   │   ├── account-manager.ts
 │   │   ├── multi-session.ts
 │   │   ├── playwright.ts
 │   │   ├── mongodb.ts
 │   │   ├── redis.ts
-│   │   └── toast.ts         # Sonner 토스트 유틸
+│   │   ├── auth.ts
+│   │   ├── cn.ts
+│   │   └── toast.ts
 │   ├── models/           # Mongoose 모델
-│   ├── types/            # 타입 정의
+│   │   ├── account.ts
+│   │   ├── cafe.ts
+│   │   ├── user.ts
+│   │   ├── published-article.ts
+│   │   ├── modified-article.ts
+│   │   ├── batch-job-log.ts
+│   │   ├── daily-activity.ts
+│   │   ├── daily-post-count.ts
+│   │   ├── queue-settings.ts
+│   │   └── viral-response.ts
+│   ├── store/            # Jotai atoms (user-atom)
+│   ├── types/            # 공통 타입 정의
+│   ├── providers.tsx     # JotaiProvider + AuthGuard
 │   └── ui/               # 공통 UI 컴포넌트
 │       ├── animated-button.tsx
 │       ├── animated-card.tsx
 │       ├── animated-tabs.tsx
 │       ├── app-header.tsx
 │       ├── button.tsx
+│       ├── checkbox.tsx
+│       ├── confirm-modal.tsx
+│       ├── loading-dots.tsx
 │       ├── page-layout.tsx
 │       ├── page-transition.tsx
 │       ├── select.tsx
 │       └── theme-toggle.tsx
 │
-└── widgets/              # 조합된 UI 블록
+└── widgets/              # 조합된 UI 블록 (현재 미사용)
 ```
 
-## 데이터 모델
+## 데이터 모델 (Mongoose)
 
 | 모델 | 설명 |
 |------|------|
 | Account | 네이버 계정 정보 |
 | Cafe | 카페 정보 |
+| User | 앱 사용자 |
 | PublishedArticle | 발행된 글 |
 | ModifiedArticle | 수정된 글 |
 | BatchJobLog | 배치 작업 로그 |
 | DailyPostCount | 일일 발행 횟수 |
 | DailyActivity | 일일 활동 기록 |
 | QueueSettings | 큐 설정 |
+| ViralResponse | 바이럴 응답 |
 
 ## 개발 규칙
 
 ### 네이밍
-- **파일**: kebab-case (`cafe-api.ts`)
-- **컴포넌트**: PascalCase (`PostForm.tsx`)
+- **파일**: kebab-case (`cafe-api.ts`, `post-form.tsx`)
+- **컴포넌트**: PascalCase
 - **함수/변수**: camelCase
-- **타입**: PascalCase
+- **타입/인터페이스**: PascalCase
 
 ### 코드 스타일
 - 구조분해할당 필수
+- 화살표 함수 사용 (`const fn = () => {}`)
 - Server Actions 사용 (`"use server"`)
 - 불필요한 주석 금지
 - React 19 기능 활용 (useOptimistic, use)
+- 절대 경로 import (`@/shared/...`)
 
-### Import Alias
-```typescript
-import { something } from "@/shared/lib/..."
-```
+### 상태 관리 패턴
+- 서버 상태 변경: Server Actions
+- 클라이언트 상태: Jotai atoms (`@/shared/store`)
+- 토스트 알림: `@/shared/lib/toast` (Sonner 래퍼)
+
+### 큐 시스템 패턴
+- 작업 타입: `post`, `comment`, `reply`, `generate`
+- 계정별 Task 큐 분리
+- 시퀀스 처리 지원 (순차 작업)
+- 중복 Job 방지 (jobId 기반)
+- 재시도 로직 (exponential backoff)
 
 ## 실행 명령어
 
 ```bash
-# 개발 서버 (port 3007) + Bull Board 동시 실행
+# 개발 서버 (Next.js port 3007 + Bull Board port 3008)
 npm run dev
 
 # Next.js만 실행
@@ -155,12 +198,6 @@ npm run bull-board
 ## 환경 변수
 
 ```env
-# MongoDB
-MONGODB_URI=
-
-# Redis
-REDIS_URL=
-
 # Naver OAuth
 NAVER_CLIENT_ID=
 NAVER_CLIENT_SECRET=
@@ -170,14 +207,24 @@ NAVER_CAFE_ID=
 NAVER_CAFE_MENU_ID=
 
 # Content Generation API
-CONTENT_API_URL=
+CONTENT_API_URL=http://localhost:8000
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=
+
+# MongoDB (Atlas 권장)
+MONGODB_URI=
+
+# Redis
+REDIS_URL=
 ```
 
 ## 주요 기능
 
 ### 1. 계정 관리
 - 다중 네이버 계정 관리
-- Playwright 세션 관리
+- Playwright 세션 관리 (multi-session)
 - 계정별 활동 추적
 
 ### 2. 자동 댓글
@@ -188,20 +235,18 @@ CONTENT_API_URL=
 ### 3. 글 발행
 - 원고 기반 자동 발행
 - 카페 메뉴별 발행
+- 수동 발행 지원
 
-### 4. 큐 시스템
-- BullMQ 기반 작업 큐
+### 4. 큐 시스템 (BullMQ)
 - 계정별 Task 큐 분리
-- 작업 타입: post, comment, reply, generate
-- 시퀀스 처리 지원 (순차 작업)
-- 중복 Job 방지 (jobId 기반)
-- 재시도 로직 (exponential backoff)
-- Bull Board로 모니터링
+- Bull Board 모니터링 (port 3008, `/queue` 경로로 프록시)
+- 시퀀스 처리 지원
 
 ### 5. 바이럴 마케팅
-- 네이버 인기글 파싱
-- AI 기반 콘텐츠 생성
-- 배치 작업 처리
+- 네이버 인기글 파싱 (`viral-parser.ts`)
+- AI 기반 콘텐츠 생성 (`viral-prompt.ts`)
+- 배치 작업 처리 (`viral-batch-job.ts`)
+- 디버그 UI 제공
 
 ## 주의사항
 
@@ -217,4 +262,10 @@ npx tsx scripts/migrate-xxx.ts
 MONGODB_URI="mongodb+srv://..." npx tsx scripts/migrate-xxx.ts
 ```
 
-.env.local의 MONGODB_URI 값을 환경변수로 직접 전달해야 함.
+### Next.js 설정
+- `serverActions.bodySizeLimit`: 500mb (대용량 이미지 처리)
+- `/queue/:path*` → `http://localhost:3008/:path*` 프록시 설정
+
+### 스크립트 (`scripts/`)
+- 마이그레이션, 큐 관리, 계정 삽입 등 유틸리티 스크립트 모음
+- `npx tsx scripts/[파일명].ts` 로 실행

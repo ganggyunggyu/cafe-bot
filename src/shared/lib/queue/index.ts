@@ -97,6 +97,9 @@ const generateJobId = (data: TaskJobData): string => {
       const rescheduleSuffix = getRescheduleSuffix(data);
       return `reply_${data.accountId}_${data.articleId}_${data.commentIndex}_${getContentHash(data.content)}${sequenceSuffix}${rescheduleSuffix}`;
     }
+    case 'like': {
+      const hash = getContentHash(`${data.cafeId}_${data.articleId}`);
+      return `like_${data.accountId}_${hash}${getRescheduleSuffix(data)}`;
   }
 };
 

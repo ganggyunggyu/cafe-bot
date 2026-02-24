@@ -33,6 +33,8 @@ export interface ActivityHours {
   end: number;
 }
 
+export type AccountRole = 'writer' | 'commenter';
+
 export interface NaverAccount {
   id: string;
   password: string;
@@ -42,6 +44,7 @@ export interface NaverAccount {
   restDays?: number[];
   dailyPostLimit?: number;
   personaId?: string;
+  role?: AccountRole;
 }
 
 export interface AccountList {

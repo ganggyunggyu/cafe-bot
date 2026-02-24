@@ -65,6 +65,16 @@ export interface ReplyJobData {
   _retryCount?: number;
 }
 
+export interface LikeJobData {
+  type: 'like';
+  accountId: string;
+  userId?: string;
+  cafeId: string;
+  articleId: number;
+  rescheduleToken?: string;
+  _retryCount?: number;
+}
+
 export interface GenerateJobData {
   type: 'generate';
   keyword: string;
@@ -73,7 +83,7 @@ export interface GenerateJobData {
   accountId: string;
 }
 
-export type TaskJobData = PostJobData | CommentJobData | ReplyJobData;
+export type TaskJobData = PostJobData | CommentJobData | ReplyJobData | LikeJobData;
 
 export interface JobResult {
   success: boolean;

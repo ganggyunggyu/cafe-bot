@@ -1,7 +1,7 @@
 import { connectDB } from '@/shared/lib/mongodb';
 import { Account } from '@/shared/models';
 import { getCurrentUserId } from './user';
-import type { NaverAccount } from '@/shared/lib/account-manager';
+import type { NaverAccount, AccountRole } from '@/shared/lib/account-manager';
 
 export const getAllAccounts = async (userId?: string): Promise<NaverAccount[]> => {
   try {
@@ -24,6 +24,7 @@ export const getAllAccounts = async (userId?: string): Promise<NaverAccount[]> =
       restDays: a.restDays,
       dailyPostLimit: a.dailyPostLimit,
       personaId: a.personaId,
+      role: a.role as AccountRole,
     }));
   } catch (error) {
     console.error('[ACCOUNTS] MongoDB 조회 실패:', error);
@@ -61,6 +62,7 @@ export const getAllAccountsForMonitoring = async (): Promise<NaverAccount[]> => 
       restDays: a.restDays,
       dailyPostLimit: a.dailyPostLimit,
       personaId: a.personaId,
+      role: a.role as AccountRole,
     }));
   } catch (error) {
     console.error('[ACCOUNTS] 모니터링용 조회 실패:', error);
@@ -87,6 +89,7 @@ export const getAccountById = async (accountId: string): Promise<NaverAccount | 
       restDays: dbAccount.restDays,
       dailyPostLimit: dbAccount.dailyPostLimit,
       personaId: dbAccount.personaId,
+      role: dbAccount.role as AccountRole,
     };
   } catch (error) {
     console.error('[ACCOUNTS] accountId 조회 실패:', error);
@@ -96,3 +99,13 @@ export const getAccountById = async (accountId: string): Promise<NaverAccount | 
 
 // 하위 호환성을 위한 동기 버전 (빈 배열 반환, 사용 자제)
 export const NAVER_ACCOUNTS: NaverAccount[] = [];
+
+export const getWriterAccounts = async (userId?: string): Promise<NaverAccount[]> => {
+  const accounts = await getAllAccounts(userId);
+  return accounts.filter((a) => a.role === 'writer');
+};
+
+export const getCommenterAccounts = async (userId?: string): Promise<NaverAccount[]> => {
+  const accounts = await getAllAccounts(userId);
+  return accounts.filter((a) => a.role === 'commenter');
+};

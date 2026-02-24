@@ -5,6 +5,8 @@ export interface ActivityHours {
   end: number; // 0-23
 }
 
+export type AccountRole = 'writer' | 'commenter';
+
 export interface IAccount extends Document {
   userId: string;
   accountId: string;
@@ -15,6 +17,7 @@ export interface IAccount extends Document {
   restDays?: number[];
   dailyPostLimit?: number;
   personaId?: string;
+  role?: AccountRole;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +42,7 @@ const AccountSchema = new Schema<IAccount>(
     restDays: { type: [Number] },
     dailyPostLimit: { type: Number },
     personaId: { type: String },
+    role: { type: String, enum: ['writer', 'commenter'] },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
