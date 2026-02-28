@@ -13,6 +13,7 @@
   "dependencies": {
     "@bull-board/api": "^6.16.2",
     "@bull-board/express": "^6.16.2",
+    "@google/genai": "^1.42.0",
     "bullmq": "^5.66.5",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
