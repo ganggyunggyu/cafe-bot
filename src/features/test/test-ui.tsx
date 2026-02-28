@@ -21,6 +21,7 @@ const TEST_TYPES: { value: TestType; label: string }[] = [
 const MODELS: { value: ModelType; label: string }[] = [
   { value: 'chatgpt-4o-latest', label: 'GPT-4o (기본)' },
   { value: 'gpt-5.2-2025-12-11', label: 'GPT-5.2' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
   { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },

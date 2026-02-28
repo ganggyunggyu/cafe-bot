@@ -10,9 +10,13 @@ export const ThemeToggle = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored) setTheme(stored);
+    const timer = setTimeout(() => {
+      setMounted(true);
+      const stored = localStorage.getItem('theme') as Theme | null;
+      if (stored) setTheme(stored);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

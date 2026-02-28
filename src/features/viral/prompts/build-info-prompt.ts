@@ -1,5 +1,5 @@
 import type { ViralPromptInput, ContentType } from './types';
-import { getPersonaDescription } from './personas';
+import { getAllPersonaDescriptions } from './personas';
 import {
   getRandomContentType,
   getProductByIndex,
@@ -14,10 +14,8 @@ export const buildInfoPrompt = (input: ViralPromptInput): string => {
     keyword,
     keywordType,
     contentType: inputContentType,
-    personaNumber,
     productIndex,
   } = input;
-  const persona = personaNumber ?? Math.floor(Math.random() * 18) + 1;
   const contentType = inputContentType ?? getRandomContentType();
   const product =
     productIndex !== undefined
@@ -30,7 +28,7 @@ export const buildInfoPrompt = (input: ViralPromptInput): string => {
   return `## ROLE
 네이버 카페/맘카페 말투를 완벽히 구사하며 광고 티 없이 자연스러운 글과 댓글 작성.
 
-키워드: ${keyword} | 유형: ${keywordTypeLabel} | 페르소나: ${persona}번 | 콘텐츠: ${contentTypeLabel}
+키워드: ${keyword} | 유형: ${keywordTypeLabel} | 콘텐츠: ${contentTypeLabel}
 ${INCLUDE_PRODUCT_INFO ? `제품명: ${product.name}\n\n## 제품 상세 정보 (참고용 - 직접 인용 금지, 자연스럽게 녹여내기)\n${product.details || ''}` : ''}
 
 ## CORE RULES
@@ -57,9 +55,12 @@ ${
 댓글 흐름: 공감 → 일상 공유 → 정보 교환`
 }
 
-## PERSONA #${persona}
+## PERSONA 선택 규칙
+★ 아래 페르소나 목록에서 키워드와 가장 자연스럽게 어울리는 페르소나를 직접 골라서 작성할 것 ★
+- 키워드의 맥락, 타겟 대상을 분석해서 가장 적합한 페르소나 선택
+- 키워드와 동떨어진 페르소나 선택 금지
 
-${getPersonaDescription(persona)}
+${getAllPersonaDescriptions()}
 
 ## TONE GUIDE
 

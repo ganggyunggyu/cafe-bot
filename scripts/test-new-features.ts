@@ -78,7 +78,7 @@ const run = async () => {
 
   // === 테스트 2: 글쓰기 아이디 — 카페 글 탐색 ===
   console.log('\n========== 테스트 2: 카페 글 탐색 ==========');
-  const browseResult = await browseCafePosts(writerAccount, cafe.cafeId, {
+  const browseResult = await browseCafePosts(writerAccount, cafe.cafeId, Number(cafe.menuId), {
     perPage: 10,
   });
 

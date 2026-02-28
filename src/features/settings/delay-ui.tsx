@@ -130,9 +130,9 @@ export const DelaySettingsUI = () => {
 
           <RangeSlider
             label="댓글 사이 딜레이"
-            min={1 * 1000}
-            max={60 * 1000}
-            step={1 * 1000}
+            min={1 * 60 * 1000}
+            max={15 * 60 * 1000}
+            step={30 * 1000}
             minValue={settings.delays.betweenComments.min}
             maxValue={settings.delays.betweenComments.max}
             onChange={(min, max) => handleDelayChange('betweenComments', min, max)}

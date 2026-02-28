@@ -16,14 +16,13 @@ const getRandomDelay = (range: DelayRange): number => {
 };
 
 import { generateViralContent, generateImages, searchRandomImages } from '@/shared/api/content-api';
-import { buildViralPrompt, detectKeywordType, type KeywordType } from './viral-prompt';
+import { buildViralPrompt, detectKeywordType, type KeywordType, type ContentStyle } from './viral-prompt';
 import { parseViralResponse, validateParsedContent } from './viral-parser';
 import { saveViralDebug } from './viral-debug';
 import { addTaskJob, startAllTaskWorkers } from '@/shared/lib/queue';
 import type { PostJobData, ViralCommentsData } from '@/shared/lib/queue/types';
 import type { PostOptions, ProgressCallback } from '@/features/auto-comment/batch/types';
 import { getRecentWriters, User } from '@/shared/models';
-import { getViralContentStyleForLoginId } from '@/shared/config/user-profile';
 
 export interface DelayConfig {
   betweenPosts: DelayRange;
@@ -68,13 +67,37 @@ export interface ViralBatchResult {
   results: ViralKeywordResult[];
 }
 
-const parseKeywordInput = (input: string): { keyword: string; category?: string } => {
+const VALID_STYLES: ContentStyle[] = ['정보', '일상', '애니'];
+const DEFAULT_STYLE: ContentStyle = '일상';
+
+const STYLE_ALIASES: Record<string, ContentStyle> = {
+  '자사키워드': '정보',
+  '자사': '정보',
+  '광고': '정보',
+};
+
+const resolveStyle = (raw: string): ContentStyle | null => {
+  const trimmed = raw.trim();
+  if (VALID_STYLES.includes(trimmed as ContentStyle)) return trimmed as ContentStyle;
+  if (trimmed in STYLE_ALIASES) return STYLE_ALIASES[trimmed];
+  return null;
+};
+
+const parseKeywordInput = (input: string): { keyword: string; category?: string; style: ContentStyle } => {
   const parts = input.split(':');
-  if (parts.length >= 2) {
-    return { keyword: parts[0].trim(), category: parts.slice(1).join(':').trim() };
+  if (parts.length >= 3) {
+    const style = resolveStyle(parts[parts.length - 1]) ?? DEFAULT_STYLE;
+    const category = parts.slice(1, -1).join(':').trim() || undefined;
+    return { keyword: parts[0].trim(), category, style };
   }
-  return { keyword: input.trim() };
-}
+  if (parts.length === 2) {
+    const second = parts[1].trim();
+    const style = resolveStyle(second);
+    if (style) return { keyword: parts[0].trim(), style };
+    return { keyword: parts[0].trim(), category: second, style: DEFAULT_STYLE };
+  }
+  return { keyword: input.trim(), style: DEFAULT_STYLE };
+};
 
 export const runViralBatch = async (
   input: ViralBatchInput,
@@ -117,8 +140,7 @@ export const runViralBatch = async (
   }
 
   const user = await User.findOne({ userId }, { loginId: 1 }).lean();
-  const contentStyle = getViralContentStyleForLoginId(user?.loginId);
-  console.log('[VIRAL] promptProfile:', { loginId: user?.loginId, contentStyle });
+  console.log('[VIRAL] user:', { loginId: user?.loginId });
 
   // 다중 카페 지원: cafeIds > cafeId > defaultCafe 순으로 우선순위
   let cafes: CafeConfig[] = [];
@@ -165,7 +187,7 @@ export const runViralBatch = async (
   // 기본 딜레이 설정 (클라이언트에서 전달받지 못한 경우)
   const defaultDelays: DelayConfig = {
     betweenPosts: { min: 30000, max: 60000 },
-    betweenComments: { min: 3000, max: 10000 },
+    betweenComments: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 },
     afterPost: { min: 5000, max: 15000 },
   };
   const effectiveDelays = delays || defaultDelays;
@@ -202,8 +224,84 @@ export const runViralBatch = async (
 
   let taskIndex = 0;
 
+  // ====== 계정별 키워드 균등 배분 ======
+  const allParsedKeywords = keywords.map((kw, idx) => {
+    const parsed = parseKeywordInput(kw);
+    return { ...parsed, index: idx, keywordType: detectKeywordType(parsed.keyword) };
+  });
+
+  const writerCandidatesAll = writerAccountIds?.length
+    ? accounts.filter((a) => writerAccountIds.includes(a.id) && isAccountActive(a))
+    : accounts.filter((a) => isAccountActive(a));
+
+  const accountAssignments = new Map<string, string>();
+
+  if (writerCandidatesAll.length > 0) {
+    for (const cafe of cafes) {
+      const cafeRecentWriters = recentWritersMap.get(cafe.cafeId) || [];
+      const cafeKeywords = allParsedKeywords.filter((pk) =>
+        getTargetCafes(pk.category).some((t) => t.cafeId === cafe.cafeId)
+      );
+
+      // 스타일별 그룹핑 (광고=정보, 일상, 기타)
+      const adKeywords = cafeKeywords.filter((k) => k.style === '정보');
+      const dailyKeywords = cafeKeywords.filter((k) => k.style === '일상');
+      const otherKeywords = cafeKeywords.filter((k) => !['정보', '일상'].includes(k.style));
+
+      // 최근 발행자가 아닌 계정 우선 정렬
+      const sortedWriters = [...writerCandidatesAll].sort((a, b) => {
+        const ai = cafeRecentWriters.indexOf(a.id);
+        const bi = cafeRecentWriters.indexOf(b.id);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return -1;
+        if (bi === -1) return 1;
+        return bi - ai;
+      });
+
+      // 라운드로빈 균등 배분
+      const assignGroup = (group: typeof cafeKeywords) => {
+        for (let gi = 0; gi < group.length; gi++) {
+          const account = sortedWriters[gi % sortedWriters.length];
+          accountAssignments.set(`${group[gi].index}-${cafe.cafeId}`, account.id);
+        }
+      };
+
+      assignGroup(adKeywords);
+      assignGroup(dailyKeywords);
+      assignGroup(otherKeywords);
+
+      // 배분 결과 로깅
+      const distribution = new Map<string, { ad: number; daily: number; other: number }>();
+      sortedWriters.forEach((a) => distribution.set(a.nickname || a.id, { ad: 0, daily: 0, other: 0 }));
+
+      for (const [key, accountId] of accountAssignments) {
+        if (!key.endsWith(`-${cafe.cafeId}`)) continue;
+        const kwIdx = parseInt(key.split('-')[0]);
+        const pk = allParsedKeywords[kwIdx];
+        const acc = sortedWriters.find((a) => a.id === accountId);
+        const name = acc?.nickname || accountId;
+        const dist = distribution.get(name);
+        if (!dist) continue;
+        if (pk.style === '정보') dist.ad++;
+        else if (pk.style === '일상') dist.daily++;
+        else dist.other++;
+      }
+
+      console.log(`[VIRAL] ${cafe.name} 계정별 키워드 배분:`);
+      for (const [name, counts] of distribution) {
+        const parts = [];
+        if (counts.ad > 0) parts.push(`광고 ${counts.ad}개`);
+        if (counts.daily > 0) parts.push(`일상 ${counts.daily}개`);
+        if (counts.other > 0) parts.push(`기타 ${counts.other}개`);
+        if (parts.length > 0) {
+          console.log(`[VIRAL]   ${name}: ${parts.join(', ')}`);
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < keywords.length; i++) {
-    const { keyword, category } = parseKeywordInput(keywords[i]);
+    const { keyword, category, style } = parseKeywordInput(keywords[i]);
     const keywordType = detectKeywordType(keyword);
     const targetCafes = getTargetCafes(category);
 
@@ -218,14 +316,14 @@ export const runViralBatch = async (
       keywordIndex: taskIndex,
       totalKeywords: totalTasks,
       phase: 'post',
-      message: `[${taskIndex + 1}/${totalTasks}] ${keyword} 콘텐츠 생성 중...`,
+      message: `[${taskIndex + 1}/${totalTasks}] ${keyword} (${style}) 콘텐츠 생성 중...`,
     });
 
     let parsed: Awaited<ReturnType<typeof parseViralResponse>> | null = null;
     let images: string[] | undefined;
 
     try {
-      const prompt = buildViralPrompt({ keyword, keywordType }, contentStyle);
+      const prompt = buildViralPrompt({ keyword, keywordType, contentType: style === '일상' ? 'lifestyle' : undefined }, style);
       const aiResponse = await generateViralContent({ prompt, model });
 
       if (!aiResponse.content) {
@@ -235,7 +333,7 @@ export const runViralBatch = async (
           response: '',
           parseError: 'AI 응답 없음',
           cafeId: cafes[0].cafeId,
-          contentStyle,
+          contentStyle: style,
         });
         throw new Error('AI 응답 없음');
       }
@@ -251,7 +349,7 @@ export const runViralBatch = async (
         parsedComments: parsed?.comments.length,
         parseError: parsed ? undefined : '파싱 실패',
         cafeId: cafes[0].cafeId,
-        contentStyle,
+        contentStyle: style,
       });
 
       if (!parsed) {
@@ -328,34 +426,25 @@ export const runViralBatch = async (
       const lastWriterId = lastWriterIdMap.get(cafe.cafeId);
 
       try {
-        // 글 작성 계정 필터링
-        const writerCandidates = writerAccountIds?.length
-          ? accounts.filter(a => writerAccountIds.includes(a.id) && isAccountActive(a))
-          : accounts.filter(a => isAccountActive(a));
-
-        if (writerCandidates.length === 0) {
-          throw new Error('글 작성 가능한 계정 없음');
-        }
-
-        // 최근 발행자들 피해서 선택
+        // 사전 배분된 계정 사용
+        const assignmentKey = `${i}-${cafe.cafeId}`;
+        const assignedAccountId = accountAssignments.get(assignmentKey);
         let writerAccount: NaverAccount;
-        if (writerCandidates.length === 1) {
-          writerAccount = writerCandidates[0];
+
+        if (assignedAccountId) {
+          const assigned = accounts.find((a) => a.id === assignedAccountId);
+          if (assigned && isAccountActive(assigned)) {
+            writerAccount = assigned;
+          } else {
+            const fallback = writerCandidatesAll.find((a) => a.id !== assignedAccountId) || writerCandidatesAll[0];
+            if (!fallback) throw new Error('글 작성 가능한 계정 없음');
+            writerAccount = fallback;
+            console.warn(`[VIRAL] 배분 계정(${assignedAccountId}) 비활성 → ${writerAccount.nickname || writerAccount.id} 대체`);
+          }
         } else {
-          let availableWriters = writerCandidates.filter(a => !recentWriters.includes(a.id));
-
-          if (availableWriters.length === 0 && lastWriterId) {
-            availableWriters = writerCandidates.filter(a => a.id !== lastWriterId);
-          }
-
-          if (availableWriters.length === 0) {
-            availableWriters = writerCandidates;
-          }
-
-          const baseIndex = (i + cafes.indexOf(cafe)) % availableWriters.length;
-          const randomOffset = Math.floor(Math.random() * Math.min(2, availableWriters.length));
-          const writerIndex = (baseIndex + randomOffset) % availableWriters.length;
-          writerAccount = availableWriters[writerIndex];
+          if (writerCandidatesAll.length === 0) throw new Error('글 작성 가능한 계정 없음');
+          writerAccount = writerCandidatesAll[i % writerCandidatesAll.length];
+          console.warn(`[VIRAL] 배분 없음 → ${writerAccount.nickname || writerAccount.id} 대체 사용`);
         }
 
         // 최근 발행자 목록 갱신

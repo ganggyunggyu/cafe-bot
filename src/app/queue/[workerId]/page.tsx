@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { Select, Button, PageLayout } from '@/shared/ui';
 import Link from 'next/link';
@@ -66,7 +66,6 @@ export default function WorkerQueuePage({ params }: Props) {
   const { workerId } = use(params);
   const accountId = workerIdToAccountId(workerId);
 
-  const [isPending, startTransition] = useTransition();
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [jobsData, setJobsData] = useState<JobsPage | null>(null);
@@ -74,22 +73,33 @@ export default function WorkerQueuePage({ params }: Props) {
   const [filter, setFilter] = useState<JobsFilter>({ status: 'all', type: 'all', accountId });
   const [isPolling, setIsPolling] = useState(true);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const [jobsResult, accountResult] = await Promise.all([
       getDetailedJobs({ ...filter, accountId }, page, pageSize),
       getAccountInfoAction(accountId),
     ]);
     setJobsData(jobsResult);
     setAccountInfo(accountResult);
-  };
+  }, [filter, accountId, page, pageSize]);
 
   useEffect(() => {
-    loadData();
+    const initialTimer = setTimeout(() => {
+      loadData();
+    }, 0);
 
-    if (!isPolling) return;
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, [filter, page, isPolling, accountId]);
+    if (!isPolling) {
+      return () => clearTimeout(initialTimer);
+    }
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 5000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [loadData, isPolling]);
 
   const handleFilterChange = (key: keyof JobsFilter, value: string) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
@@ -250,7 +260,7 @@ export default function WorkerQueuePage({ params }: Props) {
                 {(!jobsData || jobsData.jobs.length === 0) && (
                   <tr>
                     <td colSpan={5} className={cn('px-5 py-12 text-center text-ink-muted')}>
-                      {isPending ? '로딩 중...' : '작업이 없습니다'}
+                      {!jobsData ? '로딩 중...' : '작업이 없습니다'}
                     </td>
                   </tr>
                 )}

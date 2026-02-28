@@ -8,7 +8,12 @@ import { getRedisConnection } from '@/shared/lib/redis';
 
 const WRITE_LOCK_TTL = 600; // 10분
 
-const acquireWriteLock = async (cafeId: number, articleId: number, accountId: string, content: string): Promise<boolean> => {
+const acquireWriteLock = async (
+  cafeId: string,
+  articleId: number,
+  accountId: string,
+  content: string
+): Promise<boolean> => {
   const redis = getRedisConnection();
   const contentKey = content.slice(0, 30).replace(/\s+/g, '');
   const lockKey = `write_lock:comment:${cafeId}:${articleId}:${accountId}:${contentKey}`;

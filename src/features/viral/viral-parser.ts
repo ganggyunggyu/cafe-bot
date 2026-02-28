@@ -42,6 +42,13 @@ const LEGACY_PATTERNS = {
   markerComment: /^[☆★○◯〇]\s*댓글\s+(.+)$/,
 };
 
+const stripMarkdown = (text: string): string =>
+  text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/`(.+?)`/g, '$1');
+
 export const parseViralResponse = (
   response: string
 ): ParsedViralContent | null => {
@@ -55,8 +62,8 @@ export const parseViralResponse = (
       return null;
     }
 
-    const title = titleMatch[1].trim();
-    const body = bodyMatch[1].trim();
+    const title = stripMarkdown(titleMatch[1].trim());
+    const body = stripMarkdown(bodyMatch[1].trim());
     const commentsRaw = commentsMatch[1];
 
     const comments = parseComments(commentsRaw);
@@ -265,7 +272,7 @@ const parseComments = (raw: string): ParsedComment[] => {
     }
   }
 
-  return results;
+  return results.map((c) => ({ ...c, content: stripMarkdown(c.content) }));
 }
 
 export const getCommentStats = (comments: ParsedComment[]) => {
@@ -291,8 +298,8 @@ export const validateParsedContent = (content: ParsedViralContent): {
     errors.push(`제목이 너무 김 (${content.title.length}자)`);
   }
 
-  if (!content.body || content.body.length < 100) {
-    errors.push('본문이 너무 짧음');
+  if (!content.body || content.body.length === 0) {
+    errors.push('본문이 비어있음');
   }
 
   if (content.comments.length < 3) {

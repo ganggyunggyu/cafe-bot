@@ -65,7 +65,7 @@ export const processArticleModification = async ({
 
     // 광고 콘텐츠 생성 (카테고리가 있으면 키워드에 포함)
     const keywordWithCategory = category ? `${adKeyword} (카테고리: ${category})` : adKeyword;
-    const generated = await generateViralContent({ prompt: keywordWithCategory, service });
+    const generated = await generateViralContent({ prompt: keywordWithCategory, ref });
     const { title: newTitle, htmlContent: newContent } = buildCafePostContent(generated.content, adKeyword);
 
     // 글 수정

@@ -13,6 +13,5 @@ export interface ViralPromptInput {
   keyword: string;
   keywordType: KeywordType;
   contentType?: ContentType;
-  personaNumber?: number;
   productIndex?: number;
 }

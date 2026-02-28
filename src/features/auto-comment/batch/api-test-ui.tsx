@@ -28,6 +28,7 @@ const MODELS = [
   { value: '', label: '기본 모델' },
   { value: 'chatgpt-4o-latest', label: 'GPT-4o' },
   { value: 'gpt-5.2-2025-12-11', label: 'GPT-5.2' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
   { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
@@ -36,7 +37,7 @@ const MODELS = [
 ];
 
 const TABS: { key: TestType; label: string; endpoint: string; defaultModel: string }[] = [
-  { key: 'cafe-daily', label: '원고', endpoint: '/generate/test/cafe-daily', defaultModel: 'gemini-3-flash-preview' },
+  { key: 'cafe-daily', label: '원고', endpoint: '/generate/test/cafe-daily', defaultModel: 'gemini-3.1-pro-preview' },
   { key: 'comment', label: '댓글', endpoint: '/generate/test/comment', defaultModel: 'chatgpt-4o-latest' },
   { key: 'recomment', label: '대댓글', endpoint: '/generate/test/recomment', defaultModel: 'chatgpt-4o-latest' },
 ];

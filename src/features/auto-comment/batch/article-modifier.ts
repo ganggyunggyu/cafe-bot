@@ -152,7 +152,7 @@ export const modifyArticleWithAccount = async (
     }
 
     // 이미지 삽입 위치 결정
-    let imageQueue = images ? [...images] : [];
+    const imageQueue = images ? [...images] : [];
     const hasSubtitles = subtitleIndices.length > 0;
 
     console.log(`[MODIFY] 부제 ${subtitleIndices.length}개 발견, 이미지 ${imageQueue.length}장`);

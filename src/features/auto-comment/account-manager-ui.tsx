@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import { cn } from '@/shared/lib/cn';
 import {
   getAccountList,
@@ -19,18 +19,21 @@ export const AccountManagerUI = () => {
   const [newAccount, setNewAccount] = useState({ id: '', password: '', nickname: '' });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  const loadAccounts = () => {
+  const loadAccounts = useCallback(() => {
     startTransition(async () => {
       const result = await getAccountList();
       if (result.success && result.accounts) {
         setAccounts(result.accounts);
       }
     });
-  };
+
+  }, [startTransition]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      loadAccounts();
+    }, 0);
+  }, [loadAccounts]);
 
   const handleAddAccount = () => {
     const { id, password, nickname } = newAccount;

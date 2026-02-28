@@ -477,7 +477,7 @@ export const AccountManagerUI = () => {
       {accounts.length === 0 ? (
         <div className={cn('rounded-2xl border border-(--border-light) bg-(--surface) p-8 text-center')}>
           <p className={cn('text-sm text-(--ink-muted)')}>
-            등록된 계정이 없습니다. "설정 가져오기" 또는 "계정 추가" 버튼을 눌러주세요.
+            등록된 계정이 없습니다. &quot;설정 가져오기&quot; 또는 &quot;계정 추가&quot; 버튼을 눌러주세요.
           </p>
         </div>
       ) : (

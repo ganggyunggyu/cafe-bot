@@ -12,7 +12,7 @@ export type AllQueueStatus = QueueOverview;
 export interface JobDetail {
   id: string;
   accountId: string;
-  type: 'post' | 'comment' | 'reply';
+  type: 'post' | 'comment' | 'reply' | 'like';
   cafeId: string;
   cafeName?: string;
   status: 'waiting' | 'active' | 'delayed' | 'completed' | 'failed';
@@ -38,7 +38,7 @@ export interface JobsPage {
 
 export interface JobsFilter {
   status?: 'waiting' | 'active' | 'delayed' | 'completed' | 'failed' | 'all';
-  type?: 'post' | 'comment' | 'reply' | 'all';
+  type?: 'post' | 'comment' | 'reply' | 'like' | 'all';
   accountId?: string;
   cafeId?: string;
 }
@@ -49,6 +49,7 @@ export interface QueueSummary {
     post: { delayed: number; waiting: number; active: number; completed: number; failed: number };
     comment: { delayed: number; waiting: number; active: number; completed: number; failed: number };
     reply: { delayed: number; waiting: number; active: number; completed: number; failed: number };
+    like: { delayed: number; waiting: number; active: number; completed: number; failed: number };
   };
   byCafe: { cafeId: string; cafeName: string; count: number }[];
   byAccount: { accountId: string; count: number }[];
@@ -148,12 +149,14 @@ const jobToDetail = (
   if (data.type === 'post') {
     detail.subject = data.subject;
     detail.keyword = data.keyword;
-  } else {
+  } else if (data.type === 'comment' || data.type === 'reply') {
     detail.articleId = data.articleId;
     detail.content = data.content;
     if (data.type === 'reply') {
       detail.commentIndex = data.commentIndex;
     }
+  } else {
+    detail.articleId = data.articleId;
   }
 
   if (status === 'delayed' && job.delay) {
@@ -265,6 +268,7 @@ export const getQueueSummary = async (): Promise<QueueSummary> => {
       post: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
       comment: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
       reply: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
+      like: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
     },
     byCafe: [],
     byAccount: [],

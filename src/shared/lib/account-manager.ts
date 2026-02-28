@@ -202,7 +202,7 @@ export const getNextActiveTime = (account: NaverAccount): number => {
 
   const { start, end } = account.activityHours;
 
-  let targetDate = new Date(now);
+  const targetDate = new Date(now);
   targetDate.setMinutes(0, 0, 0);
 
   if (start > end) {

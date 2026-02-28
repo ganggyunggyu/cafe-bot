@@ -29,7 +29,7 @@ const STORAGE_KEY = 'cafe-bot-delay-settings';
 export const DEFAULT_DELAY_SETTINGS: DelaySettings = {
   delays: {
     betweenPosts: { min: 30 * 1000, max: 60 * 1000 },
-    betweenComments: { min: 3 * 1000, max: 10 * 1000 },
+    betweenComments: { min: 3 * 60 * 1000, max: 8 * 60 * 1000 },
     afterPost: { min: 5 * 1000, max: 15 * 1000 },
   },
   retry: { attempts: 3, backoffDelay: 5000 },
@@ -71,8 +71,12 @@ export const useDelaySettings = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setSettings(getDelaySettings());
-    setIsLoaded(true);
+    const timer = setTimeout(() => {
+      setSettings(getDelaySettings());
+      setIsLoaded(true);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const updateSettings = useCallback((newSettings: DelaySettings) => {

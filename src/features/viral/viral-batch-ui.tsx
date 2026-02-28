@@ -50,7 +50,7 @@ const savePresets = (presets: ViralPreset[]) => {
 
 const MODELS = [
   // 기본
-  { value: '', label: '기본 (Gemini 3 Pro)' },
+  { value: '', label: '기본 (Gemini 3.1 Pro)' },
   // OpenAI
   { value: 'gpt-5.2-2025-12-11', label: 'GPT 5.2' },
   { value: 'gpt-5.1-2025-11-13', label: 'GPT 5.1' },
@@ -61,6 +61,7 @@ const MODELS = [
   { value: 'gpt-4.1-2025-04-14', label: 'GPT 4.1' },
   { value: 'gpt-4.1-mini-2025-04-14', label: 'GPT 4.1 Mini' },
   // Google
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
   // Anthropic
@@ -464,12 +465,16 @@ export const ViralBatchUI = () => {
         <textarea
           value={keywords}
           onChange={(e) => setKeywords(e.target.value)}
-          placeholder={`키워드 또는 키워드:카테고리 (한 줄에 하나씩)
+          placeholder={`키워드 또는 키워드:카테고리:스타일 (한 줄에 하나씩)
+
+스타일: 자사키워드(광고) | 일상(기본값) | 애니
 
 예:
-기력보충
-수족냉증:건강
-흑염소진액 효과:후기`}
+기력보충            → 일상 스타일 (기본)
+수족냉증:건강       → 일상 스타일 (기본)
+수족냉증:건강:자사키워드  → 자사키워드(광고) 스타일
+기력보충:자사키워드         → 자사키워드(광고) 스타일
+흐염소진액 효과:후기`}
           className={cn(inputClassName, 'min-h-32 resize-none font-mono text-xs')}
         />
       </div>
@@ -880,11 +885,21 @@ export const ViralBatchUI = () => {
 
       {/* 바이럴 배치 가이드 */}
       <div className={cn('rounded-xl border border-info/20 bg-info-soft p-4 space-y-4')}>
+        {/* 스타일 가이드 */}
+        <div className={cn('space-y-1.5')}>
+          <p className={cn('text-sm font-semibold text-info')}>원고 스타일</p>
+          <div className={cn('text-xs text-info/80 space-y-0.5')}>
+            <p><strong>일상</strong> (기본): 1~3문장 혼잣말 · 광고 없음 · 카페 활동용</p>
+            <p><strong>자사키워드</strong>: 300~500자 고민글 · 댓글에서 제품 추천 · 바이럴 광고</p>
+            <p><strong>애니</strong>: 애니메이션 캐릭터 스타일</p>
+          </div>
+        </div>
+
         {/* 키워드 분류 */}
         <div className={cn('space-y-1.5')}>
           <p className={cn('text-sm font-semibold text-info')}>키워드 자동 분류</p>
           <div className={cn('text-xs text-info/80 space-y-0.5')}>
-            <p><strong>자사</strong>: 기력보충, 흑염소, 피로회복 등 → 직접 제품 홍보</p>
+            <p><strong>자사</strong>: 기력보충, 흐염소, 피로회복 등 → 직접 제품 홍보</p>
             <p><strong>타사</strong>: 경쟁 제품명 → 중립적 질문 후 대안 제시</p>
           </div>
         </div>
@@ -920,7 +935,7 @@ export const ViralBatchUI = () => {
           { label: '카페', value: selectedCafeIds.length > 0 ? `${selectedCafeIds.length}개 (${selectedCafes.map((c) => c.name).join(', ')})` : '선택 안됨' },
           {
             label: 'AI 모델',
-            value: MODELS.find((m) => m.value === model)?.label || '기본 (Gemini 3 Pro)',
+            value: MODELS.find((m) => m.value === model)?.label || '기본 (Gemini 3.1 Pro)',
           },
           {
             label: '이미지',

@@ -16,6 +16,20 @@ export interface IViralResponse extends Document {
   updatedAt: Date;
 }
 
+export type ViralResponseCreateInput = {
+  userId: string;
+  keyword: string;
+  prompt: string;
+  response: string;
+  parsedTitle?: string;
+  parsedBody?: string;
+  parsedComments?: number;
+  parseError?: string;
+  cafeId?: string;
+  contentStyle?: string;
+  writerPersona?: string;
+};
+
 const ViralResponseSchema = new Schema<IViralResponse>(
   {
     userId: { type: String, required: true, index: true },
@@ -41,7 +55,7 @@ export const ViralResponse: Model<IViralResponse> =
 
 // 바이럴 응답 저장
 export const saveViralResponse = async (
-  entry: Omit<IViralResponse, '_id' | 'createdAt' | 'updatedAt'>
+  entry: ViralResponseCreateInput
 ): Promise<string> => {
   const doc = await ViralResponse.create(entry);
   console.log(`[VIRAL-DB] 저장됨: ${doc._id}`);

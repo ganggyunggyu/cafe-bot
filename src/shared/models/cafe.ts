@@ -9,6 +9,7 @@ export interface ICafe extends Document {
   categories: string[];
   categoryMenuIds?: Record<string, string>;
   categoryAliases?: Record<string, string>;
+  commentableMenuIds?: number[];
   isDefault?: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -25,6 +26,7 @@ const CafeSchema = new Schema<ICafe>(
     categories: { type: [String], default: [] },
     categoryMenuIds: { type: Map, of: String },
     categoryAliases: { type: Map, of: String },
+    commentableMenuIds: { type: [Number], default: [] },
     isDefault: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },

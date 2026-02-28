@@ -1,6 +1,6 @@
 export const COMMENT_DELAY_RANGE_MS = {
-  base: 3000,
-  jitter: 2000,
+  base: 3 * 60 * 1000,
+  jitter: 5 * 60 * 1000,
 } as const;
 
 export const getCommentDelayMs = (): number => {

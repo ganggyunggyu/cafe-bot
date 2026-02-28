@@ -118,12 +118,23 @@ export const QueueDashboardUI = ({ onClose }: QueueDashboardUIProps) => {
   };
 
   useEffect(() => {
-    loadData();
+    const initialTimer = setTimeout(() => {
+      loadData();
+    }, 0);
 
-    if (!isPolling) return;
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, [filter, page, isPolling]);
+    if (!isPolling) {
+      return () => clearTimeout(initialTimer);
+    }
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 5000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [filter, page, isPolling, loadData]);
 
   const handleClearAll = () => {
     startTransition(async () => {

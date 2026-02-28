@@ -3,7 +3,7 @@ const BASE_URL = process.env.COMMENT_GEN_API_URL || 'http://localhost:8000';
 interface GenerateCommentRequest {
   content: string;
   author_name?: string;
-  persona_id?: string | null;
+  persona_id?: number;
 }
 
 interface GenerateReplyRequest {
@@ -12,7 +12,7 @@ interface GenerateReplyRequest {
   author_name?: string;
   parent_author?: string;
   commenter_name?: string;
-  persona_id?: string | null;
+  persona_id?: number;
 }
 
 interface GenerateCommentResponse {
@@ -26,16 +26,24 @@ interface GenerateCommentResponse {
 
 const POSITIVE_PERSONA_IDS = ['cute_f', 'warm_f', 'enthusiast', 'grateful', 'supporter'];
 
+const toNumericPersonaId = (personaId?: string | null): number | undefined => {
+  if (!personaId) return undefined;
+  const parsed = Number(personaId);
+  if (!Number.isInteger(parsed)) return undefined;
+  return parsed;
+};
+
 export const generateComment = async (
   postContent: string,
   personaId?: string | null,
   authorName?: string
 ): Promise<string> => {
+  const normalizedPersonaId = toNumericPersonaId(personaId);
   const body: GenerateCommentRequest = {
     content: postContent,
     author_name: authorName,
-    persona_id: personaId ?? null,
   };
+  if (normalizedPersonaId !== undefined) body.persona_id = normalizedPersonaId;
 
   const res = await fetch(`${BASE_URL}/generate/comment`, {
     method: 'POST',
@@ -64,14 +72,15 @@ export const generateReply = async (
   parentAuthor?: string,
   commenterName?: string
 ): Promise<string> => {
+  const normalizedPersonaId = toNumericPersonaId(personaId);
   const body: GenerateReplyRequest = {
     parent_comment: parentComment,
     content: postContent,
     author_name: authorName,
     parent_author: parentAuthor,
     commenter_name: commenterName,
-    persona_id: personaId ?? null,
   };
+  if (normalizedPersonaId !== undefined) body.persona_id = normalizedPersonaId;
 
   const res = await fetch(`${BASE_URL}/generate/recomment`, {
     method: 'POST',
@@ -100,14 +109,15 @@ export const generateAuthorReply = async (
   commenterName?: string
 ): Promise<string> => {
   const authorPersonaId = personaId ?? POSITIVE_PERSONA_IDS[Math.floor(Math.random() * POSITIVE_PERSONA_IDS.length)];
+  const normalizedPersonaId = toNumericPersonaId(authorPersonaId);
 
   const body: GenerateReplyRequest = {
     parent_comment: parentComment,
     content: postContent,
     parent_author: parentAuthor,
     commenter_name: commenterName,
-    persona_id: authorPersonaId,
   };
+  if (normalizedPersonaId !== undefined) body.persona_id = normalizedPersonaId;
 
   const res = await fetch(`${BASE_URL}/generate/recomment`, {
     method: 'POST',

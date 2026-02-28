@@ -48,7 +48,7 @@ export const getTaskQueue = (accountId: string): Queue<TaskJobData, JobResult> =
     const queue = new Queue<TaskJobData, JobResult>(queueName, {
       connection: getRedisConnection(),
       defaultJobOptions: {
-        attempts: 3,
+        attempts: 5,
         backoff: { type: 'exponential', delay: 5000 },
         removeOnComplete: 100,
         removeOnFail: 50,

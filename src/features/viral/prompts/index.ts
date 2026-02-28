@@ -31,5 +31,7 @@ export type { AnimePersona } from './anime-personas';
 
 // Prompt Builders
 export { buildCasualPrompt } from './build-casual-prompt';
+export { buildShortDailyPrompt } from './build-short-daily-prompt';
 export { buildInfoPrompt } from './build-info-prompt';
+export { buildOwnKeywordPrompt } from './build-own-keyword-prompt';
 export { buildAnimePrompt } from './build-anime-prompt';

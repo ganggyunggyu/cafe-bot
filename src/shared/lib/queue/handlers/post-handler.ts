@@ -107,8 +107,8 @@ const saveArticleOnly = async (
 
 };
 
-const FIRST_COMMENT_DELAY = 30 * 1000; // 글 저장 후 첫 댓글까지 30초
-const BETWEEN_COMMENTS_DELAY = 45 * 1000; // 댓글 간 45초
+const FIRST_COMMENT_DELAY = 3 * 60 * 1000; // 글 저장 후 첫 댓글까지 3분
+const BETWEEN_COMMENTS_DELAY = { min: 3 * 60 * 1000, max: 8 * 60 * 1000 }; // 댓글 간 3~8분
 
 const addViralCommentJobs = async (
   postData: PostJobData,
@@ -150,12 +150,13 @@ const addViralCommentJobs = async (
   let orderIndex = 0;
   let commentCount = 0;
   let replyCount = 0;
+  let cumulativeDelay = FIRST_COMMENT_DELAY;
   const lastReplyerByParent: Map<number, string> = new Map();
 
   console.log(`[WORKER] viral 댓글/대댓글 ${comments.length}개 Job 추가 시작`);
 
   for (const item of comments) {
-    const itemDelay = FIRST_COMMENT_DELAY + (orderIndex * BETWEEN_COMMENTS_DELAY);
+    const itemDelay = cumulativeDelay;
 
     if (item.type === 'comment') {
       const commenterId = commentAuthorMap.get(item.index);
@@ -179,9 +180,10 @@ const addViralCommentJobs = async (
       };
 
       await addTaskJob(commenterId, commentJobData, itemDelay);
-      console.log(`[WORKER] [${orderIndex + 1}] 댓글 Job: ${commenterId}, 딜레이: ${Math.round(itemDelay / 1000)}초`);
+      console.log(`[WORKER] [${orderIndex + 1}] 댓글 Job: ${commenterId}, 딜레이: ${Math.round(itemDelay / 60000)}분`);
       commentCount++;
       orderIndex++;
+      cumulativeDelay += getRandomDelay(BETWEEN_COMMENTS_DELAY);
       continue;
     }
 
@@ -249,9 +251,10 @@ const addViralCommentJobs = async (
     };
 
     await addTaskJob(replyerAccountId, replyJobData, itemDelay);
-    console.log(`[WORKER] [${orderIndex + 1}] 대댓글 Job (${item.type}): ${replyerAccountId} → 댓글[${parentCommentOrder}], 딜레이: ${Math.round(itemDelay / 1000)}초`);
+    console.log(`[WORKER] [${orderIndex + 1}] 대댓글 Job (${item.type}): ${replyerAccountId} → 댓글[${parentCommentOrder}], 딜레이: ${Math.round(itemDelay / 60000)}분`);
     replyCount++;
     orderIndex++;
+    cumulativeDelay += getRandomDelay(BETWEEN_COMMENTS_DELAY);
   }
 
   console.log(`[WORKER] viral 댓글 ${commentCount}개, 대댓글 ${replyCount}개 Job 추가 완료`);

@@ -19,6 +19,10 @@ export interface WriteCommentResult {
   commentId?: string;
 }
 
+const normalizeText = (value: string | null | undefined): string => {
+  return (value ?? '').replace(/\s+/g, ' ').trim();
+};
+
 const ensureLoggedIn = async (
   id: string,
   password: string
@@ -61,11 +65,9 @@ const checkErrorPopup = async (page: Page): Promise<string | null> => {
   const errorPopup = await page.$('.LayerPopup, .popup_layer, [role="alertdialog"]');
   if (!errorPopup) return null;
 
-  const errorText = await errorPopup.textContent();
-  if (errorText?.includes('권한') || errorText?.includes('없습니다')) {
-    return errorText.trim().slice(0, 100) || '권한 에러';
-  }
-  return null;
+  const errorText = normalizeText(await errorPopup.textContent());
+  if (!errorText) return '댓글/대댓글 처리 중 팝업 발생';
+  return errorText.slice(0, 120);
 };
 
 const waitForCommentItem = async (
@@ -81,15 +83,21 @@ const waitForCommentItem = async (
 };
 
 const getCommentRoot = async (page: Page): Promise<Page | Frame> => {
-  const frameHandle = await page.$('iframe#cafe_main');
-  const frame = await frameHandle?.contentFrame();
-  if (frame) {
-    const frameReady = await waitForCommentItem(frame, 5000);
-    if (frameReady) return frame;
+  try {
+    await page.waitForSelector('iframe#cafe_main', { timeout: 10000 });
+  } catch {
+    await waitForCommentItem(page, 3000);
+    return page;
   }
 
-  await waitForCommentItem(page, 3000);
-  return page;
+  const frameHandle = await page.$('iframe#cafe_main');
+  const frame = await frameHandle?.contentFrame();
+  if (!frame) {
+    await waitForCommentItem(page, 3000);
+    return page;
+  }
+
+  return frame;
 };
 
 const getClosestCommentItem = async (
@@ -127,6 +135,75 @@ const findCommentItemById = async (
   }
 
   return null;
+};
+
+const getTopLevelCommentCount = async (root: Page | Frame): Promise<number> => {
+  const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
+  return commentItems.length;
+};
+
+const getItemText = async (
+  item: ElementHandle<SVGElement | HTMLElement>,
+  selector: string
+): Promise<string> => {
+  try {
+    return await item.$eval(selector, (el) => el.textContent || '');
+  } catch {
+    return '';
+  }
+};
+
+const getCommentIdFromItem = async (
+  item: ElementHandle<HTMLElement>
+): Promise<string | undefined> => {
+  const idAttr = await item.getAttribute('id');
+  if (idAttr) return idAttr;
+
+  const dataId = await item.getAttribute('data-comment-id');
+  if (dataId) return dataId;
+
+  try {
+    const buttonId = await item.$eval('button[id^="commentItem"]', (el) => el.id);
+    if (buttonId) return buttonId.replace('commentItem', '');
+  } catch {}
+
+  try {
+    const cid = await item.$eval('[data-cid]', (el) => el.getAttribute('data-cid'));
+    if (cid) {
+      const parts = cid.split('-');
+      return parts[parts.length - 1] || cid;
+    }
+  } catch {}
+
+  return undefined;
+};
+
+const findWrittenComment = async (
+  root: Page | Frame,
+  contentPreview: string,
+  commenterNickname: string
+): Promise<{ found: boolean; commentId?: string }> => {
+  const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
+
+  for (const item of commentItems) {
+    const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
+    if (!commentText.includes(contentPreview)) continue;
+
+    if (commenterNickname) {
+      const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
+      const isNicknameMatch =
+        !commentNickname ||
+        commentNickname === commenterNickname ||
+        commentNickname.includes(commenterNickname) ||
+        commenterNickname.includes(commentNickname);
+      if (!isNicknameMatch) continue;
+    }
+
+    const commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
+    return { found: true, commentId };
+  }
+
+  return { found: false };
 };
 
 export const writeCommentWithAccount = async (
@@ -197,85 +274,102 @@ export const writeCommentWithAccount = async (
       return { accountId: id, success: false, error: '등록 버튼(a.btn_register)을 찾을 수 없습니다.' };
     }
 
+    const beforeTopLevelCount = await getTopLevelCommentCount(root);
+
     await submitButton.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2500);
 
     const errorMessage = await checkErrorPopup(page);
     if (errorMessage) {
       return { accountId: id, success: false, error: errorMessage };
     }
 
-    const normalizeText = (value: string | null | undefined): string =>
-      (value ?? '').replace(/\s+/g, ' ').trim();
-    const getItemText = async (
-      item: ElementHandle<SVGElement | HTMLElement>,
-      selector: string
-    ): Promise<string> => {
-      try {
-        return await item.$eval(selector, (el) => el.textContent || '');
-      } catch {
-        return '';
-      }
-    };
-    const getCommentIdFromItem = async (
-      item: ElementHandle<HTMLElement>
-    ): Promise<string | undefined> => {
-      const idAttr = await item.getAttribute('id');
-      if (idAttr) return idAttr;
-
-      const dataId = await item.getAttribute('data-comment-id');
-      if (dataId) return dataId;
-
-      try {
-        const buttonId = await item.$eval('button[id^="commentItem"]', (el) => el.id);
-        if (buttonId) return buttonId.replace('commentItem', '');
-      } catch {}
-
-      try {
-        const cid = await item.$eval('[data-cid]', (el) => el.getAttribute('data-cid'));
-        if (cid) {
-          const parts = cid.split('-');
-          return parts[parts.length - 1] || cid;
-        }
-      } catch {}
-
-      return undefined;
-    };
-
-    const contentPreview = normalizeText(content).slice(0, 30);
+    const contentPreview = normalizeText(sanitizedContent).slice(0, 30);
     const commenterNickname = normalizeText(account.nickname || account.id);
     let found = false;
     let commentId: string | undefined;
+    let maxObservedTopLevelCount = beforeTopLevelCount;
+    for (let retry = 0; retry < 6; retry++) {
+      const verifyRoot = await getCommentRoot(page);
+      const observedTopLevelCount = await getTopLevelCommentCount(verifyRoot);
+      if (observedTopLevelCount > maxObservedTopLevelCount) {
+        maxObservedTopLevelCount = observedTopLevelCount;
+      }
 
-    // 댓글 등록 확인 재시도 (최대 3회, 각 1초 간격)
-    for (let retry = 0; retry < 3; retry++) {
-      const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
+      const match = await findWrittenComment(verifyRoot, contentPreview, commenterNickname);
+      found = match.found;
+      commentId = match.commentId;
 
-      for (const item of commentItems) {
-        const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
-        if (!commentText.includes(contentPreview)) continue;
-
-        if (commenterNickname) {
-          const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
-          if (commentNickname && commentNickname !== commenterNickname) continue;
-        }
-
+      if (found) break;
+      if (observedTopLevelCount > beforeTopLevelCount) {
+        console.log(
+          `[COMMENT] ${id} 댓글 수 증가 감지로 성공 처리 (${beforeTopLevelCount} -> ${observedTopLevelCount})`
+        );
         found = true;
-        commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
         break;
       }
 
-      if (found) break;
-
-      // 못 찾으면 1초 대기 후 재시도
-      if (retry < 2) {
-        console.log(`[COMMENT] ${id} 댓글 확인 재시도 ${retry + 1}/3...`);
-        await page.waitForTimeout(1000);
+      if (retry < 5) {
+        const waitMs = retry < 2 ? 1000 : 2000;
+        console.log(`[COMMENT] ${id} 댓글 확인 재시도 ${retry + 1}/6...`);
+        await page.waitForTimeout(waitMs);
       }
     }
 
     if (!found) {
-      return { accountId: id, success: false, error: '댓글이 등록되지 않음 (목록에서 확인 불가)' };
+      console.log(`[COMMENT] ${id} 재로딩 후 댓글 재확인 시도`);
+      const reloadResult = await navigateToArticle(page, articleUrl, id, password, 'COMMENT-VERIFY');
+      if (!reloadResult.success) {
+        return { accountId: id, success: false, error: `댓글 검증 재진입 실패: ${reloadResult.error}` };
+      }
+
+      await page.waitForTimeout(1500);
+      const reloadedRoot = await getCommentRoot(page);
+      const reloadedTopLevelCount = await getTopLevelCommentCount(reloadedRoot);
+      if (reloadedTopLevelCount > maxObservedTopLevelCount) {
+        maxObservedTopLevelCount = reloadedTopLevelCount;
+      }
+
+      for (let retry = 0; retry < 4; retry++) {
+        const verifyRoot = await getCommentRoot(page);
+        const observedTopLevelCount = await getTopLevelCommentCount(verifyRoot);
+        if (observedTopLevelCount > maxObservedTopLevelCount) {
+          maxObservedTopLevelCount = observedTopLevelCount;
+        }
+
+        const match = await findWrittenComment(verifyRoot, contentPreview, commenterNickname);
+        found = match.found;
+        commentId = match.commentId;
+        if (found) break;
+
+        if (observedTopLevelCount > beforeTopLevelCount) {
+          console.log(
+            `[COMMENT] ${id} 재로딩 후 댓글 수 증가 감지로 성공 처리 (${beforeTopLevelCount} -> ${observedTopLevelCount})`
+          );
+          found = true;
+          break;
+        }
+
+        if (retry < 3) {
+          console.log(`[COMMENT] ${id} 재로딩 검증 재시도 ${retry + 1}/4...`);
+          await page.waitForTimeout(1500);
+        }
+      }
+
+      if (!found && reloadedTopLevelCount > beforeTopLevelCount) {
+        console.log(
+          `[COMMENT] ${id} 댓글 수 증가 감지로 성공 처리 (${beforeTopLevelCount} -> ${reloadedTopLevelCount})`
+        );
+        found = true;
+      }
+    }
+
+    if (!found) {
+      return {
+        accountId: id,
+        success: false,
+        error: `댓글이 등록되지 않음 (before:${beforeTopLevelCount}, maxAfter:${maxObservedTopLevelCount})`,
+      };
     }
 
     await saveCookiesForAccount(id);
@@ -323,8 +417,6 @@ export const writeReplyWithAccount = async (
     await page.waitForTimeout(1500);
 
     const { parentCommentId, parentComment, parentNickname } = options ?? {};
-    const normalizeText = (value: string | null | undefined): string =>
-      (value ?? '').replace(/\s+/g, ' ').trim();
     const getItemText = async (
       item: ElementHandle<SVGElement | HTMLElement>,
       selector: string

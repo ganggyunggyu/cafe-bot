@@ -290,7 +290,7 @@ export const writePostWithAccount = async (
           const text = await option.textContent();
           const trimmedText = text?.trim();
           console.log(`[DEBUG] 게시판 옵션: "${trimmedText}"`);
-          if (trimmedText === category) {
+          if (trimmedText && trimmedText.includes(category)) {
             await option.click();
             found = true;
             console.log(`[POST] ${id} 카테고리 "${category}" 선택 성공`);
@@ -460,7 +460,7 @@ export const writePostWithAccount = async (
 
     // articleid=숫자 패턴으로 추출 (네이버 카페 URL 형식)
     const articleIdMatch = decodedUrl.match(/articleid=(\d+)/i);
-    let articleId = articleIdMatch ? parseInt(articleIdMatch[1], 10) : undefined;
+    const articleId = articleIdMatch ? parseInt(articleIdMatch[1], 10) : undefined;
     console.log('[DEBUG] URL에서 추출한 articleId:', articleId);
 
     await saveCookiesForAccount(id);

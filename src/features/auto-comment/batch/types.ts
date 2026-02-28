@@ -81,13 +81,12 @@ export interface DelayConfig {
 }
 
 // DB 설정과 동기화 - queue-settings.ts의 DEFAULT_QUEUE_SETTINGS 참조
-// betweenPosts: 30초~1분, betweenComments: 3~10초, afterPost: 5~15초
 export const DEFAULT_DELAYS: DelayConfig = {
-  afterPost: 10 * 1000, // 10초 (5~15초 중간값)
-  betweenComments: 5 * 1000, // 5초 (3~10초 중간값)
-  beforeReplies: 10 * 1000, // 10초
-  betweenReplies: 10 * 1000, // 10초
-  betweenKeywords: 45 * 1000, // 45초 (30초~1분 중간값)
+  afterPost: 10 * 1000,
+  betweenComments: 5 * 60 * 1000, // 5분 (3~8분 중간값)
+  beforeReplies: 10 * 1000,
+  betweenReplies: 10 * 1000,
+  betweenKeywords: 45 * 1000,
 };
 
 export type ReplyStrategy = 'rotation' | 'random' | 'all-to-first';
