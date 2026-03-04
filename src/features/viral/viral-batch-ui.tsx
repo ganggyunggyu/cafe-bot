@@ -467,11 +467,11 @@ export const ViralBatchUI = () => {
           onChange={(e) => setKeywords(e.target.value)}
           placeholder={`키워드 또는 키워드:카테고리:스타일 (한 줄에 하나씩)
 
-스타일: 자사키워드(광고) | 일상(기본값) | 애니
+스타일: 자사키워드(광고, 기본값) | 일상 | 애니
 
 예:
-기력보충            → 일상 스타일 (기본)
-수족냉증:건강       → 일상 스타일 (기본)
+기력보충            → 자사키워드(광고) 스타일 (기본)
+수족냉증:건강       → 자사키워드(광고) 스타일 (기본)
 수족냉증:건강:자사키워드  → 자사키워드(광고) 스타일
 기력보충:자사키워드         → 자사키워드(광고) 스타일
 흐염소진액 효과:후기`}
@@ -889,8 +889,8 @@ export const ViralBatchUI = () => {
         <div className={cn('space-y-1.5')}>
           <p className={cn('text-sm font-semibold text-info')}>원고 스타일</p>
           <div className={cn('text-xs text-info/80 space-y-0.5')}>
-            <p><strong>일상</strong> (기본): 1~3문장 혼잣말 · 광고 없음 · 카페 활동용</p>
-            <p><strong>자사키워드</strong>: 300~500자 고민글 · 댓글에서 제품 추천 · 바이럴 광고</p>
+            <p><strong>자사키워드</strong> (기본): 300~500자 고민글 · 댓글에서 제품 추천 · 바이럴 광고</p>
+            <p><strong>일상</strong>: 1~3문장 혼잣말 · 광고 없음 · 카페 활동용</p>
             <p><strong>애니</strong>: 애니메이션 캐릭터 스타일</p>
           </div>
         </div>

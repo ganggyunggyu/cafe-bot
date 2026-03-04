@@ -35,33 +35,33 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // 09:35~22:47 / 33분 간격 / 계정별 165분 간격
+  // 14:30~21:42 / 18분 간격 / 계정별 90분 간격 / 쇼핑+샤넬 혼합
   // 쇼핑지름신 계정당 ad2+daily1 / 샤넬오픈런 계정당 ad1+daily1
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '임산부체리',            category: '일반 쇼핑후기',    type: 'ad',    accountId: 'compare14310', time: '09:35' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '오전 산책 날씨 좋다',   category: '일상톡톡',         type: 'daily', accountId: 'fail5644',     time: '10:08' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '수족냉증병원',          category: '일반 쇼핑후기',    type: 'ad',    accountId: 'loand3324',    time: '10:41' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '계피생강차',            category: '일반 쇼핑후기',    type: 'ad',    accountId: 'dyulp',        time: '11:14' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '비타민D츄어블',         category: '일반 쇼핑후기',    type: 'ad',    accountId: 'gmezz',        time: '11:47' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '점심 뭐 먹을까',        category: '일상톡톡',         type: 'daily', accountId: 'compare14310', time: '12:20' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '장어즙효능',            category: '일반 쇼핑후기',    type: 'ad',    accountId: 'fail5644',     time: '12:53' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '점심 먹고 나른해',      category: '일상톡톡',         type: 'daily', accountId: 'loand3324',    time: '13:26' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '생강차스틱',            category: '일반 쇼핑후기',    type: 'ad',    accountId: 'dyulp',        time: '13:59' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '임산부 흑염소',         category: '일반 쇼핑후기',    type: 'ad',    accountId: 'gmezz',        time: '14:32' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '산모에게좋은음식',      category: '일반 쇼핑후기',    type: 'ad',    accountId: 'compare14310', time: '15:05' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '초기 임산부 선물',      category: '일반 쇼핑후기',    type: 'ad',    accountId: 'fail5644',     time: '15:38' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '60대남자생일선물',      category: '일반 쇼핑후기',    type: 'ad',    accountId: 'loand3324',    time: '16:11' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '오늘 저녁 반찬 고민',   category: '일상톡톡',         type: 'daily', accountId: 'dyulp',        time: '16:44' },
-  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '퇴근하고 뭐 할까',      category: '일상톡톡',         type: 'daily', accountId: 'gmezz',        time: '17:17' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '피로회복 음료',         category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'compare14310', time: '17:50' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '퇴근 후 저녁 뭐 먹지', category: '_ 일상샤반사 📆', type: 'daily', accountId: 'fail5644',     time: '18:23' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '임산부붓기차',          category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'loand3324',    time: '18:56' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '드라마 보면서 야식',    category: '_ 일상샤반사 📆', type: 'daily', accountId: 'dyulp',        time: '19:29' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '녹용가격',              category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'gmezz',        time: '20:02' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '밤에 뭐 먹을까',        category: '_ 일상샤반사 📆', type: 'daily', accountId: 'compare14310', time: '20:35' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '몸보신메뉴',            category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'fail5644',     time: '21:08' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '요즘 재밌는 드라마',    category: '_ 일상샤반사 📆', type: 'daily', accountId: 'loand3324',    time: '21:41' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '한방차',                category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'dyulp',        time: '22:14' },
-  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '자기 전 한 잔',         category: '_ 일상샤반사 📆', type: 'daily', accountId: 'gmezz',        time: '22:47' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '키크는음식',                           category: '일반 쇼핑후기',    type: 'ad',    accountId: 'compare14310', time: '14:30' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '햇생강',                               category: '일반 쇼핑후기',    type: 'ad',    accountId: 'fail5644',     time: '14:48' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '오후 나른해서 커피 마시는 중',          category: '일상톡톡',         type: 'daily', accountId: 'loand3324',    time: '15:06' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '22백 베이지랑 블랙 고민됨',             category: '_ 일상샤반사 📆', type: 'daily', accountId: 'dyulp',        time: '15:24' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '원기회복음식',                          category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'gmezz',        time: '15:42' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '퇴근 전 이 시간이 제일 힘들어',         category: '일상톡톡',         type: 'daily', accountId: 'compare14310', time: '16:00' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '임산부에게좋은음식',                    category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'fail5644',     time: '16:18' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '산모 음식',                             category: '일반 쇼핑후기',    type: 'ad',    accountId: 'loand3324',    time: '16:36' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '왕과사는남자 오늘 보러 가기로 했는데 기대됨', category: '일상톡톡',    type: 'daily', accountId: 'dyulp',        time: '16:54' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '퀘르세틴브로멜라인',                    category: '일반 쇼핑후기',    type: 'ad',    accountId: 'gmezz',        time: '17:12' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '클래식 플랩 미디움 드디어 받았어',       category: '_ 일상샤반사 📆', type: 'daily', accountId: 'compare14310', time: '17:30' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '생칡즙',                                category: '일반 쇼핑후기',    type: 'ad',    accountId: 'fail5644',     time: '17:48' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '보이샤넬 스몰이랑 미디움 비교해봤는데',  category: '_ 일상샤반사 📆', type: 'daily', accountId: 'loand3324',    time: '18:06' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '고단백질음식',                          category: '일반 쇼핑후기',    type: 'ad',    accountId: 'dyulp',        time: '18:24' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '퇴근하고 왕과사는남자 봤는데 진짜 재밌었다', category: '일상톡톡',    type: 'daily', accountId: 'gmezz',        time: '18:42' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '젤리스틱',                              category: '일반 쇼핑후기',    type: 'ad',    accountId: 'compare14310', time: '19:00' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: 'WOC 블랙 골드 매일 쓰게 됨',            category: '_ 일상샤반사 📆', type: 'daily', accountId: 'fail5644',     time: '19:18' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '유기농레몬생강즙',                       category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'loand3324',    time: '19:36' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '비타민B음식',                           category: '일반 쇼핑후기',    type: 'ad',    accountId: 'dyulp',        time: '19:54' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '왕과사는남자 보고 나서 미니 플랩 사고 싶어짐', category: '_ 일상샤반사 📆', type: 'daily', accountId: 'gmezz', time: '20:12' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '임산부 음식 추천',                       category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'compare14310', time: '20:30' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '야식 생각나는 밤',                       category: '일상톡톡',         type: 'daily', accountId: 'fail5644',     time: '20:48' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '시나몬차',                               category: '일반 쇼핑후기',    type: 'ad',    accountId: 'loand3324',    time: '21:06' },
+  { cafe: '샤넬오픈런', cafeId: '25460974', keyword: '임산부 금지음식',                        category: '_ 일상샤반사 📆', type: 'ad',    accountId: 'dyulp',        time: '21:24' },
+  { cafe: '쇼핑지름신', cafeId: '25729954', keyword: '아연이많은음식',                         category: '일반 쇼핑후기',    type: 'ad',    accountId: 'gmezz',        time: '21:42' },
 ];
 
 const COMMENT_TEMPLATES = [
@@ -236,7 +236,7 @@ const main = async (): Promise<void> => {
         ? buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: 'own' })
         : buildShortDailyPrompt({ keyword: item.keyword, keywordType: 'own' });
 
-      const { content } = await generateViralContent({ prompt, model: 'grok-4-1-fast-non-reasoning' });
+      const { content } = await generateViralContent({ prompt, model: 'gemini-3.1-pro-preview' });
       const parsed = parseViralResponse(content);
       const title = parsed?.title || parseTitle(content);
       const body = parsed?.body || parseBody(content);

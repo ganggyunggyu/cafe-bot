@@ -68,7 +68,7 @@ export interface ViralBatchResult {
 }
 
 const VALID_STYLES: ContentStyle[] = ['정보', '일상', '애니'];
-const DEFAULT_STYLE: ContentStyle = '일상';
+const DEFAULT_STYLE: ContentStyle = '정보';
 
 const STYLE_ALIASES: Record<string, ContentStyle> = {
   '자사키워드': '정보',

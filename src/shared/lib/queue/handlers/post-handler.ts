@@ -108,7 +108,7 @@ const saveArticleOnly = async (
 };
 
 const FIRST_COMMENT_DELAY = 30 * 1000; // 글 저장 후 첫 댓글까지 30초
-const BETWEEN_COMMENTS_DELAY = { min: 30 * 1000, max: 2 * 60 * 1000 }; // 댓글 간 30초~2분
+const BETWEEN_COMMENTS_DELAY = { min: 30 * 1000, max: 90 * 1000 }; // 댓글 간 30초~1분30초
 
 const addViralCommentJobs = async (
   postData: PostJobData,
