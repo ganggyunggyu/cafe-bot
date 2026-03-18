@@ -14,6 +14,7 @@ import {
 import { addTaskJob, createRescheduleToken } from './index';
 import { getAllAccounts } from '@/shared/config/accounts';
 import { isAccountActive, getNextActiveTime } from '@/shared/lib/account-manager';
+import { isAccountLoggedIn, loginAccount } from '@/shared/lib/multi-session';
 import { getQueueSettings } from '@/shared/models/queue-settings';
 import { handlePostJob } from './handlers/post-handler';
 import { handleCommentJob } from './handlers/comment-handler';
@@ -23,6 +24,8 @@ import { handleLikeJob } from './handlers/like-handler';
 declare global {
   var __taskWorkers: Map<string, Worker<TaskJobData, JobResult>> | undefined;
   var __generateWorker: Worker<GenerateJobData, JobResult> | null | undefined;
+  var __globalJobLock: Promise<void> | null;
+  var __globalJobResolver: (() => void) | null;
 }
 
 const taskWorkers: Map<string, Worker<TaskJobData, JobResult>> =
@@ -40,10 +43,36 @@ const WORKER_LOCK_RENEW_TIME = 30 * 1000;
 const WORKER_STALLED_INTERVAL = 2 * 60 * 1000;
 const WORKER_MAX_STALLED_COUNT = 3;
 
+if (!globalThis.__globalJobLock) globalThis.__globalJobLock = null;
+if (!globalThis.__globalJobResolver) globalThis.__globalJobResolver = null;
+
+const acquireGlobalJobLock = async (): Promise<void> => {
+  while (globalThis.__globalJobLock) {
+    await globalThis.__globalJobLock;
+  }
+  let resolver: () => void;
+  globalThis.__globalJobLock = new Promise<void>((resolve) => {
+    resolver = resolve;
+  });
+  globalThis.__globalJobResolver = resolver!;
+};
+
+const releaseGlobalJobLock = (): void => {
+  const resolver = globalThis.__globalJobResolver;
+  globalThis.__globalJobLock = null;
+  globalThis.__globalJobResolver = null;
+  if (resolver) resolver();
+};
+
 const processTaskJob = async (
   job: Job<TaskJobData, JobResult>
 ): Promise<JobResult> => {
   const { data } = job;
+
+  await acquireGlobalJobLock();
+  console.log(`[WORKER] 글로벌 락 획득: ${data.type} (${data.accountId})`);
+
+  try {
   const settings = await getQueueSettings();
 
   console.log(`[WORKER] 처리 시작: ${data.type} (${data.accountId})`);
@@ -74,6 +103,16 @@ const processTaskJob = async (
     };
   }
 
+  const loggedIn = await isAccountLoggedIn(account.id);
+  if (!loggedIn) {
+    console.log(`[WORKER] 로그인 필요 — 로그인 시도: ${account.id}`);
+    const loginResult = await loginAccount(account.id, account.password);
+    if (!loginResult.success) {
+      throw new Error(`로그인 실패: ${loginResult.error}`);
+    }
+    console.log(`[WORKER] 로그인 완료: ${account.id}`);
+  }
+
   switch (data.type) {
     case 'post':
       return handlePostJob(data as PostJobData, { account, accounts, settings });
@@ -89,6 +128,10 @@ const processTaskJob = async (
 
     default:
       throw new Error('알 수 없는 작업 타입');
+  }
+  } finally {
+    releaseGlobalJobLock();
+    console.log(`[WORKER] 글로벌 락 해제: ${data.type} (${data.accountId})`);
   }
 };
 

@@ -13,6 +13,7 @@ const g = globalThis as typeof globalThis & {
   __pwLoginCache?: Map<string, number>;
   __pwLastUsed?: Map<string, number>;
   __pwIdleTimer?: ReturnType<typeof setInterval> | null;
+  __pwBrowserLaunching?: Promise<Browser> | null;
 };
 
 if (!g.__pwContexts) g.__pwContexts = new Map();
@@ -100,11 +101,21 @@ const getSessionFile = (accountId: string): string => {
 }
 
 export const getBrowser = async (): Promise<Browser> => {
-  if (!g.__pwBrowser || !g.__pwBrowser.isConnected()) {
+  if (g.__pwBrowser && g.__pwBrowser.isConnected()) {
+    return g.__pwBrowser;
+  }
+
+  // 이미 다른 호출이 브라우저 생성 중이면 그 결과를 기다림
+  if (g.__pwBrowserLaunching) {
+    return g.__pwBrowserLaunching;
+  }
+
+  g.__pwBrowserLaunching = (async () => {
     if (g.__pwBrowser) {
       console.log('[BROWSER] 브라우저 연결 끊김 - 재시작');
       contexts.clear();
       loginStatusCache.clear();
+      lastUsedAt.clear();
     }
     const isHeadless = process.env.PLAYWRIGHT_HEADLESS !== 'false';
     console.log(`[BROWSER] 브라우저 시작 (headless: ${isHeadless})`);
@@ -112,8 +123,15 @@ export const getBrowser = async (): Promise<Browser> => {
       headless: isHeadless,
       slowMo: isHeadless ? 0 : 100,
     });
+    return g.__pwBrowser;
+  })();
+
+  try {
+    const browser = await g.__pwBrowserLaunching;
+    return browser;
+  } finally {
+    g.__pwBrowserLaunching = null;
   }
-  return g.__pwBrowser;
 }
 
 const isContextAlive = (ctx: BrowserContext): boolean => {
@@ -154,7 +172,12 @@ export const getContextForAccount = async (accountId: string): Promise<BrowserCo
   return context;
 }
 
+export const touchAccount = (accountId: string): void => {
+  lastUsedAt.set(accountId, Date.now());
+};
+
 export const getPageForAccount = async (accountId: string): Promise<Page> => {
+  lastUsedAt.set(accountId, Date.now());
   const ctx = await getContextForAccount(accountId);
   const pages = ctx.pages();
   if (pages.length > 0) {

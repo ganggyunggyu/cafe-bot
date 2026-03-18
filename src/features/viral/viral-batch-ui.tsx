@@ -65,6 +65,7 @@ const MODELS = [
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
   // Anthropic
+  { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
   { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
   { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
   // Upstage
@@ -84,7 +85,7 @@ export const ViralBatchUI = () => {
   const [isPending, startTransition] = useTransition();
   const [isGenerating, startGenerating] = useTransition();
   const [keywords, setKeywords] = useState('');
-  const [model, setModel] = useState('');
+  const [model, setModel] = useState('claude-sonnet-4-6');
   const [cafes, setCafes] = useAtom(cafesAtom);
   const [cafesInitialized, setCafesInitialized] = useAtom(cafesInitializedAtom);
   const [selectedCafeIds, setSelectedCafeIds] = useState<string[]>([]);
@@ -935,7 +936,7 @@ export const ViralBatchUI = () => {
           { label: '카페', value: selectedCafeIds.length > 0 ? `${selectedCafeIds.length}개 (${selectedCafes.map((c) => c.name).join(', ')})` : '선택 안됨' },
           {
             label: 'AI 모델',
-            value: MODELS.find((m) => m.value === model)?.label || '기본 (Gemini 3.1 Pro)',
+            value: MODELS.find((m) => m.value === model)?.label || '기본 (Claude Sonnet 4.6)',
           },
           {
             label: '이미지',

@@ -4,7 +4,11 @@ import { waitForSequenceTurn, advanceSequence } from '../sequence';
 import { writeReplyWithAccount } from '@/features/auto-comment/comment-writer';
 import { NaverAccount } from '@/shared/lib/account-manager';
 import { addCommentToArticle, getArticleComments, getArticleIdByKeyword } from '@/shared/models';
+import { invalidateLoginCache } from '@/shared/lib/multi-session';
 import { getRedisConnection } from '@/shared/lib/redis';
+import { createLogger } from '@/shared/lib/logger';
+
+const log = createLogger('REPLY');
 
 const WRITE_LOCK_TTL = 600; // 10분
 
@@ -45,7 +49,7 @@ export const handleReplyJob = async (
       console.log(`[WORKER] 순서 대기 - ${retryDelay / 1000}초 뒤 재스케줄: ${data.sequenceId}#${data.sequenceIndex}`);
       await addTaskJob(
         data.accountId,
-        { ...data, rescheduleToken: 'seqwait' },
+        { ...data, rescheduleToken: `seqwait_${Date.now().toString(36)}` },
         retryDelay
       );
       return {
@@ -131,10 +135,12 @@ export const handleReplyJob = async (
   // Redis 락: 동일 대댓글 동시 실행 방지 (stalled job 재실행 / retry 중복 차단)
   const lockAcquired = await acquireWriteLock(data.cafeId, articleId, account.id, data.content);
   if (!lockAcquired) {
-    console.log(`[WORKER] 대댓글 작성 락 중복 - 스킵: ${account.id} → #${articleId}`);
+    console.log(`[WORKER] 대댓글 작성 락 중복 - 재시도 예정: ${account.id} → #${articleId}`);
     await advanceIfNeeded();
-    return { success: true };
+    return { success: false, error: '대댓글 작성 락 중복 - BullMQ retry 대기' };
   }
+
+  log.info('대댓글 작성 시도', { accountId: account.id, articleId, cafeId: data.cafeId, commentIndex: data.commentIndex });
 
   const result = await Promise.race([
     writeReplyWithAccount(account, data.cafeId, articleId, data.content, data.commentIndex, {
@@ -150,10 +156,8 @@ export const handleReplyJob = async (
   // ARTICLE_NOT_READY 에러: 5분 뒤 재시도 (시퀀스 없이)
   if (!result.success && result.error?.startsWith('ARTICLE_NOT_READY:')) {
     const retryDelay = 5 * 60 * 1000;
-    console.log(`[WORKER] 글/댓글 미준비 - 5분 뒤 재시도 (시퀀스 진행): ${articleId}`);
-    // 시퀀스 advance해서 다음 작업 진행
+    log.warn('글/댓글 미준비 — 5분 뒤 재시도', { accountId: account.id, articleId, error: result.error });
     await advanceIfNeeded();
-    // 리스케줄 시 시퀀스 정보 제거 (독립 실행)
     const { sequenceId, sequenceIndex, ...dataWithoutSequence } = data;
     await addTaskJob(
       data.accountId,
@@ -164,9 +168,20 @@ export const handleReplyJob = async (
   }
 
   if (!result.success) {
+    const retryDelay = 60 * 1000;
+    log.error('대댓글 작성 실패 — 1분 뒤 재시도', { accountId: account.id, articleId, error: result.error });
+    invalidateLoginCache(account.id);
     await advanceIfNeeded();
-    throw new Error(result.error || '대댓글 작성 실패');
+    const { sequenceId, sequenceIndex, ...dataWithoutSequence } = data;
+    await addTaskJob(
+      data.accountId,
+      { ...dataWithoutSequence, rescheduleToken: createRescheduleToken() },
+      retryDelay
+    );
+    return { success: false, error: result.error || '대댓글 작성 실패', willRetry: true };
   }
+
+  log.info('대댓글 작성 성공', { accountId: account.id, articleId, commentIndex: data.commentIndex });
 
   // DB에 대댓글 기록 저장
   try {
@@ -178,7 +193,7 @@ export const handleReplyJob = async (
       parentIndex: data.commentIndex,
     });
   } catch (dbErr) {
-    console.error('[WORKER] 대댓글 DB 저장 실패:', dbErr);
+    log.error('대댓글 DB 저장 실패', { accountId: account.id, articleId, error: String(dbErr) });
   }
 
   await advanceIfNeeded();

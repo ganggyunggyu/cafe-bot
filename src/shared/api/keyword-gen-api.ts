@@ -15,6 +15,7 @@ export interface KeywordGenerateRequest {
 export interface GeneratedKeyword {
   keyword: string;
   category: string;
+  type: string;
 }
 
 export interface KeywordGenerateResponse {

@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# logs
+/logs
+
 # dependencies
 /node_modules
 /.pnp
@@ -52,3 +55,21 @@ next-env.d.ts
 
 # test scripts
 scripts/test-viral-queue.ts
+
+# local runtime state
+.claude/scheduled_tasks.lock
+scripts/artifacts/
+
+# generated reports
+batch-test-results.md
+batch-test-results.tsv
+batch-test-sheet.tsv
+own-keyword-test-results.md
+ref-test-results.md
+ulleungdo-results.md
+viral-test-results.md
+viral-test-results-v*.md
+viral-test-v*.md
+
+# local backups
+*.backup.ts

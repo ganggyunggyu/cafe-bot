@@ -80,7 +80,7 @@ export const KeywordGeneratorUI = () => {
   const copyToClipboard = () => {
     if (!result) return;
 
-    const text = result.map((k) => `${k.keyword}:${k.category}`).join('\n');
+    const text = result.map((k) => `${k.keyword}:${k.category}:${k.type}`).join('\n');
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -191,6 +191,7 @@ export const KeywordGeneratorUI = () => {
                 >
                   <span className={cn('text-ink')}>{k.keyword}</span>
                   <span className={cn('text-ink-muted')}>:{k.category}</span>
+                  <span className={cn('text-ink-tertiary')}>:{k.type}</span>
                 </span>
               ))}
             </div>

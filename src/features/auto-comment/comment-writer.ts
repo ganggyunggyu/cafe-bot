@@ -8,6 +8,7 @@ import {
   releaseAccountLock,
   invalidateLoginCache,
   isLoginRedirect,
+  touchAccount,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import { incrementActivity } from '@/shared/models/daily-activity';
@@ -223,12 +224,14 @@ export const writeCommentWithAccount = async (
     }
 
     const page = await getPageForAccount(id);
+    touchAccount(id);
     const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
 
     const navResult = await navigateToArticle(page, articleUrl, id, password, 'COMMENT');
     if (!navResult.success) {
       return { accountId: id, success: false, error: navResult.error };
     }
+    touchAccount(id);
 
     const notFoundIndicator = await page.$('.error_content, .deleted_article, .no_article');
     if (notFoundIndicator) {
@@ -288,26 +291,14 @@ export const writeCommentWithAccount = async (
     const commenterNickname = normalizeText(account.nickname || account.id);
     let found = false;
     let commentId: string | undefined;
-    let maxObservedTopLevelCount = beforeTopLevelCount;
+
     for (let retry = 0; retry < 6; retry++) {
       const verifyRoot = await getCommentRoot(page);
-      const observedTopLevelCount = await getTopLevelCommentCount(verifyRoot);
-      if (observedTopLevelCount > maxObservedTopLevelCount) {
-        maxObservedTopLevelCount = observedTopLevelCount;
-      }
-
       const match = await findWrittenComment(verifyRoot, contentPreview, commenterNickname);
       found = match.found;
       commentId = match.commentId;
 
       if (found) break;
-      if (observedTopLevelCount > beforeTopLevelCount) {
-        console.log(
-          `[COMMENT] ${id} 댓글 수 증가 감지로 성공 처리 (${beforeTopLevelCount} -> ${observedTopLevelCount})`
-        );
-        found = true;
-        break;
-      }
 
       if (retry < 5) {
         const waitMs = retry < 2 ? 1000 : 2000;
@@ -324,43 +315,18 @@ export const writeCommentWithAccount = async (
       }
 
       await page.waitForTimeout(1500);
-      const reloadedRoot = await getCommentRoot(page);
-      const reloadedTopLevelCount = await getTopLevelCommentCount(reloadedRoot);
-      if (reloadedTopLevelCount > maxObservedTopLevelCount) {
-        maxObservedTopLevelCount = reloadedTopLevelCount;
-      }
 
       for (let retry = 0; retry < 4; retry++) {
         const verifyRoot = await getCommentRoot(page);
-        const observedTopLevelCount = await getTopLevelCommentCount(verifyRoot);
-        if (observedTopLevelCount > maxObservedTopLevelCount) {
-          maxObservedTopLevelCount = observedTopLevelCount;
-        }
-
         const match = await findWrittenComment(verifyRoot, contentPreview, commenterNickname);
         found = match.found;
         commentId = match.commentId;
         if (found) break;
 
-        if (observedTopLevelCount > beforeTopLevelCount) {
-          console.log(
-            `[COMMENT] ${id} 재로딩 후 댓글 수 증가 감지로 성공 처리 (${beforeTopLevelCount} -> ${observedTopLevelCount})`
-          );
-          found = true;
-          break;
-        }
-
         if (retry < 3) {
           console.log(`[COMMENT] ${id} 재로딩 검증 재시도 ${retry + 1}/4...`);
           await page.waitForTimeout(1500);
         }
-      }
-
-      if (!found && reloadedTopLevelCount > beforeTopLevelCount) {
-        console.log(
-          `[COMMENT] ${id} 댓글 수 증가 감지로 성공 처리 (${beforeTopLevelCount} -> ${reloadedTopLevelCount})`
-        );
-        found = true;
       }
     }
 
@@ -368,7 +334,7 @@ export const writeCommentWithAccount = async (
       return {
         accountId: id,
         success: false,
-        error: `댓글이 등록되지 않음 (before:${beforeTopLevelCount}, maxAfter:${maxObservedTopLevelCount})`,
+        error: `댓글이 등록되지 않음 (닉네임+내용 매칭 실패)`,
       };
     }
 
@@ -407,12 +373,14 @@ export const writeReplyWithAccount = async (
     }
 
     const page = await getPageForAccount(id);
+    touchAccount(id);
     const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
 
     const navResult = await navigateToArticle(page, articleUrl, id, password, 'REPLY');
     if (!navResult.success) {
       return { accountId: id, success: false, error: navResult.error };
     }
+    touchAccount(id);
 
     await page.waitForTimeout(1500);
 
@@ -514,36 +482,30 @@ export const writeReplyWithAccount = async (
       return { accountId: id, success: false, error: errorMessage };
     }
 
-    const replyInputAfter = await root.$('.CommentWriter:has(.btn_cancel) textarea.comment_inbox_text');
-    const inputClosed = !replyInputAfter;
-    const contentPreview = content.slice(0, 15);
+    const sanitizedPreview = sanitizedReplyContent.slice(0, 20);
+    let replyFound = false;
 
-    if (!inputClosed) {
-      let replyFound = false;
-      const replyAreas = await root.$$('.comment_area');
+    for (let retry = 0; retry < 4; retry++) {
+      const verifyRoot = await getCommentRoot(page);
+      const replyAreas = await verifyRoot.$$('.comment_area');
       for (const area of replyAreas) {
         const text = await area.textContent();
-        if (text?.includes(contentPreview)) {
+        if (text?.includes(sanitizedPreview)) {
           replyFound = true;
           break;
         }
       }
 
-      if (!replyFound) {
-        await page.waitForTimeout(2000);
-        const replyAreasRetry = await root.$$('.comment_area');
-        for (const area of replyAreasRetry) {
-          const text = await area.textContent();
-          if (text?.includes(contentPreview)) {
-            replyFound = true;
-            break;
-          }
-        }
+      if (replyFound) break;
 
-        if (!replyFound) {
-          return { accountId: id, success: false, error: '대댓글이 등록되지 않음 (목록에서 확인 불가)' };
-        }
+      if (retry < 3) {
+        console.log(`[REPLY] ${id} 대댓글 확인 재시도 ${retry + 1}/4...`);
+        await page.waitForTimeout(2000);
       }
+    }
+
+    if (!replyFound) {
+      return { accountId: id, success: false, error: '대댓글이 등록되지 않음 (목록에서 확인 불가)' };
     }
 
     if (targetItem) {

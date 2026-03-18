@@ -7,6 +7,7 @@ import {
   releaseAccountLock,
   invalidateLoginCache,
   isLoginRedirect,
+  touchAccount,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import type { Page } from 'playwright';
@@ -231,6 +232,7 @@ export const writePostWithAccount = async (
     }
 
     const page = await getPageForAccount(id);
+    touchAccount(id);
 
     // 글쓰기 페이지로 이동
     const writeUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/write?boardType=L&menuId=${menuId}`;
@@ -239,6 +241,7 @@ export const writePostWithAccount = async (
       waitUntil: 'networkidle',
       timeout: 30000,
     });
+    touchAccount(id);
 
     // 로그인 페이지로 리다이렉트됐는지 확인
     const currentUrlAfterNav = page.url();
@@ -335,6 +338,7 @@ export const writePostWithAccount = async (
     await page.waitForTimeout(300);
     await page.keyboard.type(subject, { delay: 100 }); // 600타/분 속도
     await page.waitForTimeout(500);
+    touchAccount(id);
 
     // 본문 입력 (SmartEditor - p.se-text-paragraph 클릭 후 타이핑)
     const contentArea = await page.$('p.se-text-paragraph');
@@ -425,6 +429,7 @@ export const writePostWithAccount = async (
 
     // 게시 옵션 설정 (체크박스 조작)
     await applyPostOptions(page, postOptions);
+    touchAccount(id);
 
     // 등록 버튼 클릭 (a.BaseButton--skinGreen)
     const submitButton = await page.$('a.BaseButton--skinGreen, a.BaseButton');
@@ -441,11 +446,14 @@ export const writePostWithAccount = async (
     await clickWithPopupRetry(page, submitButton);
 
     // 글 작성 후 URL 변화 대기 (글 상세 페이지로 리다이렉트)
+    // 두 가지 URL 패턴: /articles/123 또는 articleid=123
     try {
-      await page.waitForURL(/articles\/\d+/, { timeout: 10000 });
+      await page.waitForURL(
+        (url) => /articles\/\d+/.test(url.href) || /articleid=\d+/i.test(decodeURIComponent(url.href)),
+        { timeout: 15000 }
+      );
       console.log('[DEBUG] URL 변화 감지됨');
     } catch {
-      // URL 변화 없으면 추가 대기
       console.log('[DEBUG] URL 변화 없음, 추가 대기...');
       await page.waitForTimeout(3000);
     }
@@ -458,12 +466,21 @@ export const writePostWithAccount = async (
     const decodedUrl = decodeURIComponent(decodeURIComponent(currentUrl));
     console.log('[DEBUG] 디코딩된 URL:', decodedUrl);
 
-    // articleid=숫자 패턴으로 추출 (네이버 카페 URL 형식)
-    const articleIdMatch = decodedUrl.match(/articleid=(\d+)/i);
+    // articleid=숫자 또는 articles/숫자 패턴으로 추출
+    const articleIdMatch = decodedUrl.match(/articleid=(\d+)/i) || decodedUrl.match(/articles\/(\d+)/);
     const articleId = articleIdMatch ? parseInt(articleIdMatch[1], 10) : undefined;
     console.log('[DEBUG] URL에서 추출한 articleId:', articleId);
 
     await saveCookiesForAccount(id);
+
+    if (!articleId) {
+      return {
+        success: false,
+        writerAccountId: id,
+        error: `글 작성 후 articleId 추출 실패 — URL: ${currentUrl}`,
+        articleUrl: currentUrl,
+      };
+    }
 
     // 활동 기록
     await incrementActivity(id, cafeId, 'posts');

@@ -6,7 +6,10 @@ import { getPersonaId, getNextActiveTime, NaverAccount } from '@/shared/lib/acco
 import { getRandomDelay } from '@/shared/models/queue-settings';
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle, incrementTodayPostCount } from '@/shared/models';
+import { createLogger } from '@/shared/lib/logger';
 import mongoose from 'mongoose';
+
+const log = createLogger('POST-HANDLER');
 
 export interface PostHandlerContext {
   account: NaverAccount;
@@ -49,20 +52,41 @@ export const handlePostJob = async (
   ]);
 
   if (!result.success) {
+    log.error('글 작성 실패', {
+      keyword: data.keyword,
+      accountId: data.accountId,
+      cafeId: data.cafeId,
+      error: result.error,
+    });
     throw new Error(result.error || '글 작성 실패');
+  }
+
+  if (!result.articleId) {
+    log.error('articleId 추출 실패 — 글 작성 실패 처리', {
+      keyword: data.keyword,
+      accountId: data.accountId,
+      cafeId: data.cafeId,
+      articleUrl: result.articleUrl,
+    });
+    throw new Error(`articleId 추출 실패 — URL: ${result.articleUrl || 'N/A'}`);
   }
 
   try {
     if (result.articleId && data.viralComments?.comments.length) {
       await saveArticleOnly(data, result.articleId);
       await addViralCommentJobs(data, result.articleId, accounts);
+      log.info('viral 댓글 큐 생성 완료', { articleId: result.articleId, keyword: data.keyword });
     } else if (result.articleId && !data.skipComments) {
       await handlePostSuccess(data, result.articleId, accounts, settings);
     } else if (result.articleId) {
       await saveArticleOnly(data, result.articleId);
     }
   } catch (chainError) {
-    console.error('[WORKER] 체인 작업 중 오류 (글 발행은 완료됨):', chainError);
+    log.error('체인 작업 중 오류 (글 발행은 완료됨)', {
+      keyword: data.keyword,
+      articleId: result.articleId,
+      error: chainError instanceof Error ? chainError.message : String(chainError),
+    });
   }
 
   return {
@@ -326,6 +350,7 @@ const handlePostSuccess = async (
 
   console.log(`[WORKER] 댓글 ${commentCount}개 job 추가 예정 (계정당 ${maxCommentsPerAccount}개)`);
 
+  let sequenceOrderIndex = 0;
   const commentAuthors: Array<{ id: string; nickname: string }> = [];
   const commentContents: string[] = [];
   const accountCommentCounts: Map<string, number> = new Map();
@@ -362,9 +387,11 @@ const handlePostSuccess = async (
       content: commentText,
       commentIndex,
       sequenceId: commentBatchId,
+      sequenceIndex: sequenceOrderIndex,
     };
 
     await addTaskJob(commenter.id, commentJobData, currentDelay);
+    sequenceOrderIndex++;
     const delayInfo = activityDelay > 0
       ? `${Math.round(currentDelay / 1000)}초 (활동시간까지 ${Math.round(activityDelay / 60000)}분)`
       : `${Math.round(currentDelay / 1000)}초`;
@@ -453,9 +480,11 @@ const handlePostSuccess = async (
       parentComment: parentCommentContent,
       parentNickname: parentAuthorNickname,
       sequenceId: commentBatchId,
+      sequenceIndex: sequenceOrderIndex,
     };
 
       await addTaskJob(writerAccountId, replyJobData, currentDelay);
+      sequenceOrderIndex++;
       const delayInfo = writerActivityDelay > 0
         ? `${Math.round(currentDelay / 1000)}초 (활동시간까지 ${Math.round(writerActivityDelay / 60000)}분)`
         : `${Math.round(currentDelay / 1000)}초`;
@@ -532,9 +561,11 @@ const handlePostSuccess = async (
       parentComment: parentCommentContent,
       parentNickname: targetCommentAuthor.nickname,
       sequenceId: commentBatchId,
+      sequenceIndex: sequenceOrderIndex,
     };
 
     await addTaskJob(replyer.id, replyJobData, currentDelay);
+    sequenceOrderIndex++;
     const delayInfo = replyerActivityDelay > 0
       ? `${Math.round(currentDelay / 1000)}초 (활동시간까지 ${Math.round(replyerActivityDelay / 60000)}분)`
       : `${Math.round(currentDelay / 1000)}초`;
