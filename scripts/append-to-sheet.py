@@ -4,7 +4,25 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 SHEET_ID = "1gyipTIEogC9Qopj8w3ggBmD0k5KvAw6yNdIMXQDnwms"
-TAB_NAME = "한려담원 원고 테스트"
+TAB_NAME = "한려담원 카페 원고"
+
+# 모델별 색상 (모델 셀 배경)
+MODEL_COLORS = {
+    "gemini": {"red": 0.73, "green": 0.87, "blue": 0.98},   # 연한 파랑 (Google)
+    "gpt":    {"red": 0.75, "green": 0.94, "blue": 0.85},   # 연한 초록 (OpenAI)
+    "claude": {"red": 0.98, "green": 0.85, "blue": 0.73},   # 연한 주황 (Anthropic)
+}
+
+def detect_model_family(model_name: str) -> str:
+    """모델명에서 제공사 판별"""
+    m = model_name.lower()
+    if "gemini" in m:
+        return "gemini"
+    elif "gpt" in m:
+        return "gpt"
+    elif "claude" in m:
+        return "claude"
+    return ""
 
 creds_info = {
     "type": "service_account",
@@ -40,6 +58,7 @@ with open(md_path, "r", encoding="utf-8") as f:
 entries = re.split(r"^## ", md, flags=re.MULTILINE)[1:]
 
 rows = []
+model_families = []
 
 for entry in entries:
     hm = re.match(r"\s*\[(.+?)\]\s*\[(.+?)\]\s*(.+)", entry)
@@ -48,6 +67,14 @@ for entry in entries:
     category, angle_type, keyword = hm.group(1), hm.group(2), hm.group(3).strip()
 
     lines = entry.split("\n")
+
+    # 모델명 파싱 (> model: xxx 형식)
+    model_name = ""
+    for l in lines:
+        mm = re.match(r">\s*model:\s*(.+)", l.strip())
+        if mm:
+            model_name = mm.group(1).strip()
+            break
 
     title = ""
     title_idx = next((i for i, l in enumerate(lines) if l.strip() == "[제목]"), -1)
@@ -59,7 +86,7 @@ for entry in entries:
         title = " ".join(l.strip() for l in lines[title_idx+1:end] if l.strip())
     else:
         for i, l in enumerate(lines):
-            if i > 0 and l.strip() and not l.startswith("[") and not l.startswith("#"):
+            if i > 0 and l.strip() and not l.startswith("[") and not l.startswith("#") and not l.startswith(">"):
                 title = l.strip()
                 break
 
@@ -73,13 +100,24 @@ for entry in entries:
         end = next((i for i, l in enumerate(lines) if i > comment_idx and l.strip() == "---"), len(lines))
         comments = "\n".join(lines[comment_idx+1:end]).strip()
 
-    rows.append([keyword, category, angle_type, title, body, comments])
+    rows.append([keyword, category, angle_type, title, body, comments, model_name])
+    model_families.append(detect_model_family(model_name))
 
 print(f"새 원고 {len(rows)}개 파싱 완료")
 
 # 기존 데이터 뒤에 추가
 if rows:
     ws.update(f"A{next_row}", rows, value_input_option="RAW")
+
+    # 모델 칸(G열) 행별로 색칠
+    for i, family in enumerate(model_families):
+        row_num = next_row + i
+        if family in MODEL_COLORS:
+            ws.format(f"G{row_num}", {
+                "backgroundColor": MODEL_COLORS[family],
+                "textFormat": {"bold": True},
+            })
+    print(f"모델 셀 색칠 완료")
 
 print(f"시트 추가 완료! (행 {next_row}~{next_row + len(rows) - 1})")
 print(f"URL: https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid={ws.id}")
