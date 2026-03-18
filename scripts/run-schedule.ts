@@ -311,7 +311,7 @@ const main = async (): Promise<void> => {
 
       const { content } = await generateViralContent({
         prompt,
-        model: "gemini-3.1-pro-preview",
+        // model은 text-gen-hub의 cafe_total_service DEFAULT_MODEL 사용
       });
       const parsed = parseViralResponse(content);
       const title = parsed?.title || parseTitle(content);
