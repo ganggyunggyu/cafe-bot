@@ -4,14 +4,13 @@ import { Account } from "../src/shared/models/account";
 
 const WRITERS = [
   { accountId: "loand3324", password: "akfalwk12", nickname: "라우드" },
-  { accountId: "fail5644", password: "akfalwk12", nickname: "고구마스틱" },
   { accountId: "compare14310", password: "akfalwk12", nickname: "룰루랄라" },
   { accountId: "ags2oigb", password: "dlrbghdqudtls", nickname: "찐찐찐찐찐이야" },
-  { accountId: "dyulp", password: "akfalwk12", nickname: "운명의 마법사" },
+  { accountId: "wound12567", password: "akfalwk12", nickname: "투디치과 스킨블" },
+  { accountId: "precede1451", password: "akfalwk12!!", nickname: "토토리토" },
 ];
 
 const COMMENTERS = [
-  { accountId: "biggoose488", password: "e7oue5*q1", nickname: "제아" },
   { accountId: "regular14631", password: "r46f9sqy1", nickname: "소원" },
   { accountId: "8i2vlbym", password: "8wn@1i7u1", nickname: "꼬리별" },
   { accountId: "njmzdksm", password: "i5*wx7v11", nickname: "달달한하루" },
