@@ -7,9 +7,7 @@ import * as path from 'path';
 import { buildOwnKeywordPrompt } from '../src/features/viral/prompts/build-own-keyword-prompt';
 import { generateViralContent } from '../src/shared/api/content-api';
 
-const KEYWORDS = [
-  '보양식 추천',
-];
+const KEYWORDS = process.argv.slice(2);
 
 const OUTPUT_FILE = path.join(__dirname, '..', 'ref-test-results.md');
 
