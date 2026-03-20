@@ -1,8 +1,35 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import type { NaverAccount } from './account-manager';
+import { detectCaptcha, solveCaptchaOnPage } from './captcha-solver';
 
 const SESSION_DIR = join(process.cwd(), '.playwright-session');
+const LOGIN_POLL_INTERVAL_MS = 1000;
+const DEFAULT_LOGIN_WAIT_MS = 3000;
+const SCHEDULE_LOGIN_WAIT_MS = 10 * 60 * 1000;
+const SCHEDULE_ACCOUNT_OPEN_INTERVAL_MS = 5 * 1000;
+const DEFAULT_SCHEDULE_RESERVATION_TTL_MS = 60 * 60 * 1000;
+
+type LoginAccountOptions = {
+  waitForLoginMs?: number;
+  pollIntervalMs?: number;
+  reason?: string;
+};
+
+type WarmupScheduleSessionsOptions = {
+  loginWaitMs?: number;
+  waitBetweenAccountsMs?: number;
+  reason?: string;
+  reservationTtlMs?: number;
+};
+
+type WarmupScheduleSessionsResult = {
+  success: boolean;
+  warmedAccountIds: string[];
+  failedAccountId?: string;
+  error?: string;
+};
 
 // HMR에서 상태 유지 (Next.js dev 모듈 재평가 대응)
 const g = globalThis as typeof globalThis & {
@@ -14,6 +41,7 @@ const g = globalThis as typeof globalThis & {
   __pwLastUsed?: Map<string, number>;
   __pwIdleTimer?: ReturnType<typeof setInterval> | null;
   __pwBrowserLaunching?: Promise<Browser> | null;
+  __pwReservedSessions?: Map<string, Set<string>>;
 };
 
 if (!g.__pwContexts) g.__pwContexts = new Map();
@@ -21,12 +49,14 @@ if (!g.__pwAccountLocks) g.__pwAccountLocks = new Map();
 if (!g.__pwLockResolvers) g.__pwLockResolvers = new Map();
 if (!g.__pwLoginCache) g.__pwLoginCache = new Map();
 if (!g.__pwLastUsed) g.__pwLastUsed = new Map();
+if (!g.__pwReservedSessions) g.__pwReservedSessions = new Map();
 
 const contexts = g.__pwContexts;
 const accountLocks = g.__pwAccountLocks;
 const lockResolvers = g.__pwLockResolvers;
 const loginStatusCache = g.__pwLoginCache;
 const lastUsedAt = g.__pwLastUsed;
+const reservedSessions = g.__pwReservedSessions;
 
 const LOGIN_CACHE_TTL = 30 * 60 * 1000;
 const IDLE_TTL = 5 * 60 * 1000; // 5분 미사용 시 context 정리
@@ -39,6 +69,7 @@ const startIdleCleanup = () => {
     for (const [accountId, lastTime] of lastUsedAt) {
       if (now - lastTime < IDLE_TTL) continue;
       if (accountLocks.has(accountId)) continue; // 작업 중이면 스킵
+      if (reservedSessions.get(accountId)?.size) continue; // 예약 세션은 유지
 
       const ctx = contexts.get(accountId);
       if (!ctx) {
@@ -62,10 +93,24 @@ const startIdleCleanup = () => {
 
 startIdleCleanup();
 
+const ACCOUNT_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
+
 export const acquireAccountLock = async (accountId: string): Promise<void> => {
+  const deadline = Date.now() + ACCOUNT_LOCK_TIMEOUT_MS;
+
   while (accountLocks.has(accountId)) {
+    if (Date.now() > deadline) {
+      console.warn(`[LOCK] ${accountId} 락 타임아웃 (${ACCOUNT_LOCK_TIMEOUT_MS / 1000}초) — 강제 해제`);
+      lockResolvers.get(accountId)?.();
+      accountLocks.delete(accountId);
+      lockResolvers.delete(accountId);
+      break;
+    }
     console.log(`[LOCK] ${accountId} 락 대기 중...`);
-    await accountLocks.get(accountId);
+    await Promise.race([
+      accountLocks.get(accountId),
+      new Promise<void>(r => setTimeout(r, 5000)),
+    ]);
   }
 
   let resolver: () => void;
@@ -90,6 +135,44 @@ export const releaseAccountLock = (accountId: string): void => {
 export const invalidateLoginCache = (accountId: string): void => {
   loginStatusCache.delete(accountId);
   console.log(`[LOGIN] ${accountId} 캐시 무효화됨`);
+};
+
+export const reserveAccountSession = (
+  accountId: string,
+  reservationId: string
+): void => {
+  const reservations = reservedSessions.get(accountId) ?? new Set<string>();
+  reservations.add(reservationId);
+  reservedSessions.set(accountId, reservations);
+  touchAccount(accountId);
+  console.log(`[SESSION] ${accountId} 세션 예약 (${reservations.size}개)`);
+};
+
+export const releaseAccountSession = (
+  accountId: string,
+  reservationId?: string
+): void => {
+  const reservations = reservedSessions.get(accountId);
+  if (!reservations) return;
+
+  if (reservationId) {
+    reservations.delete(reservationId);
+  } else {
+    reservations.clear();
+  }
+
+  if (reservations.size === 0) {
+    reservedSessions.delete(accountId);
+    console.log(`[SESSION] ${accountId} 세션 예약 해제`);
+    return;
+  }
+
+  reservedSessions.set(accountId, reservations);
+  console.log(`[SESSION] ${accountId} 세션 예약 유지 (${reservations.size}개)`);
+};
+
+export const isAccountSessionReserved = (accountId: string): boolean => {
+  return (reservedSessions.get(accountId)?.size ?? 0) > 0;
 };
 
 export const isLoginRedirect = (url: string): boolean => {
@@ -160,7 +243,7 @@ export const getContextForAccount = async (accountId: string): Promise<BrowserCo
   const b = await getBrowser();
   const context = await b.newContext({
     userAgent:
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
   });
 
   const cookies = loadCookiesForAccount(accountId);
@@ -240,12 +323,60 @@ export const closeAllContexts = async (): Promise<void> => {
   }
   contexts.clear();
   loginStatusCache.clear();
+  reservedSessions.clear();
 
   if (g.__pwBrowser) {
     await g.__pwBrowser.close();
     g.__pwBrowser = null;
   }
 }
+
+const waitForLoginCompletion = async (
+  page: Page,
+  accountId: string,
+  options?: LoginAccountOptions
+): Promise<boolean> => {
+  const waitForLoginMs = options?.waitForLoginMs ?? DEFAULT_LOGIN_WAIT_MS;
+  const pollIntervalMs = options?.pollIntervalMs ?? LOGIN_POLL_INTERVAL_MS;
+  const startedAt = Date.now();
+
+  if (waitForLoginMs > DEFAULT_LOGIN_WAIT_MS) {
+    console.log(
+      `[LOGIN] ${accountId} 로그인 완료 대기 중 (${Math.round(
+        waitForLoginMs / 1000
+      )}초, reason: ${options?.reason || 'default'})`
+    );
+  }
+
+  while (Date.now() - startedAt <= waitForLoginMs) {
+    touchAccount(accountId);
+
+    if (!isLoginRedirect(page.url())) {
+      return true;
+    }
+
+    const remainingTime = waitForLoginMs - (Date.now() - startedAt);
+    if (remainingTime <= 0) {
+      break;
+    }
+
+    await page.waitForTimeout(Math.min(pollIntervalMs, remainingTime));
+  }
+
+  return !isLoginRedirect(page.url());
+};
+
+const scheduleSessionReservationRelease = (
+  accountId: string,
+  reservationId: string,
+  reservationTtlMs: number
+): void => {
+  const timer = setTimeout(() => {
+    releaseAccountSession(accountId, reservationId);
+  }, reservationTtlMs);
+
+  timer.unref?.();
+};
 
 export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => {
   const cachedTime = loginStatusCache.get(accountId);
@@ -281,7 +412,8 @@ export const isAccountLoggedIn = async (accountId: string): Promise<boolean> => 
 
 export const loginAccount = async (
   accountId: string,
-  password: string
+  password: string,
+  options?: LoginAccountOptions
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const page = await getPageForAccount(accountId);
@@ -294,11 +426,44 @@ export const loginAccount = async (
     await page.fill('input#pw', password);
     await page.click('button.btn_login, button#log\\.login');
 
+    // 로그인 버튼 클릭 후 3초 대기
     await page.waitForTimeout(3000);
 
-    const currentUrl = page.url();
-    if (currentUrl.includes('nidlogin.login')) {
-      return { success: false, error: '로그인 실패. ID/PW를 확인해주세요.' };
+    // 캡차 감지 및 자동 풀이
+    if (isLoginRedirect(page.url())) {
+      const captchaCheck = await detectCaptcha(page);
+      if (captchaCheck.detected) {
+        const geminiKey =
+          process.env.GEMINI_API_KEY ||
+          process.env.GOOGLE_API_KEY ||
+          process.env.GOOGLE_GENAI_API_KEY;
+
+        if (!geminiKey) {
+          return {
+            success: false,
+            error: 'GEMINI_API_KEY 미설정 — 캡차 자동 풀이 불가',
+          };
+        }
+
+        const captchaResult = await solveCaptchaOnPage(page, accountId, password);
+        if (!captchaResult.solved) {
+          return {
+            success: false,
+            error: `캡차 풀이 실패 (${captchaResult.attempts}회 시도): ${captchaResult.error}`,
+          };
+        }
+      }
+    }
+
+    // 캡차 풀이 후에도 로그인 미완료 시 대기
+    if (isLoginRedirect(page.url())) {
+      const loginCompleted = await waitForLoginCompletion(page, accountId, options);
+      if (!loginCompleted) {
+        return {
+          success: false,
+          error: '로그인 대기 시간 초과. 추가 인증 여부를 확인해주세요.',
+        };
+      }
     }
 
     await saveCookiesForAccount(accountId);
@@ -312,3 +477,80 @@ export const loginAccount = async (
     return { success: false, error: errorMessage };
   }
 }
+
+export const warmupScheduleSessions = async (
+  accounts: NaverAccount[],
+  options?: WarmupScheduleSessionsOptions
+): Promise<WarmupScheduleSessionsResult> => {
+  const uniqueAccounts: NaverAccount[] = [];
+  const seenAccountIds = new Set<string>();
+
+  for (const account of accounts) {
+    if (seenAccountIds.has(account.id)) continue;
+    seenAccountIds.add(account.id);
+    uniqueAccounts.push(account);
+  }
+
+  if (uniqueAccounts.length === 0) {
+    return { success: true, warmedAccountIds: [] };
+  }
+
+  const reservationId =
+    options?.reason ||
+    `schedule_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const waitBetweenAccountsMs =
+    options?.waitBetweenAccountsMs ?? SCHEDULE_ACCOUNT_OPEN_INTERVAL_MS;
+  const loginWaitMs = options?.loginWaitMs ?? SCHEDULE_LOGIN_WAIT_MS;
+  const reservationTtlMs =
+    options?.reservationTtlMs ?? DEFAULT_SCHEDULE_RESERVATION_TTL_MS;
+  const warmedAccountIds: string[] = [];
+
+  for (let i = 0; i < uniqueAccounts.length; i++) {
+    const { id, password } = uniqueAccounts[i];
+
+    reserveAccountSession(id, reservationId);
+    await acquireAccountLock(id);
+
+    try {
+      console.log(`[SESSION] 스케줄 세션 프리워밍 시작: ${id} (${i + 1}/${uniqueAccounts.length})`);
+      const loggedIn = await isAccountLoggedIn(id);
+
+      if (!loggedIn) {
+        const loginResult = await loginAccount(id, password, {
+          waitForLoginMs: loginWaitMs,
+          reason: reservationId,
+        });
+
+        if (!loginResult.success) {
+          releaseAccountSession(id, reservationId);
+
+          for (const warmedAccountId of warmedAccountIds) {
+            releaseAccountSession(warmedAccountId, reservationId);
+          }
+
+          return {
+            success: false,
+            warmedAccountIds,
+            failedAccountId: id,
+            error: loginResult.error || '로그인 실패',
+          };
+        }
+      }
+
+      warmedAccountIds.push(id);
+      scheduleSessionReservationRelease(id, reservationId, reservationTtlMs);
+      touchAccount(id);
+      console.log(`[SESSION] 스케줄 세션 준비 완료: ${id}`);
+    } finally {
+      releaseAccountLock(id);
+    }
+
+    if (i < uniqueAccounts.length - 1) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, waitBetweenAccountsMs);
+      });
+    }
+  }
+
+  return { success: true, warmedAccountIds };
+};

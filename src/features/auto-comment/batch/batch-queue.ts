@@ -4,8 +4,9 @@ import { closeAllWorkers } from '@/shared/lib/queue/workers';
 import { getRandomDelay } from '@/shared/models/queue-settings';
 import { generateContent, generateContentWithPrompt } from '@/shared/api/content-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
+import { warmupScheduleSessions } from '@/shared/lib/multi-session';
 import { PostJobData } from '@/shared/lib/queue/types';
-import { getNextActiveTime, getPersonaId } from '@/shared/lib/account-manager';
+import { getNextActiveTime, getPersonaId, type NaverAccount } from '@/shared/lib/account-manager';
 import type { BatchJobInput } from './types';
 import { parseKeywordWithCategory } from './keyword-utils';
 import { initBatchContext, isBatchContextError } from './batch-helpers';
@@ -15,6 +16,75 @@ export interface QueueBatchResult {
   jobsAdded: number;
   message: string;
 }
+
+const POST_ONLY_RESERVATION_BUFFER_MS = 20 * 60 * 1000;
+const COMMENT_RESERVATION_BUFFER_MS = 90 * 60 * 1000;
+
+type ReservationDelaySettings = {
+  delays: {
+    betweenPosts: { min: number; max: number };
+    afterPost: { min: number; max: number };
+    betweenComments: { min: number; max: number };
+  };
+};
+
+const getScheduledAccounts = (
+  accounts: NaverAccount[],
+  keywordCount: number,
+  includeCommenters: boolean
+): NaverAccount[] => {
+  if (includeCommenters) {
+    return accounts;
+  }
+
+  const scheduledAccounts: NaverAccount[] = [];
+  const seenAccountIds = new Set<string>();
+
+  for (let i = 0; i < keywordCount; i++) {
+    const account = accounts[i % accounts.length];
+    if (!account || seenAccountIds.has(account.id)) continue;
+
+    seenAccountIds.add(account.id);
+    scheduledAccounts.push(account);
+  }
+
+  return scheduledAccounts;
+};
+
+const estimateReservationTtlMs = (
+  accounts: NaverAccount[],
+  keywordCount: number,
+  includeCommenters: boolean,
+  settings: ReservationDelaySettings
+): number => {
+  const accountDelays: Map<string, number> = new Map();
+  let maxScheduledDelay = 0;
+
+  for (let i = 0; i < keywordCount; i++) {
+    const writerAccount = accounts[i % accounts.length];
+    if (!writerAccount) continue;
+
+    const currentAccountDelay = accountDelays.get(writerAccount.id) ?? 0;
+    const activityDelay = getNextActiveTime(writerAccount);
+    const totalDelay = Math.max(currentAccountDelay, activityDelay);
+
+    maxScheduledDelay = Math.max(maxScheduledDelay, totalDelay);
+    accountDelays.set(
+      writerAccount.id,
+      totalDelay + settings.delays.betweenPosts.max
+    );
+  }
+
+  const chainBufferMs = includeCommenters
+    ? Math.max(
+        COMMENT_RESERVATION_BUFFER_MS,
+        settings.delays.afterPost.max +
+          settings.delays.betweenComments.max * Math.max(accounts.length, 1) * 3
+      )
+    : POST_ONLY_RESERVATION_BUFFER_MS;
+
+  return maxScheduledDelay + chainBufferMs;
+};
 
 export const addBatchToQueue = async (
   input: BatchJobInput
@@ -39,6 +109,32 @@ export const addBatchToQueue = async (
   }
 
   const { accounts, cafe, settings } = ctx;
+  const scheduledAccounts = getScheduledAccounts(
+    accounts,
+    keywords.length,
+    !skipComments
+  );
+  const reservationTtlMs = estimateReservationTtlMs(
+    accounts,
+    keywords.length,
+    !skipComments,
+    settings
+  );
+
+  const warmupResult = await warmupScheduleSessions(scheduledAccounts, {
+    reason: `batch_queue_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    reservationTtlMs,
+  });
+
+  if (!warmupResult.success) {
+    return {
+      success: false,
+      jobsAdded: 0,
+      message: `세션 프리워밍 실패: ${warmupResult.failedAccountId || 'unknown'} - ${
+        warmupResult.error || '로그인 실패'
+      }`,
+    };
+  }
 
   let jobsAdded = 0;
   const accountDelays: Map<string, number> = new Map();
@@ -111,7 +207,7 @@ export const addBatchToQueue = async (
   return {
     success: jobsAdded > 0,
     jobsAdded,
-    message: `${jobsAdded}개 작업이 큐에 추가됨 (${accounts.length}개 계정 병렬 처리)`,
+    message: `${jobsAdded}개 작업이 큐에 추가됨 (${scheduledAccounts.length}개 계정 세션 준비 완료)`,
   };
 };
 

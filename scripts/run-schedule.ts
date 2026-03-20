@@ -11,8 +11,10 @@ import { Account } from "../src/shared/models/account";
 import { Cafe } from "../src/shared/models/cafe";
 import { addTaskJob } from "../src/shared/lib/queue";
 import { generateViralContent } from "../src/shared/api/content-api";
+import { buildViralPrompt } from "../src/features/viral/viral-prompt";
 import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
 import { buildShortDailyPrompt } from "../src/features/viral/prompts/build-short-daily-prompt";
+import { getViralContentStyleForLoginId } from "../src/shared/config/user-profile";
 import {
   browseCafePosts,
   pickRandomArticles,
@@ -29,7 +31,7 @@ import type {
 import type { NaverAccount } from "../src/shared/lib/account-manager";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
-const LOGIN_ID = process.env.LOGIN_ID || "21lab";
+const LOGIN_ID = process.env.LOGIN_ID || "qwzx16";
 const SIDE_ACTIVITY_BUFFER_MS = 3 * 60 * 1000;
 
 interface ScheduleItem {
@@ -43,56 +45,10 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // 2026-03-19 기본값: 쇼핑 ad10+daily5, 샤넬 ad5+daily5, 건노 ad12, 건관 ad12 = 49건
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "친구 출산선물", category: "일반 쇼핑후기", type: "ad", accountId: "loand3324", time: "18:00" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "갱년기 선물", category: "자유게시판", type: "ad", accountId: "compare14310", time: "18:07" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "광주 난임병원", category: "_ 일상샤반사 📆", type: "ad", accountId: "ags2oigb", time: "18:14" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "난소나이검사 방법", category: "건강이야기", type: "ad", accountId: "wound12567", time: "18:21" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "본정심흑염소 효능", category: "일반 쇼핑후기", type: "ad", accountId: "precede1451", time: "18:28" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "진주 난임병원", category: "자유게시판", type: "ad", accountId: "loand3324", time: "18:35" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "아이들 영양제", category: "일반 쇼핑후기", type: "ad", accountId: "compare14310", time: "18:42" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "아기엄마 선물", category: "건강 관리 후기", type: "ad", accountId: "ags2oigb", time: "18:49" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "초록마을 흑염소", category: "일반 쇼핑후기", type: "ad", accountId: "wound12567", time: "18:55" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "8주 계류유산", category: "건강정보", type: "ad", accountId: "precede1451", time: "19:02" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "산후 음식 기력 회복", category: "_ 일상샤반사 📆", type: "ad", accountId: "loand3324", time: "19:09" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "출산 후 치질", category: "자유로운이야기", type: "ad", accountId: "compare14310", time: "19:16" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "흑염소 한마리", category: "일반 쇼핑후기", type: "ad", accountId: "ags2oigb", time: "19:23" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산후조리 지원금", category: "한약재정보", type: "ad", accountId: "wound12567", time: "19:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "염소즙 가격 차이", category: "건강 관리 후기", type: "ad", accountId: "precede1451", time: "19:37" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "웰스앤헬스 흑염소", category: "취미이야기", type: "ad", accountId: "loand3324", time: "19:44" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "90대 할머니 선물", category: "_ 일상샤반사 📆", type: "ad", accountId: "compare14310", time: "19:50" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "갱년기 병원", category: "건강상식", type: "ad", accountId: "ags2oigb", time: "19:57" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Boy CHANEL이랑 클래식 11.12 중 첫 가방 뭐가 나을지 계속 검색", category: "_ 일상샤반사 📆", type: "daily", accountId: "wound12567", time: "20:04" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "흑염소진액 먹는법", category: "_ 일상샤반사 📆", type: "ad", accountId: "precede1451", time: "20:11" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "브링그린 안경만두 콜라보 티트리 시카 토너 올영세일 장바구니에 담아둠", category: "일상톡톡", type: "daily", accountId: "loand3324", time: "20:18" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "45세 임신 확률", category: "흑염소진액정보", type: "ad", accountId: "compare14310", time: "20:25" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 2026 봄여름 프리컬렉션 밝은 트위드 체크 계속 아른거림", category: "_ 일상샤반사 📆", type: "daily", accountId: "ags2oigb", time: "20:32" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "40세 임신 가능성", category: "일반 쇼핑후기", type: "ad", accountId: "wound12567", time: "20:39" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 원더풀스 라인업 보고 주말 정주행 리스트 적는 중", category: "일상톡톡", type: "daily", accountId: "precede1451", time: "20:45" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "와이프 출산선물", category: "흑염소진액정보", type: "ad", accountId: "loand3324", time: "20:52" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "브링그린 대나무 히알루 립 에센스 2입 기획 보고 또 올영 들어가는 중", category: "일상톡톡", type: "daily", accountId: "compare14310", time: "20:59" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "산후도우미 지원기간", category: "오늘의 운동", type: "ad", accountId: "ags2oigb", time: "21:06" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "갱년기치료제", category: "자유로운이야기", type: "ad", accountId: "wound12567", time: "21:13" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "김포 흑염소 맛집", category: "질문게시판", type: "ad", accountId: "precede1451", time: "21:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "계류유산 증상", category: "일반 쇼핑후기", type: "ad", accountId: "loand3324", time: "21:27" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "사하구 산부인과", category: "건강 챌린지", type: "ad", accountId: "compare14310", time: "21:34" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "53세 임신", category: "일반 쇼핑후기", type: "ad", accountId: "ags2oigb", time: "21:40" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "시험관 주사 통증", category: "_ 일상샤반사 📆", type: "ad", accountId: "wound12567", time: "21:47" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "e보건소 가임력검사", category: "오늘의 운동", type: "ad", accountId: "precede1451", time: "21:54" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "흑염소보감탕", category: "건강이야기", type: "ad", accountId: "loand3324", time: "22:01" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "6주 계류유산 증상", category: "일반 쇼핑후기", type: "ad", accountId: "compare14310", time: "22:08" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "60대 엄마 생신선물", category: "질문게시판", type: "ad", accountId: "ags2oigb", time: "22:15" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "서울 난임병원", category: "건강상식", type: "ad", accountId: "wound12567", time: "22:22" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "남구 산후조리원", category: "일반 쇼핑후기", type: "ad", accountId: "precede1451", time: "22:29" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 25 백 사진만 계속 넘겨보다가 퇴근길 끝남", category: "_ 일상샤반사 📆", type: "daily", accountId: "loand3324", time: "22:35" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 22랑 CHANEL 31 미니 쇼핑백 중 뭐가 데일리인지 아직도 고민", category: "_ 일상샤반사 📆", type: "daily", accountId: "compare14310", time: "22:42" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 월간남친 틀어놓고 간식 고르다가 밤 다 감", category: "일상톡톡", type: "daily", accountId: "ags2oigb", time: "22:49" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 이 사랑 통역 되나요 다시보기 시작해서 저녁 루틴 밀림", category: "일상톡톡", type: "daily", accountId: "wound12567", time: "22:56" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 25 백이랑 2026 프리컬렉션 쇼핑백 실루엣 비교하다가 시간 순삭", category: "_ 일상샤반사 📆", type: "daily", accountId: "precede1451", time: "23:03" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "인공수정 시험관 차이", category: "한약재정보", type: "ad", accountId: "loand3324", time: "23:10" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "나팔관조영술 실비", category: "건강정보", type: "ad", accountId: "compare14310", time: "23:17" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "몸을 따뜻하게 하는 음식", category: "취미이야기", type: "ad", accountId: "ags2oigb", time: "23:24" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "출산후 허리통증", category: "건강 챌린지", type: "ad", accountId: "wound12567", time: "23:30" },
+  // 2026-03-20 벤타쿠 rebrowser 테스트 (3건) — 애니 스타일
+  { cafe: "벤타쿠", cafeId: "31642514", keyword: "키즈모노가타리 키스샷 액션씬 극장판 작화 퀄리티 TV판이랑 차원이 다름", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:00" },
+  { cafe: "벤타쿠", cafeId: "31642514", keyword: "하나모노가타리 나데코 메두사 이후 스토리 전개 소설 읽고 진짜 반전", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:01" },
+  { cafe: "벤타쿠", cafeId: "31642514", keyword: "코요미모노가타리 단편 모음인데 각 에피소드 연출 실험이 미쳤음", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:02" },
 ];
 
 const COMMENT_TEMPLATES = [
@@ -300,13 +256,16 @@ const main = async (): Promise<void> => {
     );
 
     try {
+      const contentStyle = getViralContentStyleForLoginId(LOGIN_ID);
       const prompt =
-        item.type === "ad"
-          ? buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" })
-          : buildShortDailyPrompt({
-              keyword: item.keyword,
-              keywordType: "own",
-            });
+        contentStyle !== '정보'
+          ? buildViralPrompt({ keyword: item.keyword, keywordType: "own" }, contentStyle)
+          : item.type === "ad"
+            ? buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" })
+            : buildShortDailyPrompt({
+                keyword: item.keyword,
+                keywordType: "own",
+              });
 
       const { content } = await generateViralContent({
         prompt,

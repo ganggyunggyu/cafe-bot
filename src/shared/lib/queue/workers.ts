@@ -11,10 +11,15 @@ import {
   ReplyJobData,
   LikeJobData,
 } from './types';
-import { addTaskJob, createRescheduleToken } from './index';
+import { addTaskJob, createRescheduleToken, getTaskQueue } from './index';
 import { getAllAccounts } from '@/shared/config/accounts';
 import { isAccountActive, getNextActiveTime } from '@/shared/lib/account-manager';
-import { isAccountLoggedIn, loginAccount } from '@/shared/lib/multi-session';
+import {
+  isAccountLoggedIn,
+  loginAccount,
+  releaseAccountSession,
+  saveCookiesForAccount,
+} from '@/shared/lib/multi-session';
 import { getQueueSettings } from '@/shared/models/queue-settings';
 import { handlePostJob } from './handlers/post-handler';
 import { handleCommentJob } from './handlers/comment-handler';
@@ -62,6 +67,25 @@ const releaseGlobalJobLock = (): void => {
   globalThis.__globalJobLock = null;
   globalThis.__globalJobResolver = null;
   if (resolver) resolver();
+};
+
+const syncAccountSessionReservation = async (accountId: string): Promise<void> => {
+  const queue = getTaskQueue(accountId);
+  const [waitingCount, delayedCount, activeCount] = await Promise.all([
+    queue.getWaitingCount(),
+    queue.getDelayedCount(),
+    queue.getActiveCount(),
+  ]);
+
+  if (waitingCount + delayedCount + activeCount > 0) {
+    console.log(
+      `[SESSION] ${accountId} 예약 세션 유지 (waiting=${waitingCount}, delayed=${delayedCount}, active=${activeCount})`
+    );
+    return;
+  }
+
+  await saveCookiesForAccount(accountId);
+  releaseAccountSession(accountId);
 };
 
 const processTaskJob = async (
@@ -158,10 +182,16 @@ export const createTaskWorker = (
       `[WORKER] 완료: ${job.name} (${accountId})`,
       result.success ? '성공' : '실패'
     );
+    syncAccountSessionReservation(accountId).catch(e =>
+      console.error(`[WORKER] 세션 동기화 에러 (완료): ${accountId}`, e)
+    );
   });
 
   worker.on('failed', (job, err) => {
     console.error(`[WORKER] 실패: ${job?.name} (${accountId})`, err.message);
+    syncAccountSessionReservation(accountId).catch(e =>
+      console.error(`[WORKER] 세션 동기화 에러 (실패): ${accountId}`, e)
+    );
   });
 
   taskWorkers.set(accountId, worker);
