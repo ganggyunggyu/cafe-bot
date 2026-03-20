@@ -45,10 +45,10 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // 2026-03-20 벤타쿠 rebrowser 테스트 (3건) — 애니 스타일
-  { cafe: "벤타쿠", cafeId: "31642514", keyword: "키즈모노가타리 키스샷 액션씬 극장판 작화 퀄리티 TV판이랑 차원이 다름", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:00" },
-  { cafe: "벤타쿠", cafeId: "31642514", keyword: "하나모노가타리 나데코 메두사 이후 스토리 전개 소설 읽고 진짜 반전", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:01" },
-  { cafe: "벤타쿠", cafeId: "31642514", keyword: "코요미모노가타리 단편 모음인데 각 에피소드 연출 실험이 미쳤음", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:02" },
+  // 2026-03-20 벤타쿠 rebrowser chromium 테스트 (3건) — 애니 스타일
+  { cafe: "벤타쿠", cafeId: "31642514", keyword: "세컨드 시즌 오노노키 요츠기 '평화냥' 대사 모음 보다가 새벽됨", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:00" },
+  { cafe: "벤타쿠", cafeId: "31642514", keyword: "센조가하라 히타기 명대사 호치키스 장면 샤프트 각도 다시 봐도 소름", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:01" },
+  { cafe: "벤타쿠", cafeId: "31642514", keyword: "오시노 메메 '아무것도 안 해. 할 수 있는 건 네가 하는거야' 이 대사 진짜", category: "자유게시판", type: "daily", accountId: "akepzkthf12", time: "00:02" },
 ];
 
 const COMMENT_TEMPLATES = [
