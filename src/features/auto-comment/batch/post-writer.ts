@@ -234,11 +234,42 @@ export const writePostWithAccount = async (
     const page = await getPageForAccount(id);
     touchAccount(id);
 
+    // 글쓰기 전 카페 둘러보기 (자연스러운 체류 시간 확보)
+    try {
+      const cafeMainUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}`;
+      console.log(`[POST] ${id} 카페 메인 방문 중...`);
+      await page.goto(cafeMainUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.waitForTimeout(3000 + Math.floor(Math.random() * 2000));
+      touchAccount(id);
+
+      // 글 하나 읽어보기
+      const apiUrl = `https://apis.naver.com/cafe-web/cafe2/ArticleListV2dot1.json?search.clubid=${cafeId}&search.page=1&search.perPage=10&search.queryType=lastArticle&search.boardtype=L`;
+      const articleIds = await page.evaluate(async (url: string) => {
+        try {
+          const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' } });
+          if (!res.ok) return [];
+          const data = await res.json();
+          return (data?.message?.result?.articleList ?? []).map((a: { articleId: number }) => a.articleId);
+        } catch { return []; }
+      }, apiUrl);
+
+      if (articleIds.length > 0) {
+        const randomIdx = Math.floor(Math.random() * Math.min(articleIds.length, 5));
+        const readArticleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleIds[randomIdx]}`;
+        console.log(`[POST] ${id} 글 읽기 중... (articleId: ${articleIds[randomIdx]})`);
+        await page.goto(readArticleUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await page.waitForTimeout(5000 + Math.floor(Math.random() * 5000));
+        touchAccount(id);
+      }
+    } catch {
+      console.log(`[POST] ${id} 카페 둘러보기 중 오류 (무시)`);
+    }
+
     // 글쓰기 페이지로 이동
     const writeUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/write?boardType=L&menuId=${menuId}`;
 
     await page.goto(writeUrl, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
     touchAccount(id);
@@ -260,7 +291,7 @@ export const writePostWithAccount = async (
 
       // 다시 글쓰기 페이지로 이동
       await page.goto(writeUrl, {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
     }
@@ -484,6 +515,44 @@ export const writePostWithAccount = async (
 
     // 활동 기록
     await incrementActivity(id, cafeId, 'posts');
+
+    // 글 발행 후 눈팅 (자연스러운 체류)
+    try {
+      console.log(`[POST] ${id} 발행 후 카페 눈팅 시작`);
+      const cafeMainUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}`;
+      await page.goto(cafeMainUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+      await page.waitForTimeout(3000 + Math.floor(Math.random() * 3000));
+      touchAccount(id);
+
+      // 랜덤으로 글 하나 더 읽기 (50% 확률)
+      if (Math.random() < 0.5) {
+        const apiUrl = `https://apis.naver.com/cafe-web/cafe2/ArticleListV2dot1.json?search.clubid=${cafeId}&search.page=1&search.perPage=10&search.queryType=lastArticle&search.boardtype=L`;
+        const browseIds = await page.evaluate(async (url: string) => {
+          try {
+            const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' } });
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data?.message?.result?.articleList ?? []).map((a: { articleId: number }) => a.articleId);
+          } catch { return []; }
+        }, apiUrl);
+
+        if (browseIds.length > 0) {
+          const randomIdx = Math.floor(Math.random() * Math.min(browseIds.length, 5));
+          const browseArticleId = browseIds[randomIdx];
+          if (browseArticleId !== articleId) {
+            await page.goto(`https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${browseArticleId}`, {
+              waitUntil: 'domcontentloaded',
+              timeout: 10000,
+            });
+            await page.waitForTimeout(3000 + Math.floor(Math.random() * 4000));
+            touchAccount(id);
+          }
+        }
+      }
+      console.log(`[POST] ${id} 눈팅 완료`);
+    } catch {
+      console.log(`[POST] ${id} 눈팅 중 오류 (무시)`);
+    }
 
     return {
       success: true,

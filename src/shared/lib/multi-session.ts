@@ -59,7 +59,9 @@ const lastUsedAt = g.__pwLastUsed;
 const reservedSessions = g.__pwReservedSessions;
 
 const LOGIN_CACHE_TTL = 30 * 60 * 1000;
-const IDLE_TTL = 5 * 60 * 1000; // 5분 미사용 시 context 정리
+const IDLE_TTL_MIN = 10 * 60 * 1000;
+const IDLE_TTL_MAX = 15 * 60 * 1000;
+const randomIdleTtl = () => IDLE_TTL_MIN + Math.floor(Math.random() * (IDLE_TTL_MAX - IDLE_TTL_MIN));
 const IDLE_CHECK_INTERVAL = 60 * 1000; // 1분마다 체크
 
 const startIdleCleanup = () => {
@@ -67,7 +69,7 @@ const startIdleCleanup = () => {
   g.__pwIdleTimer = setInterval(async () => {
     const now = Date.now();
     for (const [accountId, lastTime] of lastUsedAt) {
-      if (now - lastTime < IDLE_TTL) continue;
+      if (now - lastTime < randomIdleTtl()) continue;
       if (accountLocks.has(accountId)) continue; // 작업 중이면 스킵
       if (reservedSessions.get(accountId)?.size) continue; // 예약 세션은 유지
 
