@@ -45,58 +45,68 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // 2026-03-21 스케줄 캠페인 (39건) — 쇼핑/샤넬/건강노후/건강관리
+  // 2026-03-23 스케줄 캠페인 (49건) — 쇼핑/샤넬/건강노후/건강관리
 
-  // — 14:20~14:50 —
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "스타벅스 에어로카노 마셔봤는데 진짜 거품이 신기함", category: "일상톡톡", type: "daily", accountId: "ags2oigb", time: "14:20" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "청라동 보양탕", category: "자유게시판", type: "ad", accountId: "regular14631", time: "14:25" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "이마트24 말차크림롤 먹어봤는데 말차 맛 제대로임", category: "_ 일상샤반사 📆", type: "daily", accountId: "wound12567", time: "14:35" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "폐경후 생리", category: "건강이야기", type: "ad", accountId: "8i2vlbym", time: "14:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "당뇨환자 흑염소", category: "일반 쇼핑후기", type: "ad", accountId: "precede1451", time: "14:50" },
+  // — 16:45~17:37 —
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "남편 산전검사", category: "일반 쇼핑후기", type: "ad", accountId: "mixxut", time: "16:45" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "슈폼라떼", category: "_ 일상샤반사 📆", type: "daily", accountId: "ynattg", time: "16:49" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "정읍 산후조리원", category: "일반 쇼핑후기", type: "ad", accountId: "ags2oigb", time: "16:57" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "냥이마들렌", category: "_ 일상샤반사 📆", type: "daily", accountId: "wound12567", time: "17:05" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "일산 산후조리원", category: "일반 쇼핑후기", type: "ad", accountId: "precede1451", time: "17:13" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "자연드림 흑염소", category: "자유게시판", type: "ad", accountId: "regular14631", time: "17:21" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "기흥구 산부인과 조리원", category: "건강이야기", type: "ad", accountId: "8i2vlbym", time: "17:29" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산후 탈모", category: "흑염소진액정보", type: "ad", accountId: "njmzdksm", time: "17:37" },
 
-  // — 15:05~16:45 —
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "어린이 흑염소", category: "흑염소진액정보", type: "ad", accountId: "njmzdksm", time: "15:05" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "미추홀구산부인과", category: "건강이야기", type: "ad", accountId: "0ehz3cb2", time: "15:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "고용량 엽산", category: "건강상식", type: "ad", accountId: "suc4dce7", time: "15:45" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "손이 차가운 이유", category: "건강 챌린지", type: "ad", accountId: "xzjmfn3f", time: "16:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "e보건소 산전검사 병원", category: "건강정보", type: "ad", accountId: "8ua1womn", time: "16:25" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "임신 잘되는 한약", category: "_ 일상샤반사 📆", type: "ad", accountId: "ags2oigb", time: "16:35" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "강서구 산후도우미", category: "오늘의 운동", type: "ad", accountId: "selzze", time: "16:45" },
+  // — 17:45~18:41 —
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "에어로카노", category: "_ 일상샤반사 📆", type: "daily", accountId: "mixxut", time: "17:45" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "화성난임센터", category: "일반 쇼핑후기", type: "ad", accountId: "ynattg", time: "17:53" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "마뗑킴 팝업", category: "_ 일상샤반사 📆", type: "daily", accountId: "ags2oigb", time: "18:01" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "고함량 알부민", category: "일반 쇼핑후기", type: "ad", accountId: "wound12567", time: "18:09" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "두바이초콜릿", category: "_ 일상샤반사 📆", type: "daily", accountId: "precede1451", time: "18:17" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "흑염소진액 성분", category: "취미이야기", type: "ad", accountId: "regular14631", time: "18:25" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "분당차병원 난임센터", category: "한약재정보", type: "ad", accountId: "8i2vlbym", time: "18:33" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "청소년 빈혈 영양제", category: "자유로운이야기", type: "ad", accountId: "njmzdksm", time: "18:41" },
 
-  // — 16:50~17:45 —
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "갱년기 안면홍조", category: "일반 쇼핑후기", type: "ad", accountId: "wound12567", time: "16:50" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "다이소 블루투스 스피커 품절이길래 결국 온라인 주문함", category: "일상톡톡", type: "daily", accountId: "precede1451", time: "17:05" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "난임시술비 지원", category: "취미이야기", type: "ad", accountId: "regular14631", time: "17:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "개구리즙 효능", category: "자유게시판", type: "ad", accountId: "8i2vlbym", time: "17:45" },
+  // — 18:49~19:45 —
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "다이소 꿀템", category: "일상톡톡", type: "daily", accountId: "mixxut", time: "18:49" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "토리든 세럼", category: "_ 일상샤반사 📆", type: "daily", accountId: "ynattg", time: "18:57" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "무신사쿠폰", category: "일상톡톡", type: "daily", accountId: "ags2oigb", time: "19:05" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "클라이맥스 드라마", category: "_ 일상샤반사 📆", type: "daily", accountId: "wound12567", time: "19:13" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올영세일", category: "일상톡톡", type: "daily", accountId: "precede1451", time: "19:21" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "안성난임센터 치료", category: "건강 챌린지", type: "ad", accountId: "0ehz3cb2", time: "19:29" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "계류유산 한약", category: "건강상식", type: "ad", accountId: "suc4dce7", time: "19:37" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "출산축하선물", category: "건강 관리 후기", type: "ad", accountId: "xzjmfn3f", time: "19:45" },
 
-  // — 18:05~19:45 —
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "대구 산후보약", category: "취미이야기", type: "ad", accountId: "njmzdksm", time: "18:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산후 붓기차", category: "한약재정보", type: "ad", accountId: "0ehz3cb2", time: "18:25" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "임신전 체질 관리", category: "건강 챌린지", type: "ad", accountId: "suc4dce7", time: "18:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "시험관 시술 비용", category: "일반 쇼핑후기", type: "ad", accountId: "ags2oigb", time: "18:50" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "여자 흑염소", category: "_ 일상샤반사 📆", type: "ad", accountId: "wound12567", time: "19:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "의왕 산후도우미", category: "건강정보", type: "ad", accountId: "xzjmfn3f", time: "19:05" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "올리브영 토리든 세럼 1+1 할 때 안 사면 후회함", category: "_ 일상샤반사 📆", type: "daily", accountId: "precede1451", time: "19:20" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "50살 임신", category: "건강 관리 후기", type: "ad", accountId: "8ua1womn", time: "19:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "7주 계류유산 증상", category: "질문게시판", type: "ad", accountId: "selzze", time: "19:45" },
+  // — 19:53~20:49 —
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "월간남친", category: "_ 일상샤반사 📆", type: "daily", accountId: "mixxut", time: "19:53" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "두바이떡", category: "일상톡톡", type: "daily", accountId: "ynattg", time: "20:01" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "밥 안먹는 아이", category: "일반 쇼핑후기", type: "ad", accountId: "ags2oigb", time: "20:09" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "쿠팡 장바구니", category: "일상톡톡", type: "daily", accountId: "wound12567", time: "20:17" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "골다공증 주사 부작용", category: "일반 쇼핑후기", type: "ad", accountId: "precede1451", time: "20:25" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "세종 산후도우미", category: "건강정보", type: "ad", accountId: "0ehz3cb2", time: "20:33" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "청궁흑염소", category: "오늘의 운동", type: "ad", accountId: "suc4dce7", time: "20:41" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산후풍", category: "질문게시판", type: "ad", accountId: "xzjmfn3f", time: "20:49" },
 
-  // — 20:25~21:45 —
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "흑염소 먹는 시간", category: "흑염소진액정보", type: "ad", accountId: "regular14631", time: "20:25" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "강북 산부인과", category: "자유로운이야기", type: "ad", accountId: "8i2vlbym", time: "20:45" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CU 스스스 우유샌드 설향 딸기 진짜 맛있는지 궁금", category: "_ 일상샤반사 📆", type: "daily", accountId: "ags2oigb", time: "21:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "영양식 추천", category: "한약재정보", type: "ad", accountId: "njmzdksm", time: "21:05" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "쿠팡 로켓직구 쿠폰 쓰려고 장바구니 또 채움", category: "일상톡톡", type: "daily", accountId: "wound12567", time: "21:20" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "건강원 흑염소", category: "자유로운이야기", type: "ad", accountId: "0ehz3cb2", time: "21:25" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "임신중독증 원인", category: "_ 일상샤반사 📆", type: "ad", accountId: "precede1451", time: "21:35" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "임산부 선물", category: "건강상식", type: "ad", accountId: "suc4dce7", time: "21:45" },
+  // — 20:57~21:29 —
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "김소영흑염소", category: "일반 쇼핑후기", type: "ad", accountId: "mixxut", time: "20:57" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "목초농장 흑염소진액", category: "일반 쇼핑후기", type: "ad", accountId: "ynattg", time: "21:05" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "건물주법", category: "_ 일상샤반사 📆", type: "daily", accountId: "ags2oigb", time: "21:13" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "에스트로겐 수치", category: "일반 쇼핑후기", type: "ad", accountId: "wound12567", time: "21:21" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "봄동 비빔밥", category: "_ 일상샤반사 📆", type: "daily", accountId: "precede1451", time: "21:29" },
 
-  // — 22:05~23:25 —
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "의정부 산후조리원", category: "건강 관리 후기", type: "ad", accountId: "xzjmfn3f", time: "22:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산후풍 증상 후유증", category: "질문게시판", type: "ad", accountId: "8ua1womn", time: "22:25" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "5일배양 피검사", category: "오늘의 운동", type: "ad", accountId: "selzze", time: "22:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후 한약 산후 회복", category: "일반 쇼핑후기", type: "ad", accountId: "ags2oigb", time: "23:00" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "삼성동 난임병원", category: "일반 쇼핑후기", type: "ad", accountId: "wound12567", time: "23:15" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "갱년기 호르몬치료", category: "일반 쇼핑후기", type: "ad", accountId: "precede1451", time: "23:25" },
+  // — 21:37~23:05 —
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "시험관 출산예정일", category: "자유게시판", type: "ad", accountId: "8ua1womn", time: "21:37" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "안양 산부인과", category: "건강이야기", type: "ad", accountId: "selzze", time: "21:45" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "강남여성의원", category: "흑염소진액정보", type: "ad", accountId: "4giccokx", time: "21:53" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "산후풍 한의원", category: "취미이야기", type: "ad", accountId: "uqgidh2690", time: "22:01" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "창원 리베라 산후조리원", category: "한약재정보", type: "ad", accountId: "eytkgy5500", time: "22:09" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "amh 수치", category: "건강상식", type: "ad", accountId: "yenalk", time: "22:17" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "47세 자연임신", category: "자유로운이야기", type: "ad", accountId: "br5rbg", time: "22:25" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "난임지원금 신청", category: "건강 챌린지", type: "ad", accountId: "beautifulelephant274", time: "22:33" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "고양 산후조리원", category: "건강 관리 후기", type: "ad", accountId: "8ua1womn", time: "22:41" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "흑염소 먹는법", category: "건강정보", type: "ad", accountId: "selzze", time: "22:49" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "80대 할머니 선물", category: "오늘의 운동", type: "ad", accountId: "4giccokx", time: "22:57" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "30대 조기폐경", category: "질문게시판", type: "ad", accountId: "uqgidh2690", time: "23:05" },
 ];
 
 const COMMENT_TEMPLATES = [
