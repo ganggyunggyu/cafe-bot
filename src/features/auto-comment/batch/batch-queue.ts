@@ -1,4 +1,5 @@
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getCafeCommenterAccounts, getCafeWriterAccounts } from '@/shared/config/cafe-account-policy';
 import { addTaskJob, getQueueStatus, closeAllQueues } from '@/shared/lib/queue';
 import { closeAllWorkers } from '@/shared/lib/queue/workers';
 import { getRandomDelay } from '@/shared/models/queue-settings';
@@ -26,6 +27,21 @@ type ReservationDelaySettings = {
     afterPost: { min: number; max: number };
     betweenComments: { min: number; max: number };
   };
+};
+
+const mergeAccounts = (...accountGroups: NaverAccount[][]): NaverAccount[] => {
+  const mergedAccounts: NaverAccount[] = [];
+  const seenAccountIds = new Set<string>();
+
+  accountGroups.forEach((accounts) => {
+    accounts.forEach((account) => {
+      if (seenAccountIds.has(account.id)) return;
+      seenAccountIds.add(account.id);
+      mergedAccounts.push(account);
+    });
+  });
+
+  return mergedAccounts;
 };
 
 const getScheduledAccounts = (
@@ -109,13 +125,27 @@ export const addBatchToQueue = async (
   }
 
   const { accounts, cafe, settings } = ctx;
+  const writerAccounts = getCafeWriterAccounts(accounts, cafe.cafeId);
+  const commenterAccounts = getCafeCommenterAccounts(accounts, cafe.cafeId);
+
+  if (writerAccounts.length === 0) {
+    return {
+      success: false,
+      jobsAdded: 0,
+      message: `글쓰기 가능한 계정이 없습니다 (${cafe.name})`,
+    };
+  }
+
+  const reservationAccounts = skipComments
+    ? writerAccounts
+    : mergeAccounts(writerAccounts, commenterAccounts);
   const scheduledAccounts = getScheduledAccounts(
-    accounts,
+    reservationAccounts,
     keywords.length,
     !skipComments
   );
   const reservationTtlMs = estimateReservationTtlMs(
-    accounts,
+    reservationAccounts,
     keywords.length,
     !skipComments,
     settings
@@ -143,7 +173,10 @@ export const addBatchToQueue = async (
     const keywordInput = keywords[i];
     const { keyword, category } = parseKeywordWithCategory(keywordInput);
     const keywordLabel = category ? `${keyword}:${category}` : keyword;
-    const writerAccount = accounts[i % accounts.length];
+    const writerAccount = writerAccounts[i % writerAccounts.length];
+    const commenterAccountIds = skipComments
+      ? undefined
+      : getCafeCommenterAccounts(accounts, cafe.cafeId, writerAccount.id).map(({ id }) => id);
 
     try {
       const personaId = getPersonaId(writerAccount);
@@ -183,6 +216,7 @@ export const addBatchToQueue = async (
         service,
         rawContent: generatedContent,
         skipComments,
+        commenterAccountIds,
       };
 
       const currentAccountDelay = accountDelays.get(writerAccount.id) ?? 0;

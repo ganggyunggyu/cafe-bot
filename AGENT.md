@@ -248,6 +248,93 @@ REDIS_URL=
 - 배치 작업 처리 (`viral-batch-job.ts`)
 - 디버그 UI 제공
 
+## 네이버 카페 브라우저 작업 지침
+
+### 브라우저 도구
+- **OpenClaw 브라우저**(`openclaw browser`)를 우선 사용
+- cmux browser는 OpenClaw 실패 시 폴백
+
+### 로그인
+```bash
+openclaw browser open "https://nid.naver.com/nidlogin.login"
+openclaw browser snapshot --efficient  # ref 확인
+openclaw browser type <id-ref> "<accountId>"
+openclaw browser type <pw-ref> "<password>"
+openclaw browser snapshot --efficient  # ref 재확인 (바뀜!)
+openclaw browser click <login-ref>
+```
+- 아이디/비밀번호 입력 후 ref가 바뀌므로, **로그인 버튼 클릭 전 반드시 snapshot 재촬영**
+
+### 카페 가입
+```bash
+openclaw browser navigate "https://m.cafe.naver.com/<cafeUrl>"
+# "카페 가입하기" 보이면 클릭 → 닉네임 + 질문 답변 → "동의 후 가입하기"
+```
+
+### 모바일 카페 사용 (필수)
+- **항상 `m.cafe.naver.com` 사용** — PC 버전은 iframe 문제 발생
+- 게시판 URL: `https://m.cafe.naver.com/ca-fe/web/cafes/<cafeId>/menus/<menuId>`
+- 글 URL: `https://m.cafe.naver.com/ca-fe/web/cafes/<cafeId>/articles/<articleId>`
+
+### 댓글 작성 절차
+1. 글 페이지 이동 → snapshot
+2. "댓글쓰기가 허용되지 않은 글" 확인 → 있으면 SKIP
+3. `link "댓글 N"` 클릭 → 댓글 영역 이동
+4. `button/link "댓글을 남겨보세요"` 클릭 → 입력 폼 오픈
+5. JS `document.execCommand("insertText")` 로 텍스트 입력
+6. `button "등록"` 클릭
+7. 닉네임 확인으로 성공 검증
+
+### 댓글 텍스트 입력 (핵심)
+```bash
+cat <<'SCRIPT' > /tmp/cc.js
+() => {
+  const el = document.querySelector("div.text_input_area[contenteditable]");
+  if (!el) return "nf";
+  el.focus();
+  document.execCommand("selectAll");
+  document.execCommand("delete");
+  document.execCommand("insertText", false, "댓글 내용");
+  return "ok";
+}
+SCRIPT
+openclaw browser evaluate --fn "$(cat /tmp/cc.js)"
+```
+- `textContent` 직접 설정 금지 (React 상태 미반영)
+- `document.execCommand("insertText")` 필수
+
+### 글 내용 읽기
+```bash
+openclaw browser evaluate --fn '() => {
+  const a = document.querySelector(".se-main-container") || document.querySelector("article");
+  return a ? a.innerText.substring(0, 300) : "";
+}'
+```
+
+### 글 URL 추출 (목록에서)
+```bash
+openclaw browser evaluate --fn '() => {
+  const links = document.querySelectorAll("a");
+  return Array.from(links).filter(l => l.textContent.includes("[일상]"))
+    .map(l => { const m = l.href.match(/articleid=(\d+)/);
+      return m ? { id: m[1], text: l.textContent.trim().substring(0, 50) } : null;
+    }).filter(Boolean);
+}'
+```
+
+### 주의사항
+- ref는 snapshot마다 바뀜 → 매 상호작용 전 snapshot 재촬영
+- "댓글쓰기가 허용되지 않은 글" 체크 필수 (등급 제한)
+- 서브에이전트 위임 시 "OpenClaw 브라우저로 작업해" 지침 포함
+- JS evaluate 시 작은따옴표/특수문자 → 파일 기반 전달
+
+### 카페 정보
+
+| 카페명 | cafeId | cafeUrl | 일상 게시판 menuId |
+|--------|--------|---------|-------------------|
+| 쇼핑지름신 | 25729954 | shopjirmsin | 948 (일상톡톡) |
+| 샤넬오픈런 | 25460974 | shoppingtpw | 홈 피드에서 [일상] 태그 |
+
 ## 주의사항
 
 ### DB 마이그레이션

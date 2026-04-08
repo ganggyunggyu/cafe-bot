@@ -24,6 +24,7 @@ export interface PostJobData {
   keyword?: string;
   service?: string;
   rawContent?: string;
+  postType?: 'ad' | 'daily' | 'daily-ad';
   skipComments?: boolean;
   viralComments?: ViralCommentsData;
   images?: string[]; // Base64 이미지 배열
@@ -83,7 +84,18 @@ export interface GenerateJobData {
   accountId: string;
 }
 
-export type TaskJobData = PostJobData | CommentJobData | ReplyJobData | LikeJobData;
+export interface DisableCommentJobData {
+  type: 'disable-comment';
+  accountId: string;
+  userId?: string;
+  cafeId: string;
+  articleId: number;
+  sequenceId?: string;
+  rescheduleToken?: string;
+  _retryCount?: number;
+}
+
+export type TaskJobData = PostJobData | CommentJobData | ReplyJobData | LikeJobData | DisableCommentJobData;
 
 export interface JobResult {
   success: boolean;

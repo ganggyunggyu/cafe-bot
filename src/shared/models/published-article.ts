@@ -23,6 +23,7 @@ export interface IPublishedArticle extends Document {
   writerAccountId: string;
   publishedAt: Date;
   status: 'published' | 'modified';
+  postType?: 'ad' | 'daily' | 'daily-ad';
   commentCount: number;
   replyCount: number;
   comments: IArticleComment[]; // 댓글/대댓글 목록
@@ -55,6 +56,7 @@ const PublishedArticleSchema = new Schema<IPublishedArticle>(
     writerAccountId: { type: String, required: true },
     publishedAt: { type: Date, default: Date.now },
     status: { type: String, enum: ['published', 'modified'], default: 'published' },
+    postType: { type: String, enum: ['ad', 'daily', 'daily-ad'] },
     commentCount: { type: Number, default: 0 },
     replyCount: { type: Number, default: 0 },
     comments: { type: [ArticleCommentSchema], default: [] },

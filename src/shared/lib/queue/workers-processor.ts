@@ -6,6 +6,7 @@ import {
   CommentJobData,
   ReplyJobData,
   LikeJobData,
+  DisableCommentJobData,
 } from './types';
 import { addTaskJob, createRescheduleToken } from './index';
 import { getAllAccounts, getAccountById } from '@/shared/config/accounts';
@@ -15,6 +16,7 @@ import { handlePostJob } from './handlers/post-handler';
 import { handleCommentJob } from './handlers/comment-handler';
 import { handleReplyJob } from './handlers/reply-handler';
 import { handleLikeJob } from './handlers/like-handler';
+import { handleDisableCommentJob } from './handlers/disable-comment-handler';
 
 export const processTaskJob = async (
   job: Job<TaskJobData, JobResult>
@@ -80,6 +82,9 @@ export const processTaskJob = async (
 
     case 'like':
       return handleLikeJob(data as LikeJobData, { account, settings });
+
+    case 'disable-comment':
+      return handleDisableCommentJob(data as DisableCommentJobData, { account });
 
     default:
       throw new Error('알 수 없는 작업 타입');

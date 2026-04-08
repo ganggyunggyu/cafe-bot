@@ -386,6 +386,12 @@ export const writePostWithAccount = async (
     await clickWithPopupRetry(page, contentArea);
     await page.waitForTimeout(500);
 
+    // 카테고리 선택 시 자동 채워진 본문 템플릿 삭제 (Cmd+A → Backspace)
+    await page.keyboard.press('Meta+A');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Backspace');
+    await page.waitForTimeout(500);
+
     // HTML 태그를 plain text로 변환
     const plainContent = content
       .replace(/<\/p>\s*<p>/gi, '\n')  // </p><p> → 줄바꿈

@@ -19,6 +19,7 @@ export interface ModifyArticleInput {
   newContent: string;
   category?: string; // 게시판명 (미지정 시 카테고리 변경 안함)
   images?: string[]; // Base64 이미지 배열
+  enableComments?: boolean; // true: 댓글 허용으로 변경
 }
 
 export interface ModifyResult {
@@ -55,16 +56,34 @@ export const modifyArticleWithAccount = async (
 
     const page = await getPageForAccount(id);
 
+    // JS dialog 자동 처리 (네이버 수정 페이지 alert/confirm 대응)
+    page.on('dialog', async (dialog) => {
+      try {
+        await dialog.accept();
+      } catch {}
+    });
+
     // 글 수정 페이지로 이동
     const modifyUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}/modify`;
     console.log('[DEBUG] 수정 페이지 이동:', modifyUrl);
 
     await page.goto(modifyUrl, {
-      waitUntil: 'networkidle',
-      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
     });
 
-    await page.waitForTimeout(3000);
+    // 에디터 로딩 대기
+    try {
+      await page.waitForSelector('p.se-text-paragraph, .FlexableTextArea textarea.textarea_input, .se-component-content', { timeout: 15000 });
+    } catch {
+      console.log('[DEBUG] 에디터 셀렉터 대기 실패, 스크린샷 촬영');
+      await page.screenshot({ path: '/tmp/modify-debug.png', fullPage: true });
+      console.log('[DEBUG] 현재 URL:', page.url());
+      const title = await page.title();
+      console.log('[DEBUG] 페이지 제목:', title);
+      await page.waitForTimeout(5000);
+    }
+    await page.waitForTimeout(2000);
 
     // 카테고리 변경 (지정된 경우에만)
     if (category) {
@@ -159,7 +178,7 @@ export const modifyArticleWithAccount = async (
 
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].trim()) {
-        await page.keyboard.type(lines[i], { delay: 5 });
+        await page.keyboard.type(lines[i], { delay: 120 });
       }
       if (i < lines.length - 1) {
         await page.keyboard.press('Enter');
@@ -202,6 +221,34 @@ export const modifyArticleWithAccount = async (
         console.warn(`[MODIFY] ${id} 이미지 업로드 실패 - 글 수정은 계속 진행`);
       }
       await page.waitForTimeout(1000);
+    }
+
+    // 댓글 허용 토글
+    if (input.enableComments !== undefined) {
+      try {
+        const settingArea = await page.$('.setting_area');
+        if (settingArea) {
+          await settingArea.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(300);
+        }
+
+        const commentCheckbox = await page.$('#coment');
+        if (commentCheckbox) {
+          const isChecked = await commentCheckbox.evaluate((el) => (el as HTMLInputElement).checked);
+          if (isChecked !== input.enableComments) {
+            const label = await page.$('label[for="coment"]');
+            if (label) {
+              await label.click();
+            } else {
+              await commentCheckbox.click();
+            }
+            console.log(`[MODIFY] 댓글 ${input.enableComments ? '허용' : '차단'}으로 변경`);
+            await page.waitForTimeout(300);
+          }
+        }
+      } catch {
+        console.log('[MODIFY] 댓글 설정 변경 실패 (무시)');
+      }
     }
 
     // 수정 완료 버튼 클릭

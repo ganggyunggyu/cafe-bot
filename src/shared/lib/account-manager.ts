@@ -223,10 +223,14 @@ export const getNextActiveTime = (account: NaverAccount): number => {
   }
 
   if (account.restDays) {
-    while (account.restDays.includes(targetDate.getDay())) {
+    let safetyCounter = 0;
+    while (account.restDays.includes(targetDate.getDay()) && safetyCounter < 7) {
       targetDate.setDate(targetDate.getDate() + 1);
+      safetyCounter++;
     }
   }
 
-  return Math.max(0, targetDate.getTime() - now.getTime());
+  const MAX_DELAY_MS = 24 * 60 * 60 * 1000; // 최대 24시간
+  const delay = targetDate.getTime() - now.getTime();
+  return Math.min(Math.max(0, delay), MAX_DELAY_MS);
 };

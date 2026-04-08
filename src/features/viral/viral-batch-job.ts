@@ -1,6 +1,10 @@
 'use server';
 
 import { getAllAccounts } from '@/shared/config/accounts';
+import {
+  getCafeCommenterAccounts,
+  getCafeWriterAccounts,
+} from '@/shared/config/cafe-account-policy';
 import { getCurrentUserId } from '@/shared/config/user';
 import { getDefaultCafe, getCafeById, type CafeConfig } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
@@ -230,14 +234,20 @@ export const runViralBatch = async (
     return { ...parsed, index: idx, keywordType: detectKeywordType(parsed.keyword) };
   });
 
-  const writerCandidatesAll = writerAccountIds?.length
-    ? accounts.filter((a) => writerAccountIds.includes(a.id) && isAccountActive(a))
-    : accounts.filter((a) => isAccountActive(a));
+  const writerCandidatesByCafe = new Map<string, NaverAccount[]>();
 
   const accountAssignments = new Map<string, string>();
 
-  if (writerCandidatesAll.length > 0) {
-    for (const cafe of cafes) {
+  for (const cafe of cafes) {
+    const writerCandidates = getCafeWriterAccounts(accounts, cafe.cafeId, writerAccountIds)
+      .filter((account) => isAccountActive(account));
+    writerCandidatesByCafe.set(cafe.cafeId, writerCandidates);
+
+    if (writerCandidates.length === 0) {
+      console.warn(`[VIRAL] ${cafe.name} 글쓰기 가능한 계정 없음`);
+      continue;
+    }
+
       const cafeRecentWriters = recentWritersMap.get(cafe.cafeId) || [];
       const cafeKeywords = allParsedKeywords.filter((pk) =>
         getTargetCafes(pk.category).some((t) => t.cafeId === cafe.cafeId)
@@ -249,7 +259,7 @@ export const runViralBatch = async (
       const otherKeywords = cafeKeywords.filter((k) => !['정보', '일상'].includes(k.style));
 
       // 최근 발행자가 아닌 계정 우선 정렬
-      const sortedWriters = [...writerCandidatesAll].sort((a, b) => {
+      const sortedWriters = [...writerCandidates].sort((a, b) => {
         const ai = cafeRecentWriters.indexOf(a.id);
         const bi = cafeRecentWriters.indexOf(b.id);
         if (ai === -1 && bi === -1) return 0;
@@ -297,7 +307,6 @@ export const runViralBatch = async (
           console.log(`[VIRAL]   ${name}: ${parts.join(', ')}`);
         }
       }
-    }
   }
 
   for (let i = 0; i < keywords.length; i++) {
@@ -423,27 +432,27 @@ export const runViralBatch = async (
     // 대상 카페에만 발행
     for (const cafe of targetCafes) {
       const recentWriters = recentWritersMap.get(cafe.cafeId) || [];
-      const lastWriterId = lastWriterIdMap.get(cafe.cafeId);
 
       try {
         // 사전 배분된 계정 사용
         const assignmentKey = `${i}-${cafe.cafeId}`;
         const assignedAccountId = accountAssignments.get(assignmentKey);
+        const writerCandidates = writerCandidatesByCafe.get(cafe.cafeId) || [];
         let writerAccount: NaverAccount;
 
         if (assignedAccountId) {
-          const assigned = accounts.find((a) => a.id === assignedAccountId);
+          const assigned = writerCandidates.find((a) => a.id === assignedAccountId);
           if (assigned && isAccountActive(assigned)) {
             writerAccount = assigned;
           } else {
-            const fallback = writerCandidatesAll.find((a) => a.id !== assignedAccountId) || writerCandidatesAll[0];
+            const fallback = writerCandidates.find((a) => a.id !== assignedAccountId) || writerCandidates[0];
             if (!fallback) throw new Error('글 작성 가능한 계정 없음');
             writerAccount = fallback;
             console.warn(`[VIRAL] 배분 계정(${assignedAccountId}) 비활성 → ${writerAccount.nickname || writerAccount.id} 대체`);
           }
         } else {
-          if (writerCandidatesAll.length === 0) throw new Error('글 작성 가능한 계정 없음');
-          writerAccount = writerCandidatesAll[i % writerCandidatesAll.length];
+          if (writerCandidates.length === 0) throw new Error('글 작성 가능한 계정 없음');
+          writerAccount = writerCandidates[i % writerCandidates.length];
           console.warn(`[VIRAL] 배분 없음 → ${writerAccount.nickname || writerAccount.id} 대체 사용`);
         }
 
@@ -479,6 +488,12 @@ export const runViralBatch = async (
         const viralComments: ViralCommentsData = { comments: parsed!.comments };
         const commentCount = parsed!.comments.filter(c => c.type === 'comment').length;
         const replyCount = parsed!.comments.length - commentCount;
+        const commenterAccountIdsForCafe = getCafeCommenterAccounts(
+          accounts,
+          cafe.cafeId,
+          writerAccount.id,
+          commenterAccountIds
+        ).map(({ id }) => id);
 
         const postJobData: PostJobData = {
           type: 'post',
@@ -495,7 +510,7 @@ export const runViralBatch = async (
           skipComments: true,
           viralComments,
           images,
-          commenterAccountIds: commenterAccountIds?.length ? commenterAccountIds : undefined,
+          commenterAccountIds: commenterAccountIdsForCafe,
         };
 
         await addTaskJob(writerAccount.id, postJobData, postDelay);

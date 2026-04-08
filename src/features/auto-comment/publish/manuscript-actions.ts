@@ -1,6 +1,7 @@
 'use server';
 
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getCafeWriterAccounts } from '@/shared/config/cafe-account-policy';
 import { getCafeById, getDefaultCafe } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { addTaskJob } from '@/shared/lib/queue';
@@ -33,6 +34,16 @@ export const runManuscriptUploadAction = async (
   }
 
   const { accounts, cafe, settings } = ctx;
+  const writerAccounts = getCafeWriterAccounts(accounts, cafe.cafeId);
+
+  if (writerAccounts.length === 0) {
+    return {
+      success: false,
+      jobsAdded: 0,
+      message: `글쓰기 가능한 계정이 없습니다 (${cafe.name})`,
+    };
+  }
+
   const enableDailyPostLimit = settings.limits?.enableDailyPostLimit ?? true;
 
   let jobsAdded = 0;
@@ -41,7 +52,7 @@ export const runManuscriptUploadAction = async (
 
   const accountRemainingPosts: Map<string, number> = new Map();
   if (enableDailyPostLimit) {
-    for (const account of accounts) {
+    for (const account of writerAccounts) {
       const remaining = await getRemainingPostsToday(account.id, cafe.cafeId, account.dailyPostLimit);
       accountRemainingPosts.set(account.id, remaining);
     }
@@ -49,7 +60,7 @@ export const runManuscriptUploadAction = async (
 
   for (let i = 0; i < manuscripts.length; i++) {
     const manuscript = manuscripts[i];
-    const writerAccount = accounts[i % accounts.length];
+    const writerAccount = writerAccounts[i % writerAccounts.length];
 
     if (!isAccountActive(writerAccount)) {
       console.log(`[MANUSCRIPT] ${writerAccount.id} 비활동 시간대 - 스킵`);
@@ -118,7 +129,7 @@ export const runManuscriptUploadAction = async (
   return {
     success: jobsAdded > 0,
     jobsAdded,
-    message: `${jobsAdded}개 원고가 큐에 추가됨 (${accounts.length}개 계정 병렬 처리)${skipMsg}`,
+    message: `${jobsAdded}개 원고가 큐에 추가됨 (${writerAccounts.length}개 글쓰기 계정 처리)${skipMsg}`,
   };
 };
 

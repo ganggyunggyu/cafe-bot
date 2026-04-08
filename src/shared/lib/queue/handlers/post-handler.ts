@@ -118,6 +118,7 @@ const saveArticleOnly = async (
         articleUrl,
         writerAccountId,
         status: 'published',
+        postType: postData.postType,
         commentCount: 0,
         replyCount: 0,
       });
@@ -310,6 +311,7 @@ const handlePostSuccess = async (
         articleUrl,
         writerAccountId,
         status: 'published',
+        postType: postData.postType,
         commentCount: 0,
         replyCount: 0,
         comments: [],

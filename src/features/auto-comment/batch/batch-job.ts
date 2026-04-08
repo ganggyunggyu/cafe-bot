@@ -1,6 +1,10 @@
 import mongoose, { HydratedDocument } from 'mongoose';
 import { closeAllContexts } from '@/shared/lib/multi-session';
 import { getAllAccounts } from '@/shared/config/accounts';
+import {
+  getCafeCommenterAccounts,
+  getCafeWriterAccounts,
+} from '@/shared/config/cafe-account-policy';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { BatchJobLog, type IBatchJobLog, canPostToday } from '@/shared/models';
@@ -13,7 +17,6 @@ import {
   type KeywordResult,
   type ProgressCallback,
   DEFAULT_DELAYS,
-  getWriterAccount,
 } from './types';
 import { processKeyword } from './keyword-processor';
 
@@ -64,6 +67,18 @@ export const runBatchJob = async (
 
   const { cafeId, menuId, name: cafeName } = cafe;
   console.log(`[BATCH] 카페: ${cafeName} (${cafeId})`)
+  const writerAccounts = getCafeWriterAccounts(accounts, cafeId);
+
+  if (writerAccounts.length === 0) {
+    console.log(`[BATCH] ${cafeName} 글쓰기 가능한 계정 없음`);
+    return {
+      success: false,
+      totalKeywords: keywords.length,
+      completed: 0,
+      failed: keywords.length,
+      results: [],
+    };
+  }
 
   let jobLog: HydratedDocument<IBatchJobLog> | null = null;
   let dbConnected = false;
@@ -145,7 +160,8 @@ export const runBatchJob = async (
   try {
     for (let i = 0; i < keywords.length; i++) {
       const rawKeyword = keywords[i];
-      const writerAccount = getWriterAccount(accounts, i);
+      const writerAccount = writerAccounts[i % writerAccounts.length];
+      const commenterAccounts = getCafeCommenterAccounts(accounts, cafeId, writerAccount.id);
 
       if (!isAccountActive(writerAccount)) {
         console.log(`[BATCH] ${writerAccount.id} 비활동 시간대 - 스킵`);
@@ -173,7 +189,8 @@ export const runBatchJob = async (
           menuId,
           postOptions,
           delays: effectiveDelays,
-          accounts,
+          writerAccount,
+          commenterAccounts,
           dbConnected,
           onProgress,
         });

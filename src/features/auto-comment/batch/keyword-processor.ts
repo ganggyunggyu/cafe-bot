@@ -13,8 +13,6 @@ import {
   type PostOptions,
   type DelayConfig,
   type ProgressCallback,
-  getWriterAccount,
-  getCommenterAccounts,
 } from './types';
 import { getRandomCommentCount } from './random';
 import { parseKeywordWithCategory } from './keyword-utils';
@@ -40,7 +38,8 @@ export interface KeywordProcessParams {
   menuId: string;
   postOptions?: PostOptions;
   delays: DelayConfig;
-  accounts: NaverAccount[];
+  writerAccount: NaverAccount;
+  commenterAccounts: NaverAccount[];
   dbConnected: boolean;
   onProgress?: ProgressCallback;
 }
@@ -134,13 +133,12 @@ export const processKeyword = async ({
   menuId,
   postOptions,
   delays,
-  accounts,
+  writerAccount,
+  commenterAccounts,
   dbConnected,
   onProgress,
 }: KeywordProcessParams): Promise<KeywordProcessResult> => {
   const { keyword, category } = parseKeywordWithCategory(keywordInput);
-  const writerAccount = getWriterAccount(accounts, keywordIndex);
-  const commenterAccounts = getCommenterAccounts(accounts, writerAccount.id);
 
   const progressLabel = `[${keywordIndex + 1}/${totalKeywords}] "${keyword}"${category ? ` (${category})` : ''}`;
 
@@ -206,6 +204,7 @@ export const processKeyword = async ({
         articleUrl,
         writerAccountId: writerAccount.id,
         status: 'published',
+        postType: 'ad',
         commentCount: 0,
         replyCount: 0,
       });
@@ -228,7 +227,6 @@ export const processKeyword = async ({
     const commentAuthors: Array<{ id: string; nickname: string }> = [];
     const commentIds: Array<string | undefined> = [];
     const commentCount = getRandomCommentCount();
-    const postContent = generated.content;
 
     for (let j = 0; j < commentCount; j++) {
       const commenter = commenterAccounts[j % commenterAccounts.length];

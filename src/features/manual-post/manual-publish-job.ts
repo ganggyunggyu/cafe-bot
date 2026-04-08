@@ -1,6 +1,7 @@
 'use server';
 
 import { getAllAccounts } from '@/shared/config/accounts';
+import { getCafeWriterAccounts } from '@/shared/config/cafe-account-policy';
 import { getDefaultCafe, getCafeById } from '@/shared/config/cafes';
 import { connectDB } from '@/shared/lib/mongodb';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
@@ -12,7 +13,6 @@ import type {
   ManualPublishInput,
   ManualPublishResult,
   ManuscriptResult,
-  ManuscriptFolder,
 } from './types';
 
 export const runManualPublish = async (
@@ -60,6 +60,22 @@ export const runManualPublish = async (
   const settings = await getQueueSettings();
   await startAllTaskWorkers();
 
+  const writerAccounts = getCafeWriterAccounts(accounts, cafe.cafeId);
+  if (writerAccounts.length === 0) {
+    return {
+      success: false,
+      totalManuscripts: manuscripts.length,
+      completed: 0,
+      failed: manuscripts.length,
+      results: manuscripts.map((m) => ({
+        folderName: m.folderName,
+        title: m.title,
+        success: false,
+        error: `글쓰기 가능한 계정 없음 (${cafe.name})`,
+      })),
+    };
+  }
+
   const results: ManuscriptResult[] = [];
   let completed = 0;
   let failed = 0;
@@ -78,19 +94,19 @@ export const runManualPublish = async (
     });
 
     try {
-      const activeAccounts = accounts.filter((a) => isAccountActive(a));
-      if (activeAccounts.length === 0) {
+      const activeWriterAccounts = writerAccounts.filter((a) => isAccountActive(a));
+      if (activeWriterAccounts.length === 0) {
         throw new Error('활동 가능한 계정 없음');
       }
 
       // 라운드 로빈 + 랜덤: 마지막 글쓴이 제외하고 선택
       let writerAccount: NaverAccount;
-      if (activeAccounts.length === 1) {
-        writerAccount = activeAccounts[0];
+      if (activeWriterAccounts.length === 1) {
+        writerAccount = activeWriterAccounts[0];
       } else {
         const availableWriters = lastWriterId
-          ? activeAccounts.filter((a) => a.id !== lastWriterId)
-          : activeAccounts;
+          ? activeWriterAccounts.filter((a) => a.id !== lastWriterId)
+          : activeWriterAccounts;
         const baseIndex = i % availableWriters.length;
         const randomOffset = Math.floor(Math.random() * Math.min(2, availableWriters.length));
         const writerIndex = (baseIndex + randomOffset) % availableWriters.length;

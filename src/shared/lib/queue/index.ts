@@ -101,6 +101,10 @@ const generateJobId = (data: TaskJobData): string => {
       const hash = getContentHash(`${data.cafeId}_${data.articleId}`);
       return `like_${data.accountId}_${hash}${getRescheduleSuffix(data)}`;
     }
+    case 'disable-comment': {
+      const hash = getContentHash(`${data.cafeId}_${data.articleId}`);
+      return `disablecomment_${data.accountId}_${hash}${getRescheduleSuffix(data)}`;
+    }
   }
 };
 
