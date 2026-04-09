@@ -7,10 +7,12 @@
     "dev:next": "next dev --port 3007",
     "build": "next build",
     "start": "next start --port 3007",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:strict": "eslint --max-warnings 0 --no-warn-ignored",
     "bull-board": "npx tsx scripts/bull-board.ts",
     "test:harness": "tsx --test src/shared/lib/queue/task-job-harness.test.ts src/shared/lib/queue/sequence-harness.test.ts scripts/harness-verify.test.ts",
-    "verify:task": "tsx scripts/harness-verify.ts"
+    "verify:task": "tsx scripts/harness-verify.ts",
+    "verify:ci": "npm run lint -- --max-warnings=0 && npm run test:harness && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

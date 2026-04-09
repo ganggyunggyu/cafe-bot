@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 export interface HarnessVerifyOptions {
+  lintTargets: string[];
   testCommands: string[];
   verifyCommands: string[];
   commitMessage?: string;
@@ -29,6 +30,7 @@ const requireValue = (argv: string[], index: number, flag: string): string => {
 export const parseHarnessVerifyArgs = (
   argv: string[],
 ): HarnessVerifyOptions => {
+  const lintTargets: string[] = [];
   const testCommands: string[] = [];
   const verifyCommands: string[] = [];
   let commitMessage: string | undefined;
@@ -37,6 +39,13 @@ export const parseHarnessVerifyArgs = (
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+
+    if (arg === '--lint-target') {
+      const value = requireValue(argv, index, '--lint-target');
+      lintTargets.push(value);
+      index += 1;
+      continue;
+    }
 
     if (arg === '--test') {
       const value = requireValue(argv, index, '--test');
@@ -71,8 +80,8 @@ export const parseHarnessVerifyArgs = (
     if (arg === '--help') {
       throw new Error(
         [
-          'Usage: npm run verify:task -- --test "<command>" [--verify "<command>"] [--commit "<message>"]',
-          '기본 실행: npm run lint + npm run test:harness + --test ...',
+          'Usage: npm run verify:task -- --lint-target "<path>" --test "<command>" [--verify "<command>"] [--commit "<message>"]',
+          '기본 실행: strict lint + npm run test:harness + --test ...',
         ].join('\n'),
       );
     }
@@ -84,7 +93,12 @@ export const parseHarnessVerifyArgs = (
     throw new Error('최소 1개의 --test "<command>" 가 필요함');
   }
 
+  if (includeLint && lintTargets.length === 0) {
+    throw new Error('최소 1개의 --lint-target "<path>" 가 필요함');
+  }
+
   return {
+    lintTargets,
     testCommands,
     verifyCommands,
     commitMessage,
@@ -93,11 +107,17 @@ export const parseHarnessVerifyArgs = (
   };
 };
 
+export const buildStrictLintCommand = (targets: string[]): string => [
+  'npm run lint:strict --',
+  ...targets.map((target) => quoteShellArg(target)),
+].join(' ');
+
 export const buildHarnessVerifySteps = (
   options: HarnessVerifyOptions,
 ): HarnessVerifyStep[] => {
   const steps: HarnessVerifyStep[] = [];
   const {
+    lintTargets,
     testCommands,
     verifyCommands,
     commitMessage,
@@ -108,8 +128,8 @@ export const buildHarnessVerifySteps = (
   if (includeLint) {
     steps.push({
       kind: 'lint',
-      label: 'lint',
-      command: 'npm run lint',
+      label: 'lint:strict',
+      command: buildStrictLintCommand(lintTargets),
     });
   }
 

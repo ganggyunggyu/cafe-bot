@@ -31,7 +31,7 @@
 
 ### 4. 모든 작업은 검증 루프까지 포함하기
 
-- 테스트 코드 작성/수정 → 구현 → lint → 관련 테스트 실행 → 원하는 결과 확인 순서로 진행
+- 테스트 코드 작성/수정 → 구현 → strict lint → 관련 테스트 실행 → 원하는 결과 확인 순서로 진행
 - 결과 확인은 테스트 출력, UI 변화, 로그, 하네스 결과 중 해당 작업에 맞는 source of truth로 검증
 - 작업 종료 시에는 의미 단위 커밋이 가능한 상태로 변경 범위를 정리
 - 새 하네스가 없으면 최소한 기존 테스트 또는 새 계약 테스트를 추가해 회귀 지점을 남김
@@ -57,6 +57,8 @@ npm run test:harness
 
 ```bash
 npm run verify:task -- \
+  --lint-target "src/path/to/file.ts" \
+  --lint-target "scripts/path/to/file.ts" \
   --test "npx tsx --test <관련 테스트 파일>" \
   --verify "<원하는 결과를 확인하는 명령>"
 ```
@@ -66,7 +68,8 @@ npm run verify:task -- \
 ## verify:task 규칙
 
 - `--test` 는 최소 1개 필수다
-- 기본적으로 `npm run lint` 와 `npm run test:harness` 를 먼저 실행한다
+- `--lint-target` 은 최소 1개 필수이며, 현재 작업에서 수정한 코드 파일이나 디렉터리만 넣는다
+- 기본적으로 `npm run lint:strict -- <lint-targets...>` 와 `npm run test:harness` 를 먼저 실행한다
 - `--verify` 는 선택이지만, 가능한 한 실제 결과 확인 명령을 함께 넣는다
 - `--no-lint`, `--no-harness` 로 생략할 수 있지만 생략 이유를 작업 로그에 남긴다
 - `--commit` 을 주면 `git status --short` 확인 뒤 `git commit -m` 까지 수행한다
