@@ -38,7 +38,8 @@ LOGIN_ID에 따라 수정 원고 스타일이 자동 결정됩니다:
 | LOGIN_ID | 대상 카페 | 수정 스타일 | 프롬프트 |
 |----------|----------|-----------|---------|
 | `qwzx16` | 벤타쿠/으스스/다향만리 | 애니 스타일 | `buildViralPrompt` (애니) |
-| `21lab` | 샤넬/쇼핑/건강 | 광고 스타일 | `buildOwnKeywordPrompt` |
+| `21lab` | 샤넬/쇼핑/건강 자사 키워드 | 광고 스타일 | `buildOwnKeywordPrompt` |
+| `21lab` | 샤넬/쇼핑/건강 타사 키워드 | 타사옹호 스타일 | `buildCompetitorAdvocacyPrompt` |
 
 ### 4단계: 사용자 확인
 
@@ -56,6 +57,10 @@ LOGIN_ID에 따라 수정 원고 스타일이 자동 결정됩니다:
 **실행 전 반드시 LOGIN_ID 확인:**
 - 벤타쿠 등 테스트 카페: `qwzx16`
 - 샤넬/쇼핑/건강 카페: `21lab`
+
+**샤넬오픈런 카테고리 규칙 (필수):**
+- `cafeId=25460974` 인 글은 수정 시에도 게시판을 반드시 `_ 일상샤반사 📆`로 지정합니다.
+- `_ 오늘의 쇼핑 🛒` 등 다른 게시판으로 두지 않습니다.
 
 ```bash
 npx tsx --env-file=.env.local scripts/run-modify.ts

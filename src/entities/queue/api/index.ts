@@ -12,7 +12,7 @@ export type AllQueueStatus = QueueOverview;
 export interface JobDetail {
   id: string;
   accountId: string;
-  type: 'post' | 'comment' | 'reply' | 'like';
+  type: 'post' | 'comment' | 'reply' | 'like' | 'disable-comment';
   cafeId: string;
   cafeName?: string;
   status: 'waiting' | 'active' | 'delayed' | 'completed' | 'failed';
@@ -38,7 +38,7 @@ export interface JobsPage {
 
 export interface JobsFilter {
   status?: 'waiting' | 'active' | 'delayed' | 'completed' | 'failed' | 'all';
-  type?: 'post' | 'comment' | 'reply' | 'like' | 'all';
+  type?: 'post' | 'comment' | 'reply' | 'like' | 'disable-comment' | 'all';
   accountId?: string;
   cafeId?: string;
 }
@@ -50,6 +50,7 @@ export interface QueueSummary {
     comment: { delayed: number; waiting: number; active: number; completed: number; failed: number };
     reply: { delayed: number; waiting: number; active: number; completed: number; failed: number };
     like: { delayed: number; waiting: number; active: number; completed: number; failed: number };
+    'disable-comment': { delayed: number; waiting: number; active: number; completed: number; failed: number };
   };
   byCafe: { cafeId: string; cafeName: string; count: number }[];
   byAccount: { accountId: string; count: number }[];
@@ -269,6 +270,7 @@ export const getQueueSummary = async (): Promise<QueueSummary> => {
       comment: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
       reply: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
       like: { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
+      'disable-comment': { delayed: 0, waiting: 0, active: 0, completed: 0, failed: 0 },
     },
     byCafe: [],
     byAccount: [],

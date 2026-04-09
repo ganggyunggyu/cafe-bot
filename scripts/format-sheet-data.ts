@@ -82,8 +82,8 @@ for (const entry of entries) {
   const commentLines = comments.split('\n').filter((l) => /^\[댓글\d+\]/.test(l.trim()));
   if (commentLines.length < 5) issues.push(`댓글 ${commentLines.length}개`);
 
-  // 한,려담원 언급 확인
-  const hasProduct = comments.includes('한,려담원') || comments.includes('한려담원');
+  // 한려담원 언급 확인
+  const hasProduct = comments.includes('한려담원') || comments.includes('한려담원');
   if (!hasProduct) issues.push('제품 미언급');
 
   // 반박/의심 댓글 체크

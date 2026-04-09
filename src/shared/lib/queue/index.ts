@@ -6,36 +6,14 @@ import {
   JobResult,
   getTaskQueueName,
   GENERATE_QUEUE_NAME,
-  PostJobData,
 } from './types';
 import { getQueueSettings, getRandomDelay } from '@/shared/models/queue-settings';
-import { createHash } from 'crypto';
-
-const getContentHash = (str: string): string => {
-  return createHash('md5').update(str).digest('hex').slice(0, 8);
-};
-
-const getSequenceSuffix = (data: { sequenceId?: string; sequenceIndex?: number }): string => {
-  if (!data.sequenceId || data.sequenceIndex === undefined) {
-    return '';
-  }
-
-  return `_seq_${data.sequenceId}_${data.sequenceIndex}`;
-};
-
-const getRescheduleSuffix = (data: { rescheduleToken?: string }): string => {
-  if (!data.rescheduleToken) {
-    return '';
-  }
-
-  return `_r${data.rescheduleToken}`;
-};
-
-export const createRescheduleToken = (): string => {
-  const now = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `${now}_${rand}`;
-};
+import {
+  createAddTaskJob,
+  createRescheduleToken,
+  generateTaskJobId,
+  resolveTaskJobDelay,
+} from './task-job-harness';
 
 const taskQueues: Map<string, Queue<TaskJobData, JobResult>> = new Map();
 
@@ -80,70 +58,12 @@ export const getGenerateQueue = (): Queue<GenerateJobData, JobResult> => {
   return generateQueue;
 };
 
-const generateJobId = (data: TaskJobData): string => {
-  switch (data.type) {
-    case 'post': {
-      const postData = data as PostJobData;
-      const hash = getContentHash(postData.subject);
-      return `post_${data.accountId}_${hash}${getRescheduleSuffix(postData)}`;
-    }
-    case 'comment': {
-      const sequenceSuffix = getSequenceSuffix(data);
-      const rescheduleSuffix = getRescheduleSuffix(data);
-      return `comment_${data.accountId}_${data.articleId}_${getContentHash(data.content)}${sequenceSuffix}${rescheduleSuffix}`;
-    }
-    case 'reply': {
-      const sequenceSuffix = getSequenceSuffix(data);
-      const rescheduleSuffix = getRescheduleSuffix(data);
-      return `reply_${data.accountId}_${data.articleId}_${data.commentIndex}_${getContentHash(data.content)}${sequenceSuffix}${rescheduleSuffix}`;
-    }
-    case 'like': {
-      const hash = getContentHash(`${data.cafeId}_${data.articleId}`);
-      return `like_${data.accountId}_${hash}${getRescheduleSuffix(data)}`;
-    }
-    case 'disable-comment': {
-      const hash = getContentHash(`${data.cafeId}_${data.articleId}`);
-      return `disablecomment_${data.accountId}_${hash}${getRescheduleSuffix(data)}`;
-    }
-  }
-};
-
-export const addTaskJob = async (
-  accountId: string,
-  data: TaskJobData,
-  delay?: number
-): Promise<Job<TaskJobData, JobResult> | null> => {
-  const queue = getTaskQueue(accountId);
-  const settings = await getQueueSettings();
-
-  let jobDelay = delay;
-  if (jobDelay === undefined) {
-    if (data.type === 'post') {
-      jobDelay = getRandomDelay(settings.delays.betweenPosts);
-    } else {
-      jobDelay = getRandomDelay(settings.delays.betweenComments);
-    }
-  }
-
-  const jobId = generateJobId(data);
-
-  const existingJob = await queue.getJob(jobId);
-  if (existingJob) {
-    const state = await existingJob.getState();
-    if (['waiting', 'delayed', 'active'].includes(state)) {
-      console.log(`[QUEUE] 중복 Job 스킵: ${jobId} (상태: ${state})`);
-      return null;
-    }
-  }
-
-  const job = await queue.add(data.type, data, {
-    delay: jobDelay,
-    jobId,
-  });
-
-  console.log(`[QUEUE] Job 추가: ${data.type} (${accountId}), 딜레이: ${Math.round(jobDelay / 1000)}초`);
-  return job;
-};
+export const addTaskJob = createAddTaskJob<Job<TaskJobData, JobResult>>({
+  getQueueSettings,
+  getRandomDelay,
+  getTaskQueue,
+  log: (message: string) => console.log(message),
+});
 
 export const addGenerateJob = async (
   data: GenerateJobData
@@ -189,3 +109,4 @@ export const getActiveQueueIds = (): string[] => {
 };
 
 export { startAllTaskWorkers } from './workers';
+export { createRescheduleToken, generateTaskJobId, resolveTaskJobDelay };

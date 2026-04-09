@@ -171,8 +171,13 @@ const changeProfileImageInCafe = async (
 
 const main = async () => {
   await connectDB();
+  const db = mongoose.connection.db;
 
-  const accounts = await mongoose.connection.db
+  if (!db) {
+    throw new Error('MongoDB database connection is not ready');
+  }
+
+  const accounts = await db
     .collection('accounts')
     .find({ userId: USER_ID, isActive: true })
     .toArray();

@@ -18,6 +18,7 @@
 
 # next.js
 /.next/
+/.next-build-verify/
 /out/
 
 # production

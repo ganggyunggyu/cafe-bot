@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev --port 3007\" \"npx tsx scripts/bull-board.ts\"",
-    "dev:next": "next dev --port 3007",
-    "build": "next build",
-    "start": "next start --port 3007",
-    "lint": "eslint .",
-    "lint:strict": "eslint --max-warnings 0 --no-warn-ignored",
-    "bull-board": "npx tsx scripts/bull-board.ts",
-    "test:harness": "tsx --test src/shared/lib/queue/task-job-harness.test.ts src/shared/lib/queue/sequence-harness.test.ts scripts/harness-verify.test.ts",
-    "verify:task": "tsx scripts/harness-verify.ts",
-    "verify:ci": "npm run lint -- --max-warnings=0 && npm run test:harness && npm run build"
+    "dev": "concurrently \"node scripts/run-with-project-root.mjs next dev --port 3007\" \"node scripts/run-with-project-root.mjs tsx scripts/bull-board.ts\"",
+    "dev:next": "node scripts/run-with-project-root.mjs next dev --port 3007",
+    "build": "node scripts/run-with-project-root.mjs next build",
+    "start": "node scripts/run-with-project-root.mjs next start --port 3007",
+    "lint": "node scripts/run-with-project-root.mjs eslint .",
+    "lint:strict": "node scripts/run-with-project-root.mjs node scripts/eslint-gate.mjs",
+    "lint:strict:all": "npm run lint -- --max-warnings=0",
+    "bull-board": "node scripts/run-with-project-root.mjs tsx scripts/bull-board.ts",
+    "test:harness": "node scripts/run-with-project-root.mjs tsx --test src/shared/lib/queue/task-job-harness.test.ts src/shared/lib/queue/sequence-harness.test.ts scripts/harness-verify.test.ts",
+    "test:tooling": "node scripts/run-with-project-root.mjs node --test scripts/eslint-gate.test.mjs scripts/run-with-project-root.test.mjs",
+    "verify:task": "node scripts/run-with-project-root.mjs tsx scripts/harness-verify.ts",
+    "verify:ci": "npm run lint:strict && npm run test:harness && npm run test:tooling && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

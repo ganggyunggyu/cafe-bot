@@ -2,24 +2,28 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useAtom } from 'jotai';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/shared/lib/cn';
-import { Select, Button, Checkbox, ExecuteConfirmModal, type SettingItem } from '@/shared/ui';
+import { Button, Checkbox, ExecuteConfirmModal, Select, type SettingItem } from '@/shared/ui';
 import { toast } from '@/shared/lib/toast';
 import { PostOptionsUI } from '@/features/auto-comment/batch/post-options-ui';
-import {
-  postOptionsAtom,
-  cafesAtom,
-  cafesInitializedAtom,
-} from '@/entities/store';
-import { getCafesAction, getAccountsAction, type AccountData } from '@/features/accounts/actions';
+import { cafesAtom, cafesInitializedAtom, postOptionsAtom } from '@/entities/store';
+import { getAccountsAction, getCafesAction, type AccountData } from '@/features/accounts/actions';
 import { getDelaySettings } from '@/shared/hooks/use-delay-settings';
 import { generateKeywords } from '@/shared/api/keyword-gen-api';
 import { userAtom } from '@/shared/store';
 import { getKeywordPromptProfileForLoginId } from '@/shared/config/user-profile';
+import {
+  getImageSummary,
+  getModelLabel,
+  getRoleCounts,
+  getRunReadiness,
+  parseKeywordLines,
+  type AccountRole,
+  type ViralPartialResult,
+} from './viral-batch-ui.helpers';
 import type { ViralBatchResult } from './viral-batch-job';
-
-type AccountRole = 'both' | 'writer' | 'commenter' | 'disabled';
+import { ViralBatchSummaryCard } from './ui/viral-batch-summary-card';
+import { ViralBatchStatusPanel } from './ui/viral-batch-status-panel';
 
 interface ViralPreset {
   name: string;
@@ -33,25 +37,8 @@ interface ViralPreset {
 
 const PRESET_STORAGE_KEY = 'viral-batch-presets';
 
-const loadPresets = (): ViralPreset[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(PRESET_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-};
-
-const savePresets = (presets: ViralPreset[]) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
-};
-
 const MODELS = [
-  // 기본
   { value: '', label: '기본 (Gemini 3.1 Pro)' },
-  // OpenAI
   { value: 'gpt-5.2-2025-12-11', label: 'GPT 5.2' },
   { value: 'gpt-5.1-2025-11-13', label: 'GPT 5.1' },
   { value: 'gpt-5-2025-08-07', label: 'GPT 5' },
@@ -60,25 +47,50 @@ const MODELS = [
   { value: 'gpt-4o', label: 'GPT-4o API' },
   { value: 'gpt-4.1-2025-04-14', label: 'GPT 4.1' },
   { value: 'gpt-4.1-mini-2025-04-14', label: 'GPT 4.1 Mini' },
-  // Google
   { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
-  // Anthropic
   { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
   { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
   { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
-  // Upstage
   { value: 'solar-pro', label: 'Solar Pro (한국어)' },
   { value: 'solar-pro2', label: 'Solar Pro 2 (한국어)' },
-  // xAI
   { value: 'grok-4-1-fast-non-reasoning', label: 'Grok 4.1' },
   { value: 'grok-4-1-fast-reasoning', label: 'Grok 4.1 추론' },
   { value: 'grok-4-fast-non-reasoning', label: 'Grok 4' },
   { value: 'grok-4-fast-reasoning', label: 'Grok 4 추론' },
-  // DeepSeek
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
   { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner' },
+];
+
+const loadPresets = (): ViralPreset[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const data = localStorage.getItem(PRESET_STORAGE_KEY);
+
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePresets = (presets: ViralPreset[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+};
+
+const IMAGE_COUNT_OPTIONS = [
+  { value: '0', label: '랜덤 1~2장' },
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => ({
+    value: String(count),
+    label: `${count}장`,
+  })),
 ];
 
 export const ViralBatchUI = () => {
@@ -92,43 +104,145 @@ export const ViralBatchUI = () => {
   const [postOptions, setPostOptions] = useAtom(postOptionsAtom);
   const [result, setResult] = useState<ViralBatchResult | null>(null);
   const [user] = useAtom(userAtom);
-
   const [enableImage, setEnableImage] = useState(false);
   const [imageSource, setImageSource] = useState<'ai' | 'search'>('search');
   const [imageCount, setImageCount] = useState(0);
-
-  // 실시간 진행 결과
-  interface PartialResult {
-    keyword: string;
-    success: boolean;
-    title?: string;
-    error?: string;
-  }
-  const [partialResults, setPartialResults] = useState<PartialResult[]>([]);
+  const [partialResults, setPartialResults] = useState<ViralPartialResult[]>([]);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [showAccountRoles, setShowAccountRoles] = useState(false);
-
-  // 계정 역할 상태
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [accountRoles, setAccountRoles] = useState<Map<string, AccountRole>>(new Map());
-
-  // 프리셋 상태
   const [presets, setPresets] = useState<ViralPreset[]>([]);
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
+  const [showGenerator, setShowGenerator] = useState(false);
+  const [genCount, setGenCount] = useState(30);
+  const [genShuffle, setGenShuffle] = useState(true);
+  const [genNote, setGenNote] = useState('');
 
-  // 프리셋 로드 (클라이언트에서만)
+  const inputClassName = cn(
+    'w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink',
+    'placeholder:text-ink-tertiary transition-all',
+    'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
+  );
+  const sectionClassName = cn(
+    'overflow-hidden rounded-[28px] border border-border-light bg-[linear-gradient(180deg,var(--surface),color-mix(in_srgb,var(--surface-muted)_60%,var(--surface)))] shadow-sm'
+  );
+  const sectionHeadingClassName = cn('text-xl font-semibold tracking-tight text-ink');
+  const labelClassName = cn('text-sm font-medium text-ink');
+  const helperTextClassName = cn('text-sm leading-6 text-ink-muted');
+
   useEffect(() => {
     setPresets(loadPresets());
   }, []);
 
-  const handleSavePreset = () => {
-    if (!newPresetName.trim()) {
-      toast.warning('프리셋 이름을 입력해주세요');
+  useEffect(() => {
+    if (cafesInitialized) {
       return;
     }
-    const newPreset: ViralPreset = {
-      name: newPresetName.trim(),
+
+    const loadCafes = async () => {
+      const cafeData = await getCafesAction();
+      const defaultCafe = cafeData.find(({ isDefault }) => isDefault) || cafeData[0];
+
+      setCafes(cafeData);
+
+      if (defaultCafe) {
+        setSelectedCafeIds([defaultCafe.cafeId]);
+      }
+
+      setCafesInitialized(true);
+    };
+
+    loadCafes();
+  }, [cafesInitialized, setCafes, setCafesInitialized]);
+
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const accountData = await getAccountsAction();
+      const nextRoles = new Map<string, AccountRole>();
+
+      accountData.forEach(({ id }) => nextRoles.set(id, 'both'));
+
+      setAccounts(accountData);
+      setAccountRoles(nextRoles);
+    };
+
+    loadAccounts();
+  }, []);
+
+  const selectedCafes = cafes.filter(({ cafeId }) => selectedCafeIds.includes(cafeId));
+  const selectedCafeNames = selectedCafes.map(({ name }) => name);
+  const categories = [...new Set(selectedCafes.flatMap(({ categories: cafeCategories }) => cafeCategories))];
+  const parsedKeywords = parseKeywordLines(keywords);
+  const keywordCount = parsedKeywords.length;
+  const { activeCount, commenterCount, writerCount } = getRoleCounts(accounts, accountRoles);
+  const writerAccountIds = accounts
+    .filter(({ id }) => ['both', 'writer'].includes(accountRoles.get(id) || 'both'))
+    .map(({ id }) => id);
+  const commenterAccountIds = accounts
+    .filter(({ id }) => ['both', 'commenter'].includes(accountRoles.get(id) || 'both'))
+    .map(({ id }) => id);
+  const modelLabel = getModelLabel(model, MODELS);
+  const imageSummary = getImageSummary(enableImage, imageSource, imageCount);
+  const readinessItems = [
+    {
+      label: '키워드 큐',
+      ready: keywordCount > 0,
+      detail: keywordCount > 0 ? `${keywordCount}개 준비됨` : '1개 이상 필요',
+    },
+    {
+      label: '카페 연결',
+      ready: selectedCafeIds.length > 0,
+      detail: selectedCafeIds.length > 0 ? `${selectedCafeIds.length}개 선택` : '카페 선택 필요',
+    },
+    {
+      label: '글 계정',
+      ready: writerCount > 0,
+      detail: writerCount > 0 ? `${writerCount}개 활성` : '글 계정 필요',
+    },
+    {
+      label: '댓글 계정',
+      ready: commenterCount > 0,
+      detail: commenterCount > 0 ? `${commenterCount}개 활성` : '댓글 계정 필요',
+    },
+  ];
+  const blockers = readinessItems
+    .filter(({ ready }) => !ready)
+    .map(({ label, detail }) => `${label}: ${detail}`);
+  const readinessCount = readinessItems.filter(({ ready }) => ready).length;
+  const readinessTotal = readinessItems.length;
+  const canRunBatch = blockers.length === 0;
+  const runReadiness = getRunReadiness({
+    commenterCount,
+    isPending,
+    keywordCount,
+    selectedCafeCount: selectedCafeIds.length,
+    writerCount,
+  });
+  const modalSettings: SettingItem[] = [
+    { label: '키워드', value: `${keywordCount}개`, highlight: true },
+    {
+      label: '카페',
+      value: selectedCafeIds.length > 0 ? `${selectedCafeIds.length}개 (${selectedCafeNames.join(', ')})` : '선택 안됨',
+    },
+    { label: 'AI 모델', value: modelLabel },
+    { label: '이미지', value: imageSummary },
+    { label: '글 작성 계정', value: `${writerCount}개` },
+    { label: '댓글 작성 계정', value: `${commenterCount}개` },
+  ];
+
+  const handleSavePreset = () => {
+    const presetName = newPresetName.trim();
+
+    if (!presetName) {
+      toast.warning('프리셋 이름을 입력해주세요');
+
+      return;
+    }
+
+    const nextPreset: ViralPreset = {
+      name: presetName,
       cafeIds: selectedCafeIds,
       model,
       enableImage,
@@ -136,11 +250,12 @@ export const ViralBatchUI = () => {
       imageCount,
       accountRoles: Object.fromEntries(accountRoles),
     };
-    const updatedPresets = [...presets.filter((p) => p.name !== newPreset.name), newPreset];
-    setPresets(updatedPresets);
-    savePresets(updatedPresets);
+    const nextPresets = [...presets.filter(({ name }) => name !== nextPreset.name), nextPreset];
+
+    setPresets(nextPresets);
+    savePresets(nextPresets);
     setNewPresetName('');
-    toast.success(`프리셋 "${newPreset.name}" 저장됨`);
+    toast.success(`프리셋 "${nextPreset.name}" 저장됨`);
   };
 
   const handleLoadPreset = (preset: ViralPreset) => {
@@ -150,83 +265,41 @@ export const ViralBatchUI = () => {
     setImageSource(preset.imageSource);
     setImageCount(preset.imageCount);
     setAccountRoles(new Map(Object.entries(preset.accountRoles) as [string, AccountRole][]));
-    toast.success(`프리셋 "${preset.name}" 불러옴`);
     setShowPresetPanel(false);
+    toast.success(`프리셋 "${preset.name}" 불러옴`);
   };
 
   const handleDeletePreset = (presetName: string) => {
-    const updatedPresets = presets.filter((p) => p.name !== presetName);
-    setPresets(updatedPresets);
-    savePresets(updatedPresets);
+    const nextPresets = presets.filter(({ name }) => name !== presetName);
+
+    setPresets(nextPresets);
+    savePresets(nextPresets);
     toast.success(`프리셋 "${presetName}" 삭제됨`);
   };
-
-  // 키워드 생성 상태
-  const [showGenerator, setShowGenerator] = useState(false);
-  const [genCount, setGenCount] = useState(30);
-  const [genShuffle, setGenShuffle] = useState(true);
-  const [genNote, setGenNote] = useState('');
-
-  const inputClassName = cn(
-    'w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink',
-    'placeholder:text-ink-tertiary transition-all',
-    'focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10'
-  );
-
-  const labelClassName = cn('text-sm font-medium text-ink');
-
-  // 카페 초기화 (전역 상태)
-  useEffect(() => {
-    if (cafesInitialized) return;
-
-    const loadCafes = async () => {
-      const cafeData = await getCafesAction();
-      setCafes(cafeData);
-      const defaultCafe = cafeData.find((c) => c.isDefault) || cafeData[0];
-      if (defaultCafe) {
-        setSelectedCafeIds([defaultCafe.cafeId]);
-      }
-      setCafesInitialized(true);
-    };
-    loadCafes();
-  }, [cafesInitialized, setCafes, setCafesInitialized]);
-
-  // 계정 로딩 (로컬 상태 - 항상 실행)
-  useEffect(() => {
-    const loadAccounts = async () => {
-      const accountData = await getAccountsAction();
-      setAccounts(accountData);
-      const roles = new Map<string, AccountRole>();
-      accountData.forEach((a) => roles.set(a.id, 'both'));
-      setAccountRoles(roles);
-    };
-    loadAccounts();
-  }, []);
-
-  // 선택된 카페들의 카테고리 합집합
-  const selectedCafes = cafes.filter((c) => selectedCafeIds.includes(c.cafeId));
-  const categories = [...new Set(selectedCafes.flatMap((c) => c.categories))];
 
   const handleGenerateKeywords = () => {
     if (selectedCafeIds.length === 0) {
       toast.warning('카페를 먼저 선택해주세요');
+
       return;
     }
 
     startGenerating(async () => {
       const loadingId = toast.loading('키워드 생성 중...');
+
       try {
         const promptProfile = getKeywordPromptProfileForLoginId(user?.loginId);
-        // 카페별로 분리해서 키워드 생성
         const countPerCafe = Math.ceil(genCount / selectedCafes.length);
         const allKeywords: { keyword: string; category: string }[] = [];
 
         for (const cafe of selectedCafes) {
-          if (cafe.categories.length === 0) continue;
+          if (cafe.categories.length === 0) {
+            continue;
+          }
 
           toast.loading(`${cafe.name} 키워드 생성 중...`, { id: loadingId });
 
-          const res = await generateKeywords({
+          const response = await generateKeywords({
             categories: cafe.categories,
             count: countPerCafe,
             shuffle: genShuffle,
@@ -234,48 +307,58 @@ export const ViralBatchUI = () => {
             prompt_profile: promptProfile,
           });
 
-          allKeywords.push(...res.keywords);
+          allKeywords.push(...response.keywords);
         }
 
-        // 섞기 옵션이면 전체 셔플
         if (genShuffle) {
-          for (let i = allKeywords.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allKeywords[i], allKeywords[j]] = [allKeywords[j], allKeywords[i]];
+          for (let index = allKeywords.length - 1; index > 0; index -= 1) {
+            const swapIndex = Math.floor(Math.random() * (index + 1));
+            [allKeywords[index], allKeywords[swapIndex]] = [allKeywords[swapIndex], allKeywords[index]];
           }
         }
 
-        const formatted = allKeywords.map((k) => `${k.keyword}:${k.category}`).join('\n');
-        setKeywords(formatted);
+        setKeywords(allKeywords.map(({ keyword, category }) => `${keyword}:${category}`).join('\n'));
         setShowGenerator(false);
         toast.dismiss(loadingId);
         toast.success(`${allKeywords.length}개 키워드 생성 완료 (${selectedCafes.length}개 카페)`);
-      } catch (err) {
+      } catch (error) {
         toast.dismiss(loadingId);
-        toast.error('키워드 생성 실패', err instanceof Error ? err.message : undefined);
+        toast.error('키워드 생성 실패', error instanceof Error ? error.message : undefined);
       }
     });
   };
 
-  const parseKeywords = (): string[] => {
-    return keywords
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-  };
-
   const handleRunClick = () => {
-    const parsedKeywords = parseKeywords();
     if (parsedKeywords.length === 0) {
       toast.warning('키워드를 입력해주세요');
+
       return;
     }
+
+    if (selectedCafeIds.length === 0) {
+      toast.warning('카페를 먼저 선택해주세요');
+
+      return;
+    }
+
+    if (writerCount === 0) {
+      toast.warning('글 작성 계정을 1개 이상 활성화해주세요');
+
+      return;
+    }
+
+    if (commenterCount === 0) {
+      toast.warning('댓글 작성 계정을 1개 이상 활성화해주세요');
+
+      return;
+    }
+
     setShowExecuteModal(true);
   };
 
   const handleRun = () => {
-    const parsedKeywords = parseKeywords();
     const delaySettings = getDelaySettings();
+
     setShowExecuteModal(false);
 
     startTransition(async () => {
@@ -296,12 +379,8 @@ export const ViralBatchUI = () => {
             imageSource: enableImage ? imageSource : undefined,
             imageCount: enableImage ? imageCount : 0,
             delays: delaySettings.delays,
-            writerAccountIds: accounts
-              .filter((a) => ['both', 'writer'].includes(accountRoles.get(a.id) || 'both'))
-              .map((a) => a.id),
-            commenterAccountIds: accounts
-              .filter((a) => ['both', 'commenter'].includes(accountRoles.get(a.id) || 'both'))
-              .map((a) => a.id),
+            writerAccountIds,
+            commenterAccountIds,
           }),
         });
 
@@ -315,25 +394,31 @@ export const ViralBatchUI = () => {
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+
+          if (done) {
+            break;
+          }
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n\n');
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
+            if (!line.startsWith('data: ')) {
+              continue;
+            }
+
             const data = JSON.parse(line.slice(6));
 
             if (data.type === 'progress') {
               const current = data.keywordIndex + 1;
               const total = data.totalKeywords;
+
               toast.loading(`${current}/${total} 처리 중... (${data.currentKeyword})`, { id: loadingId });
 
-              // 키워드 처리 완료 시 실시간 결과 추가
               if (data.phase === 'done') {
-                setPartialResults((prev) => [
-                  ...prev,
+                setPartialResults((previous) => [
+                  ...previous,
                   {
                     keyword: data.currentKeyword,
                     success: data.success ?? false,
@@ -343,13 +428,15 @@ export const ViralBatchUI = () => {
                 ]);
               }
             } else if (data.type === 'complete') {
-              const res = data.result as ViralBatchResult;
-              setResult(res);
+              const nextResult = data.result as ViralBatchResult;
+
+              setResult(nextResult);
               toast.dismiss(loadingId);
-              if (res.success) {
-                toast.success(`${res.completed}/${res.totalKeywords} 완료`);
+
+              if (nextResult.success) {
+                toast.success(`${nextResult.completed}/${nextResult.totalKeywords} 완료`);
               } else {
-                toast.warning(`${res.completed}/${res.totalKeywords} 완료 (일부 실패)`);
+                toast.warning(`${nextResult.completed}/${nextResult.totalKeywords} 완료 (일부 실패)`);
               }
             } else if (data.type === 'error') {
               throw new Error(data.error);
@@ -364,8 +451,8 @@ export const ViralBatchUI = () => {
           totalKeywords: parsedKeywords.length,
           completed: 0,
           failed: parsedKeywords.length,
-          results: parsedKeywords.map((k) => ({
-            keyword: k,
+          results: parsedKeywords.map((keyword) => ({
+            keyword,
             keywordType: 'own',
             success: false,
             error: error instanceof Error ? error.message : '알 수 없는 오류',
@@ -375,731 +462,822 @@ export const ViralBatchUI = () => {
     });
   };
 
-  const keywordCount = parseKeywords().length;
+  const handleToggleGenerator = () => {
+    setShowGenerator((previous) => !previous);
+  };
+
+  const handleTogglePresetPanel = () => {
+    setShowPresetPanel((previous) => !previous);
+  };
+
+  const handleToggleAccountRoles = () => {
+    setShowAccountRoles((previous) => !previous);
+  };
+
+  const handleSelectAllCafes = () => {
+    setSelectedCafeIds(cafes.map(({ cafeId }) => cafeId));
+  };
+
+  const handleClearCafes = () => {
+    setSelectedCafeIds([]);
+  };
+
+  const handleSetAllRoles = (role: AccountRole) => {
+    const nextRoles = new Map<string, AccountRole>();
+
+    accounts.forEach(({ id }) => nextRoles.set(id, role));
+    setAccountRoles(nextRoles);
+  };
 
   return (
-    <div className={cn('space-y-6')}>
-      {/* 키워드 입력 영역 */}
-      <div className={cn('space-y-4')}>
-        <div className={cn('flex items-center justify-between')}>
-          <label className={labelClassName}>키워드</label>
-          <div className={cn('flex items-center gap-2')}>
-            {keywordCount > 0 && (
-              <span className={cn('text-sm font-medium text-accent')}>{keywordCount}개</span>
-            )}
-            <Button
-              variant={showGenerator ? 'primary' : 'secondary'}
-              size="xs"
-              onClick={() => setShowGenerator(!showGenerator)}
-            >
-              {showGenerator ? 'AI 생성 닫기' : 'AI로 생성'}
-            </Button>
-          </div>
-        </div>
+    <div className={cn('space-y-8')}>
+      <section
+        className={cn(
+          'overflow-hidden rounded-[32px] border border-border-light',
+          'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--surface)_90%,var(--info-soft)_10%),color-mix(in_srgb,var(--surface)_92%,var(--surface-muted)_8%))] shadow-sm'
+        )}
+      >
+        <div className={cn('grid gap-6 px-6 py-6 xl:grid-cols-[minmax(0,1fr)_280px] xl:px-7 xl:py-7')}>
+          <div>
+            <p className={cn('text-xs font-semibold uppercase tracking-[0.24em] text-info')}>Batch Command Deck</p>
+            <h2 className={cn('mt-3 text-3xl font-semibold tracking-tight text-ink sm:text-[2rem]')}>
+              {runReadiness.label}
+            </h2>
+            <p className={cn('mt-3 max-w-2xl text-sm leading-7 text-ink-muted sm:text-base')}>
+              {runReadiness.description}
+            </p>
 
-        {/* AI 키워드 생성 패널 */}
-        <div
-          className={cn(
-            'grid transition-all duration-300 ease-out',
-            showGenerator ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-          )}
-        >
-          <div className={cn('overflow-hidden')}>
-            <div className={cn('rounded-xl border border-accent/30 bg-accent-soft p-4 space-y-4')}>
-              <div className={cn('flex items-center gap-2')}>
-                <span className={cn('text-sm font-semibold text-ink')}>AI 키워드 생성</span>
-                <span className={cn('text-xs text-ink-muted')}>
-                  {categories.length > 0 ? `${categories.join(', ')} 기반` : '카페를 먼저 선택하세요'}
-                </span>
-              </div>
-
-              <div className={cn('grid grid-cols-2 gap-3')}>
-                <div className={cn('space-y-1.5')}>
-                  <label className={cn('text-xs font-medium text-ink-muted')}>개수</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={genCount}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => {
-                      const cleaned = e.target.value.replace(/\D/g, '');
-                      if (cleaned === '') return;
-                      setGenCount(Math.max(1, Math.min(200, Number(cleaned))));
-                    }}
-                    className={cn(inputClassName, 'py-2 text-center')}
-                  />
-                </div>
-                <div className={cn('space-y-1.5 flex flex-col justify-end')}>
-                  <Checkbox
-                    size="sm"
-                    label="섞기"
-                    checked={genShuffle}
-                    onChange={(e) => setGenShuffle(e.target.checked)}
-                  />
-                </div>
-              </div>
-
-              <div className={cn('space-y-1.5')}>
-                <label className={cn('text-xs font-medium text-ink-muted')}>추가 요청 (선택)</label>
-                <input
-                  type="text"
-                  value={genNote}
-                  onChange={(e) => setGenNote(e.target.value)}
-                  placeholder="예: 봄철 관련, 초보자 타겟..."
-                  className={cn(inputClassName, 'py-2')}
-                />
-              </div>
-
-              <Button
-                onClick={handleGenerateKeywords}
-                disabled={categories.length === 0}
-                isLoading={isGenerating}
-                fullWidth
+            <div className={cn('mt-5 flex flex-wrap gap-2')}>
+              <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1.5 text-sm text-ink')}>
+                카페 {selectedCafeIds.length}개
+              </span>
+              <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1.5 text-sm text-ink')}>
+                카테고리 {categories.length}개
+              </span>
+              <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1.5 text-sm text-ink')}>
+                계정 {activeCount}개 활성
+              </span>
+              <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1.5 text-sm text-ink')}>
+                이미지 {imageSummary}
+              </span>
+              <span
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-sm font-medium',
+                  canRunBatch ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning'
+                )}
               >
-                {`${genCount}개 생성하기`}
+                {canRunBatch ? 'Launch Ready' : 'Setup Check'}
+              </span>
+            </div>
+
+            <div className={cn('mt-6 flex flex-wrap gap-3')}>
+              <Button size="lg" onClick={handleRunClick} disabled={!canRunBatch} isLoading={isPending}>
+                {isPending ? '배치 실행 중' : '지금 실행'}
+              </Button>
+              <Button variant={showGenerator ? 'primary' : 'secondary'} size="lg" onClick={handleToggleGenerator}>
+                {showGenerator ? 'AI 생성 닫기' : 'AI 키워드 생성'}
+              </Button>
+              <Button variant="secondary" size="lg" onClick={handleTogglePresetPanel}>
+                프리셋 {showPresetPanel ? '숨기기' : '열기'}
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* 키워드 텍스트 영역 */}
-        <textarea
-          value={keywords}
-          onChange={(e) => setKeywords(e.target.value)}
-          placeholder={`키워드 또는 키워드:카테고리:스타일 (한 줄에 하나씩)
+          <div className={cn('rounded-[28px] border border-border-light bg-surface/90 px-5 py-5')}>
+            <div className={cn('flex items-start justify-between gap-4')}>
+              <div>
+                <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>준비 상태</p>
+                <p className={cn('mt-2 text-3xl font-semibold tracking-tight text-ink')}>
+                  {readinessCount}
+                  <span className={cn('ml-1 text-lg text-ink-tertiary')}>/ {readinessTotal}</span>
+                </p>
+              </div>
+              <span
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-semibold',
+                  canRunBatch ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning'
+                )}
+              >
+                {canRunBatch ? '즉시 실행 가능' : '사전 조건 확인'}
+              </span>
+            </div>
+
+            <div className={cn('mt-5 space-y-3')}>
+              {readinessItems.map(({ detail, label, ready }) => (
+                <div key={label} className={cn('rounded-[20px] bg-surface-muted px-4 py-3')}>
+                  <div className={cn('flex items-center justify-between gap-3')}>
+                    <div className={cn('flex items-center gap-3')}>
+                      <span
+                        className={cn(
+                          'h-2.5 w-2.5 rounded-full',
+                          ready ? 'bg-success shadow-[0_0_0_4px_color-mix(in_srgb,var(--success)_18%,transparent)]' : 'bg-warning shadow-[0_0_0_4px_color-mix(in_srgb,var(--warning)_18%,transparent)]'
+                        )}
+                      />
+                      <p className={cn('text-sm font-medium text-ink')}>{label}</p>
+                    </div>
+                    <p className={cn('text-xs text-ink-muted')}>{detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className={cn('grid gap-3 sm:grid-cols-2 xl:grid-cols-4')}>
+        <div className={cn('rounded-[24px] border border-border-light bg-surface px-5 py-4 shadow-sm')}>
+          <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>키워드 큐</p>
+          <p className={cn('mt-2 text-2xl font-semibold tracking-tight text-ink')}>{keywordCount}개</p>
+          <p className={cn('mt-1 text-sm text-ink-muted')}>실행 대상 줄 수 기준.</p>
+        </div>
+        <div className={cn('rounded-[24px] border border-border-light bg-surface px-5 py-4 shadow-sm')}>
+          <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>선택 카페</p>
+          <p className={cn('mt-2 text-2xl font-semibold tracking-tight text-ink')}>{selectedCafeIds.length}개</p>
+          <p className={cn('mt-1 text-sm text-ink-muted')}>카테고리 {categories.length}개 연결.</p>
+        </div>
+        <div className={cn('rounded-[24px] border border-border-light bg-surface px-5 py-4 shadow-sm')}>
+          <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>활성 계정</p>
+          <p className={cn('mt-2 text-2xl font-semibold tracking-tight text-ink')}>{activeCount}개</p>
+          <p className={cn('mt-1 text-sm text-ink-muted')}>글 {writerCount}개 / 댓글 {commenterCount}개.</p>
+        </div>
+        <div className={cn('rounded-[24px] border border-border-light bg-surface px-5 py-4 shadow-sm')}>
+          <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>모델 / 이미지</p>
+          <p className={cn('mt-2 text-lg font-semibold tracking-tight text-ink')}>{modelLabel}</p>
+          <p className={cn('mt-1 text-sm text-ink-muted')}>{imageSummary}</p>
+        </div>
+      </div>
+
+      <div className={cn('grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]')}>
+        <div className={cn('space-y-6')}>
+          <section className={sectionClassName}>
+            <div className={cn('border-b border-border-light px-6 py-5')}>
+              <div className={cn('flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between')}>
+                <div>
+                  <p className={cn('text-xs font-semibold uppercase tracking-[0.24em] text-info')}>Step 1</p>
+                  <h3 className={cn('mt-2', sectionHeadingClassName)}>키워드 작업대</h3>
+                  <p className={cn('mt-2', helperTextClassName)}>
+                    직접 입력과 AI 생성을 한 흐름에서 정리할 수 있게 구성.
+                  </p>
+                </div>
+                <div className={cn('flex flex-wrap gap-2')}>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    직접 입력
+                  </span>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    AI 생성
+                  </span>
+                  <span className={cn('rounded-full border border-accent/15 bg-accent/10 px-3 py-1 text-xs font-medium text-accent')}>
+                    {keywordCount}개 준비
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn('grid gap-6 px-6 py-6 xl:grid-cols-[minmax(0,1fr)_280px]')}>
+              <div className={cn('space-y-5')}>
+                <div className={cn('flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between')}>
+                  <div>
+                    <label className={labelClassName}>키워드 목록</label>
+                    <p className={cn('mt-1 text-sm text-ink-muted')}>
+                      한 줄에 하나씩 입력하고, 필요하면 `키워드:카테고리:스타일` 형식으로 확장.
+                    </p>
+                  </div>
+                  <div className={cn('flex items-center gap-2')}>
+                    {keywordCount > 0 && (
+                      <span className={cn('rounded-full bg-accent/10 px-3 py-1 text-sm font-medium text-accent')}>
+                        {keywordCount}개 준비됨
+                      </span>
+                    )}
+                    <Button
+                      variant={showGenerator ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={handleToggleGenerator}
+                    >
+                      {showGenerator ? 'AI 생성 닫기' : 'AI로 생성'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div
+                  className={cn(
+                    'grid transition-all duration-300 ease-out',
+                    showGenerator ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                  )}
+                >
+                  <div className={cn('overflow-hidden')}>
+                    <div className={cn('rounded-[24px] border border-info/20 bg-info-soft p-5')}>
+                      <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between')}>
+                        <div>
+                          <p className={cn('text-sm font-semibold text-info')}>AI 키워드 생성</p>
+                          <p className={cn('mt-1 text-sm text-info/80')}>
+                            {categories.length > 0 ? `${categories.join(', ')} 기반으로 생성.` : '카페를 먼저 선택하면 카테고리 기반 생성 가능.'}
+                          </p>
+                        </div>
+                        <span className={cn('rounded-full bg-info/10 px-3 py-1 text-xs font-medium text-info')}>
+                          {selectedCafeIds.length}개 카페 선택
+                        </span>
+                      </div>
+
+                      <div className={cn('mt-5 grid gap-4 lg:grid-cols-[180px_1fr]')}>
+                        <div className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-1')}>
+                          <div className={cn('space-y-1.5')}>
+                            <label className={cn('text-xs font-medium text-ink-muted')}>개수</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={genCount}
+                              onFocus={(event) => event.target.select()}
+                              onChange={(event) => {
+                                const cleaned = event.target.value.replace(/\D/g, '');
+
+                                if (cleaned === '') {
+                                  return;
+                                }
+
+                                setGenCount(Math.max(1, Math.min(200, Number(cleaned))));
+                              }}
+                              className={cn(inputClassName, 'py-2 text-center')}
+                            />
+                          </div>
+                          <div className={cn('flex items-end')}>
+                            <Checkbox
+                              size="sm"
+                              label="결과 섞기"
+                              checked={genShuffle}
+                              onChange={(event) => setGenShuffle(event.target.checked)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className={cn('space-y-4')}>
+                          <div className={cn('space-y-1.5')}>
+                            <label className={cn('text-xs font-medium text-ink-muted')}>추가 요청</label>
+                            <input
+                              type="text"
+                              value={genNote}
+                              onChange={(event) => setGenNote(event.target.value)}
+                              placeholder="예: 초보자 톤, 계절성 강조, 후기 중심..."
+                              className={cn(inputClassName, 'py-2')}
+                            />
+                          </div>
+                          <Button
+                            onClick={handleGenerateKeywords}
+                            disabled={categories.length === 0}
+                            isLoading={isGenerating}
+                          >
+                            {`${genCount}개 생성하기`}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <textarea
+                  value={keywords}
+                  onChange={(event) => setKeywords(event.target.value)}
+                  placeholder={`키워드 또는 키워드:카테고리:스타일 (한 줄에 하나씩)
 
 스타일: 자사키워드(광고, 기본값) | 일상 | 애니
 
 예:
-기력보충            → 자사키워드(광고) 스타일 (기본)
-수족냉증:건강       → 자사키워드(광고) 스타일 (기본)
-수족냉증:건강:자사키워드  → 자사키워드(광고) 스타일
-기력보충:자사키워드         → 자사키워드(광고) 스타일
+기력보충
+수족냉증:건강
+수족냉증:건강:자사키워드
+기력보충:자사키워드
 흐염소진액 효과:후기`}
-          className={cn(inputClassName, 'min-h-32 resize-none font-mono text-xs')}
-        />
-      </div>
-
-      {/* 프리셋 패널 */}
-      <div className={cn('rounded-2xl border border-border-light bg-surface p-4 space-y-3')}>
-        <button
-          type="button"
-          onClick={() => setShowPresetPanel(!showPresetPanel)}
-          className={cn('flex items-center justify-between w-full')}
-        >
-          <div className={cn('flex items-center gap-2')}>
-            <span className={cn('text-sm font-semibold text-ink')}>프리셋</span>
-            <span className={cn('text-xs text-ink-muted')}>
-              {presets.length}개 저장됨
-            </span>
-          </div>
-          <span className={cn('text-ink-muted text-sm transition-transform', showPresetPanel && 'rotate-180')}>
-            ▼
-          </span>
-        </button>
-
-        <div
-          className={cn(
-            'grid transition-all duration-300 ease-out',
-            showPresetPanel ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-          )}
-        >
-          <div className={cn('overflow-hidden')}>
-            <div className={cn('space-y-3 pt-2')}>
-              {/* 저장된 프리셋 목록 */}
-              {presets.length > 0 && (
-                <div className={cn('flex flex-wrap gap-2')}>
-                  {presets.map((preset) => (
-                    <div
-                      key={preset.name}
-                      className={cn(
-                        'flex items-center gap-1 px-3 py-1.5 rounded-lg',
-                        'bg-accent/10 border border-accent/30'
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleLoadPreset(preset)}
-                        className={cn('text-sm font-medium text-accent hover:underline')}
-                      >
-                        {preset.name}
-                      </button>
-                      <span className={cn('text-xs text-ink-muted')}>
-                        ({preset.cafeIds.length}카페)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePreset(preset.name)}
-                        className={cn('text-ink-muted hover:text-danger ml-1')}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* 새 프리셋 저장 */}
-              <div className={cn('flex gap-2')}>
-                <input
-                  type="text"
-                  value={newPresetName}
-                  onChange={(e) => setNewPresetName(e.target.value)}
-                  placeholder="프리셋 이름"
-                  className={cn(inputClassName, 'py-2 flex-1')}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                  className={cn(inputClassName, 'min-h-72 resize-y font-mono text-xs leading-6')}
                 />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSavePreset}
-                  disabled={!newPresetName.trim()}
-                >
-                  현재 설정 저장
-                </Button>
+
+                <div className={cn('rounded-[20px] border border-border-light bg-surface px-4 py-4')}>
+                  <p className={cn('text-sm font-semibold text-ink')}>스타일 빠른 참고</p>
+                  <div className={cn('mt-3 grid gap-3 md:grid-cols-3')}>
+                    <div className={cn('rounded-2xl bg-surface-muted px-4 py-3')}>
+                      <p className={cn('text-sm font-medium text-ink')}>자사키워드</p>
+                      <p className={cn('mt-1 text-sm text-ink-muted')}>300~500자 고민글 뒤에 댓글 흐름으로 연결.</p>
+                    </div>
+                    <div className={cn('rounded-2xl bg-surface-muted px-4 py-3')}>
+                      <p className={cn('text-sm font-medium text-ink')}>일상</p>
+                      <p className={cn('mt-1 text-sm text-ink-muted')}>짧은 톤의 카페 활동용 문구에 적합.</p>
+                    </div>
+                    <div className={cn('rounded-2xl bg-surface-muted px-4 py-3')}>
+                      <p className={cn('text-sm font-medium text-ink')}>애니</p>
+                      <p className={cn('mt-1 text-sm text-ink-muted')}>캐릭터성이 강한 변주가 필요할 때 사용.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 설정 카드 */}
-      <div className={cn('rounded-2xl border border-border-light bg-surface p-6 space-y-5')}>
-        <h3 className={cn('text-base font-semibold text-ink')}>설정</h3>
+              <div className={cn('space-y-4')}>
+                <div className={cn('rounded-[24px] border border-border-light bg-surface px-5 py-5')}>
+                  <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>Input Brief</p>
+                  <h4 className={cn('mt-3 text-lg font-semibold text-ink')}>현재 입력 컨텍스트</h4>
+                  <div className={cn('mt-4 space-y-3')}>
+                    <div className={cn('rounded-2xl bg-surface-muted px-4 py-3')}>
+                      <p className={cn('text-xs text-ink-tertiary')}>선택 카페</p>
+                      <p className={cn('mt-1 text-sm text-ink')}>{selectedCafeNames.length > 0 ? selectedCafeNames.join(', ') : '선택 안됨'}</p>
+                    </div>
+                    <div className={cn('rounded-2xl bg-surface-muted px-4 py-3')}>
+                      <p className={cn('text-xs text-ink-tertiary')}>카테고리</p>
+                      <p className={cn('mt-1 text-sm text-ink')}>{categories.length > 0 ? categories.join(', ') : '연결된 카테고리 없음'}</p>
+                    </div>
+                    <div className={cn('rounded-2xl bg-surface-muted px-4 py-3')}>
+                      <p className={cn('text-xs text-ink-tertiary')}>입력 방식</p>
+                      <p className={cn('mt-1 text-sm text-ink')}>
+                        {showGenerator ? '직접 입력 + AI 생성 병행' : '직접 입력 중심'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-        {/* 카페 선택 (다중) */}
-        <div className={cn('space-y-3')}>
-          <div className={cn('flex items-center justify-between')}>
-            <span className={labelClassName}>카페 선택</span>
-            <div className={cn('flex items-center gap-2')}>
-              <span className={cn('text-xs text-ink-muted')}>
-                {selectedCafeIds.length}개 선택
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedCafeIds(cafes.map((c) => c.cafeId))}
-                className={cn('text-xs text-accent hover:underline')}
-              >
-                전체 선택
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedCafeIds([])}
-                className={cn('text-xs text-ink-muted hover:underline')}
-              >
-                선택 해제
-              </button>
-            </div>
-          </div>
-          <div className={cn('grid grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-xl border border-border-light bg-surface-muted p-3')}>
-            {cafes.map((cafe) => {
-              const isSelected = selectedCafeIds.includes(cafe.cafeId);
-              return (
-                <button
-                  key={cafe.cafeId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedCafeIds((prev) =>
-                      isSelected
-                        ? prev.filter((id) => id !== cafe.cafeId)
-                        : [...prev, cafe.cafeId]
-                    );
-                  }}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-all',
-                    isSelected
-                      ? 'bg-accent/10 border-2 border-accent text-accent font-medium'
-                      : 'bg-surface border-2 border-transparent hover:border-border text-ink'
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'w-4 h-4 rounded border-2 flex items-center justify-center text-xs flex-shrink-0',
-                      isSelected
-                        ? 'bg-accent border-accent text-background'
-                        : 'border-border-light'
+                <div className={cn('rounded-[24px] border border-border-light bg-surface px-5 py-5')}>
+                  <p className={cn('text-xs font-semibold uppercase tracking-[0.18em] text-ink-tertiary')}>Keyword Preview</p>
+                  <h4 className={cn('mt-3 text-lg font-semibold text-ink')}>최근 입력 미리보기</h4>
+                  <div className={cn('mt-4 space-y-2')}>
+                    {parsedKeywords.length > 0 ? (
+                      parsedKeywords.slice(0, 5).map((keyword) => (
+                        <div key={keyword} className={cn('rounded-2xl border border-border-light bg-surface-muted px-4 py-3 text-sm text-ink')}>
+                          {keyword}
+                        </div>
+                      ))
+                    ) : (
+                      <div className={cn('rounded-2xl border border-dashed border-border bg-surface-muted px-4 py-6 text-sm text-ink-muted')}>
+                        입력된 키워드가 아직 없음
+                      </div>
                     )}
-                  >
-                    {isSelected && '✓'}
-                  </span>
-                  <span className={cn('truncate')}>{cafe.name}</span>
-                  {cafe.isDefault && (
-                    <span className={cn('text-xs text-accent/70')}>(기본)</span>
+                  </div>
+                  {parsedKeywords.length > 5 && (
+                    <p className={cn('mt-3 text-xs text-ink-muted')}>외 {parsedKeywords.length - 5}개</p>
                   )}
-                </button>
-              );
-            })}
-          </div>
-          {selectedCafes.length > 0 && (
-            <p className={cn('text-xs text-ink-muted')}>
-              카테고리: {categories.join(', ')}
-            </p>
-          )}
-        </div>
-
-        {/* 모델 선택 */}
-        <Select
-          label="AI 모델"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          options={MODELS}
-        />
-
-        {/* 계정 역할 선택 */}
-        {accounts.length > 0 && (
-          <div className={cn('space-y-3')}>
-            <button
-              type="button"
-              onClick={() => setShowAccountRoles(!showAccountRoles)}
-              className={cn('flex items-center justify-between w-full')}
-            >
-              <div className={cn('flex items-center gap-2')}>
-                <span className={labelClassName}>계정 역할</span>
-                <span className={cn('text-xs text-ink-muted')}>
-                  글 {accounts.filter((a) => ['both', 'writer'].includes(accountRoles.get(a.id) || 'both')).length}개 /
-                  댓글 {accounts.filter((a) => ['both', 'commenter'].includes(accountRoles.get(a.id) || 'both')).length}개
-                </span>
+                </div>
               </div>
-              <span className={cn('text-ink-muted text-sm transition-transform', showAccountRoles && 'rotate-180')}>
-                ▼
-              </span>
-            </button>
+            </div>
+          </section>
 
-            <div
-              className={cn(
-                'grid transition-all duration-300 ease-out',
-                showAccountRoles ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-              )}
-            >
-              <div className={cn('overflow-hidden')}>
-                <div className={cn('rounded-xl border border-border-light bg-surface-muted p-4 space-y-3')}>
-                  {/* 일괄 설정 버튼 */}
-                  <div className={cn('flex flex-wrap gap-2 pb-3 border-b border-border-light')}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = new Map<string, AccountRole>();
-                        accounts.forEach((a) => next.set(a.id, 'both'));
-                        setAccountRoles(next);
-                      }}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                        'bg-accent/10 text-accent hover:bg-accent/20'
-                      )}
-                    >
-                      전체 글/댓글
+          <section className={sectionClassName}>
+            <div className={cn('border-b border-border-light px-6 py-5')}>
+              <div className={cn('flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between')}>
+                <div>
+                  <p className={cn('text-xs font-semibold uppercase tracking-[0.24em] text-info')}>Step 2</p>
+                  <h3 className={cn('mt-2', sectionHeadingClassName)}>프리셋 보관함</h3>
+                  <p className={cn('mt-2', helperTextClassName)}>
+                    자주 쓰는 카페 조합과 모델 선택을 저장하고 바로 복원 가능.
+                  </p>
+                </div>
+                <div className={cn('flex flex-wrap gap-2')}>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    저장 {presets.length}개
+                  </span>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    빠른 복원
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn('space-y-4 px-6 py-6')}>
+              <button
+                type="button"
+                onClick={handleTogglePresetPanel}
+                className={cn('flex w-full items-center justify-between rounded-2xl border border-border-light bg-surface px-4 py-3 text-left')}
+              >
+                <div>
+                  <p className={cn('text-sm font-semibold text-ink')}>저장된 프리셋</p>
+                  <p className={cn('mt-1 text-sm text-ink-muted')}>{presets.length}개 저장됨</p>
+                </div>
+                <span className={cn('text-sm text-ink-muted transition-transform', showPresetPanel && 'rotate-180')}>▼</span>
+              </button>
+
+              <div
+                className={cn(
+                  'grid transition-all duration-300 ease-out',
+                  showPresetPanel ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                )}
+              >
+                <div className={cn('overflow-hidden')}>
+                  <div className={cn('space-y-4')}>
+                    {presets.length > 0 && (
+                      <div className={cn('grid gap-3 md:grid-cols-2')}>
+                        {presets.map((preset) => (
+                          <div
+                            key={preset.name}
+                            className={cn('rounded-[24px] border border-border-light bg-surface px-4 py-4')}
+                          >
+                            <div className={cn('flex items-start justify-between gap-3')}>
+                              <div className={cn('min-w-0')}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleLoadPreset(preset)}
+                                  className={cn('truncate text-sm font-semibold text-ink hover:text-accent')}
+                                >
+                                  {preset.name}
+                                </button>
+                                <p className={cn('mt-2 text-sm text-ink-muted')}>
+                                  {preset.cafeIds.length}개 카페 · {getModelLabel(preset.model, MODELS)}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePreset(preset.name)}
+                                className={cn('text-xs text-ink-muted hover:text-danger')}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                            <div className={cn('mt-3 flex flex-wrap gap-2')}>
+                              <span className={cn('rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-ink')}>
+                                이미지 {getImageSummary(preset.enableImage, preset.imageSource, preset.imageCount)}
+                              </span>
+                              <span className={cn('rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-ink')}>
+                                계정 {Object.keys(preset.accountRoles).length}개
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className={cn('flex flex-col gap-2 sm:flex-row')}>
+                      <input
+                        type="text"
+                        value={newPresetName}
+                        onChange={(event) => setNewPresetName(event.target.value)}
+                        placeholder="프리셋 이름"
+                        className={cn(inputClassName, 'flex-1 py-2')}
+                        onKeyDown={(event) => event.key === 'Enter' && handleSavePreset()}
+                      />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleSavePreset}
+                        disabled={!newPresetName.trim()}
+                      >
+                        현재 설정 저장
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionClassName}>
+            <div className={cn('border-b border-border-light px-6 py-5')}>
+              <div className={cn('flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between')}>
+                <div>
+                  <p className={cn('text-xs font-semibold uppercase tracking-[0.24em] text-info')}>Step 3</p>
+                  <h3 className={cn('mt-2', sectionHeadingClassName)}>실행 설정</h3>
+                  <p className={cn('mt-2', helperTextClassName)}>
+                    카페, 계정 역할, 모델, 이미지, 게시 옵션을 한 화면에서 순서대로 조정.
+                  </p>
+                </div>
+                <div className={cn('flex flex-wrap gap-2')}>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    카페 {selectedCafeIds.length}개
+                  </span>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    글 {writerCount}개
+                  </span>
+                  <span className={cn('rounded-full border border-border-light bg-surface px-3 py-1 text-xs font-medium text-ink')}>
+                    댓글 {commenterCount}개
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn('space-y-6 px-6 py-6')}>
+              <div className={cn('space-y-3 rounded-[24px] border border-border-light bg-surface p-5')}>
+                <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between')}>
+                  <div>
+                    <span className={labelClassName}>카페 선택</span>
+                    <p className={cn('mt-1 text-sm text-ink-muted')}>
+                      {selectedCafeIds.length}개 카페 선택됨
+                    </p>
+                  </div>
+                  <div className={cn('flex items-center gap-3 text-sm')}>
+                    <button type="button" onClick={handleSelectAllCafes} className={cn('text-accent hover:underline')}>
+                      전체 선택
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = new Map<string, AccountRole>();
-                        accounts.forEach((a) => next.set(a.id, 'writer'));
-                        setAccountRoles(next);
-                      }}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                        'bg-info/10 text-info hover:bg-info/20'
-                      )}
-                    >
-                      전체 글만
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = new Map<string, AccountRole>();
-                        accounts.forEach((a) => next.set(a.id, 'commenter'));
-                        setAccountRoles(next);
-                      }}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                        'bg-success/10 text-success hover:bg-success/20'
-                      )}
-                    >
-                      전체 댓글만
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = new Map<string, AccountRole>();
-                        accounts.forEach((a) => next.set(a.id, 'disabled'));
-                        setAccountRoles(next);
-                      }}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                        'bg-danger/10 text-danger hover:bg-danger/20'
-                      )}
-                    >
-                      전체 비활성화
+                    <button type="button" onClick={handleClearCafes} className={cn('text-ink-muted hover:underline')}>
+                      선택 해제
                     </button>
                   </div>
+                </div>
 
-                  {/* 헤더 */}
-                  <div className={cn('grid grid-cols-[1fr_60px_60px] gap-2 text-xs font-medium text-ink-muted px-1')}>
-                    <span>계정</span>
-                    <span className={cn('text-center')}>글</span>
-                    <span className={cn('text-center')}>댓글</span>
-                  </div>
+                <div className={cn('grid gap-2 md:grid-cols-2')}>
+                  {cafes.map((cafe) => {
+                    const isSelected = selectedCafeIds.includes(cafe.cafeId);
+                    const handleToggleCafe = () => {
+                      setSelectedCafeIds((previous) => (
+                        isSelected
+                          ? previous.filter((id) => id !== cafe.cafeId)
+                          : [...previous, cafe.cafeId]
+                      ));
+                    };
 
-                  {/* 계정 목록 */}
-                  <div className={cn('space-y-1 max-h-60 overflow-y-auto')}>
-                    {accounts.map((account) => {
-                      const role = accountRoles.get(account.id) || 'both';
-                      const canWrite = role === 'both' || role === 'writer';
-                      const canComment = role === 'both' || role === 'commenter';
-
-                      const toggleWrite = () => {
-                        const next = new Map(accountRoles);
-                        if (canWrite && canComment) next.set(account.id, 'commenter');
-                        else if (canWrite && !canComment) next.set(account.id, 'disabled');
-                        else if (!canWrite && canComment) next.set(account.id, 'both');
-                        else next.set(account.id, 'writer');
-                        setAccountRoles(next);
-                      };
-
-                      const toggleComment = () => {
-                        const next = new Map(accountRoles);
-                        if (canWrite && canComment) next.set(account.id, 'writer');
-                        else if (!canWrite && canComment) next.set(account.id, 'disabled');
-                        else if (canWrite && !canComment) next.set(account.id, 'both');
-                        else next.set(account.id, 'commenter');
-                        setAccountRoles(next);
-                      };
-
-                      return (
-                        <div
-                          key={account.id}
+                    return (
+                      <button
+                        key={cafe.cafeId}
+                        type="button"
+                        onClick={handleToggleCafe}
+                        className={cn(
+                          'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all',
+                          isSelected
+                            ? 'border-accent bg-accent/10 text-accent'
+                            : 'border-border-light bg-surface hover:border-border'
+                        )}
+                      >
+                        <span
                           className={cn(
-                            'grid grid-cols-[1fr_60px_60px] gap-2 items-center py-1.5 px-1 rounded-lg',
-                            'hover:bg-surface transition-colors'
+                            'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs',
+                            isSelected ? 'border-accent bg-accent text-background' : 'border-border'
                           )}
                         >
-                          <span className={cn('text-sm text-ink truncate')}>
-                            {account.nickname || account.id}
-                            {account.isMain && <span className={cn('ml-1 text-xs text-accent')}>(메인)</span>}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={toggleWrite}
-                            className={cn(
-                              'w-6 h-6 mx-auto rounded-md border-2 transition-all flex items-center justify-center',
-                              canWrite
-                                ? 'bg-info border-info text-background'
-                                : 'border-border-light hover:border-info/50'
-                            )}
-                          >
-                            {canWrite && <span className={cn('text-xs')}>✓</span>}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={toggleComment}
-                            className={cn(
-                              'w-6 h-6 mx-auto rounded-md border-2 transition-all flex items-center justify-center',
-                              canComment
-                                ? 'bg-success border-success text-background'
-                                : 'border-border-light hover:border-success/50'
-                            )}
-                          >
-                            {canComment && <span className={cn('text-xs')}>✓</span>}
-                          </button>
-                        </div>
-                      );
-                    })}
+                          {isSelected ? '✓' : ''}
+                        </span>
+                        <span className={cn('min-w-0 flex-1 truncate text-sm font-medium text-ink')}>
+                          {cafe.name}
+                          {cafe.isDefault && <span className={cn('ml-2 text-xs text-accent/80')}>기본</span>}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedCafes.length > 0 && (
+                  <div className={cn('rounded-2xl bg-surface-muted px-4 py-3 text-sm text-ink-muted')}>
+                    카테고리: {categories.join(', ')}
                   </div>
+                )}
+              </div>
+
+              <div className={cn('grid gap-6 lg:grid-cols-2')}>
+                <div className={cn('space-y-4 rounded-[24px] border border-border-light bg-surface p-5')}>
+                  <Select
+                    label="AI 모델"
+                    value={model}
+                    onChange={(event) => setModel(event.target.value)}
+                    options={MODELS}
+                  />
+                  <p className={cn('text-sm text-ink-muted')}>현재 선택: {modelLabel}</p>
+                </div>
+
+                <div className={cn('space-y-4 rounded-[24px] border border-border-light bg-surface p-5')}>
+                  <Checkbox
+                    label="이미지 첨부"
+                    checked={enableImage}
+                    onChange={(event) => setEnableImage(event.target.checked)}
+                  />
+
+                  {enableImage && (
+                    <div className={cn('space-y-4')}>
+                      <div className={cn('grid gap-2 sm:grid-cols-2')}>
+                        <button
+                          type="button"
+                          onClick={() => setImageSource('search')}
+                          className={cn(
+                            'rounded-2xl border px-4 py-4 text-left transition-all',
+                            imageSource === 'search'
+                              ? 'border-accent bg-accent/10 text-accent'
+                              : 'border-border-light bg-surface hover:border-border'
+                          )}
+                        >
+                          <p className={cn('text-sm font-semibold')}>구글 검색</p>
+                          <p className={cn('mt-1 text-sm text-ink-muted')}>랜덤 액자/필터 기반.</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageSource('ai')}
+                          className={cn(
+                            'rounded-2xl border px-4 py-4 text-left transition-all',
+                            imageSource === 'ai'
+                              ? 'border-accent bg-accent/10 text-accent'
+                              : 'border-border-light bg-surface hover:border-border'
+                          )}
+                        >
+                          <p className={cn('text-sm font-semibold')}>AI 생성</p>
+                          <p className={cn('mt-1 text-sm text-ink-muted')}>DALL-E / Imagen 기반.</p>
+                        </button>
+                      </div>
+
+                      <Select
+                        label="장수"
+                        value={String(imageCount)}
+                        onChange={(event) => setImageCount(Number(event.target.value))}
+                        options={IMAGE_COUNT_OPTIONS}
+                        fullWidth={false}
+                        className="w-40"
+                      />
+                    </div>
+                  )}
+
+                  <p className={cn('text-sm text-ink-muted')}>현재 이미지 설정: {imageSummary}</p>
+                </div>
+              </div>
+
+              {accounts.length > 0 && (
+                <div className={cn('space-y-4 rounded-[24px] border border-border-light bg-surface p-5')}>
+                  <button
+                    type="button"
+                    onClick={handleToggleAccountRoles}
+                    className={cn('flex w-full items-center justify-between text-left')}
+                  >
+                    <div>
+                      <span className={labelClassName}>계정 역할</span>
+                      <p className={cn('mt-1 text-sm text-ink-muted')}>
+                        글 {writerCount}개 / 댓글 {commenterCount}개
+                      </p>
+                    </div>
+                    <span className={cn('text-sm text-ink-muted transition-transform', showAccountRoles && 'rotate-180')}>▼</span>
+                  </button>
+
+                  <div
+                    className={cn(
+                      'grid transition-all duration-300 ease-out',
+                      showAccountRoles ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                    )}
+                  >
+                    <div className={cn('overflow-hidden')}>
+                      <div className={cn('space-y-4')}>
+                        <div className={cn('flex flex-wrap gap-2')}>
+                          <Button variant="secondary" size="xs" onClick={() => handleSetAllRoles('both')}>
+                            전체 글/댓글
+                          </Button>
+                          <Button variant="secondary" size="xs" onClick={() => handleSetAllRoles('writer')}>
+                            전체 글만
+                          </Button>
+                          <Button variant="secondary" size="xs" onClick={() => handleSetAllRoles('commenter')}>
+                            전체 댓글만
+                          </Button>
+                          <Button variant="secondary" size="xs" onClick={() => handleSetAllRoles('disabled')}>
+                            전체 비활성화
+                          </Button>
+                        </div>
+
+                        <div className={cn('space-y-2')}>
+                          {accounts.map((account) => {
+                            const role = accountRoles.get(account.id) || 'both';
+                            const canWrite = role === 'both' || role === 'writer';
+                            const canComment = role === 'both' || role === 'commenter';
+
+                            const handleToggleWrite = () => {
+                              const nextRoles = new Map(accountRoles);
+
+                              if (canWrite && canComment) {
+                                nextRoles.set(account.id, 'commenter');
+                              } else if (canWrite && !canComment) {
+                                nextRoles.set(account.id, 'disabled');
+                              } else if (!canWrite && canComment) {
+                                nextRoles.set(account.id, 'both');
+                              } else {
+                                nextRoles.set(account.id, 'writer');
+                              }
+
+                              setAccountRoles(nextRoles);
+                            };
+
+                            const handleToggleComment = () => {
+                              const nextRoles = new Map(accountRoles);
+
+                              if (canWrite && canComment) {
+                                nextRoles.set(account.id, 'writer');
+                              } else if (!canWrite && canComment) {
+                                nextRoles.set(account.id, 'disabled');
+                              } else if (canWrite && !canComment) {
+                                nextRoles.set(account.id, 'both');
+                              } else {
+                                nextRoles.set(account.id, 'commenter');
+                              }
+
+                              setAccountRoles(nextRoles);
+                            };
+
+                            return (
+                              <div
+                                key={account.id}
+                                className={cn('grid grid-cols-[minmax(0,1fr)_64px_64px] items-center gap-3 rounded-2xl bg-surface-muted px-4 py-3')}
+                              >
+                                <div className={cn('min-w-0')}>
+                                  <p className={cn('truncate text-sm font-medium text-ink')}>
+                                    {account.nickname || account.id}
+                                  </p>
+                                  <p className={cn('mt-1 text-xs text-ink-muted')}>
+                                    {account.id}
+                                    {account.isMain && <span className={cn('ml-2 text-accent')}>메인</span>}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleToggleWrite}
+                                  className={cn(
+                                    'mx-auto flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-all',
+                                    canWrite ? 'border-info bg-info text-background' : 'border-border hover:border-info/50'
+                                  )}
+                                >
+                                  글
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleToggleComment}
+                                  className={cn(
+                                    'mx-auto flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-all',
+                                    canComment ? 'border-success bg-success text-background' : 'border-border hover:border-success/50'
+                                  )}
+                                >
+                                  댓
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className={cn('space-y-3 rounded-[24px] border border-border-light bg-surface p-5')}>
+                <span className={labelClassName}>게시 옵션</span>
+                <div className={cn('rounded-[20px] border border-border-light bg-surface-muted p-4')}>
+                  <PostOptionsUI options={postOptions} onChange={setPostOptions} />
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          </section>
 
-        {/* 이미지 옵션 */}
-        <div className={cn('space-y-3')}>
-          <Checkbox
-            label="이미지 첨부"
-            checked={enableImage}
-            onChange={(e) => setEnableImage(e.target.checked)}
-          />
-          {enableImage && (
-            <div className={cn('pl-8 space-y-4')}>
-              {/* 이미지 소스 선택 */}
-              <div className={cn('flex gap-2')}>
-                <button
-                  type="button"
-                  onClick={() => setImageSource('search')}
-                  className={cn(
-                    'flex-1 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium',
-                    imageSource === 'search'
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-border-light bg-surface text-ink-muted hover:border-border'
-                  )}
-                >
-                  <div className={cn('flex flex-col items-center gap-1')}>
-                    <span className={cn('text-lg')}>🔍</span>
-                    <span>구글 검색</span>
-                    <span className={cn('text-xs opacity-70')}>랜덤 액자/필터</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImageSource('ai')}
-                  className={cn(
-                    'flex-1 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium',
-                    imageSource === 'ai'
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-border-light bg-surface text-ink-muted hover:border-border'
-                  )}
-                >
-                  <div className={cn('flex flex-col items-center gap-1')}>
-                    <span className={cn('text-lg')}>🎨</span>
-                    <span>AI 생성</span>
-                    <span className={cn('text-xs opacity-70')}>DALL-E / Imagen</span>
-                  </div>
-                </button>
+          <section className={cn('rounded-[28px] border border-info/20 bg-info-soft px-6 py-6')}>
+            <div className={cn('flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between')}>
+              <div>
+                <p className={cn('text-xs font-semibold uppercase tracking-[0.24em] text-info')}>Guide</p>
+                <h3 className={cn('mt-2 text-xl font-semibold tracking-tight text-info')}>운영 기준 빠른 확인</h3>
               </div>
-
-              {/* 장수 선택 */}
-              <Select
-                label="장수"
-                value={String(imageCount)}
-                onChange={(e) => setImageCount(Number(e.target.value))}
-                options={[
-                  { value: '0', label: '랜덤 1~2장' },
-                  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => ({
-                    value: String(n),
-                    label: `${n}장`,
-                  })),
-                ]}
-                fullWidth={false}
-                className="w-32"
-              />
+              <p className={cn('max-w-xl text-sm leading-6 text-info/80')}>
+                실행 전에 흐름과 태그 규칙을 빠르게 다시 보는 용도. 작업대와 결과 영역을 같은 기준으로 해석 가능.
+              </p>
             </div>
-          )}
+
+            <div className={cn('mt-5 grid gap-4 lg:grid-cols-3')}>
+              <div className={cn('rounded-[20px] bg-info/10 px-4 py-4')}>
+                <p className={cn('text-sm font-semibold text-info')}>키워드 자동 분류</p>
+                <p className={cn('mt-2 text-sm leading-6 text-info/80')}>
+                  자사는 직접 홍보 흐름, 타사는 질문형 비교 흐름으로 구성.
+                </p>
+              </div>
+              <div className={cn('rounded-[20px] bg-info/10 px-4 py-4')}>
+                <p className={cn('text-sm font-semibold text-info')}>댓글 태그 규칙</p>
+                <p className={cn('mt-2 text-sm leading-6 text-info/80')}>
+                  `[댓글N]`, `[작성자-N]`, `[댓글러-N]`, `[제3자-N]` 형식 유지.
+                </p>
+              </div>
+              <div className={cn('rounded-[20px] bg-info/10 px-4 py-4')}>
+                <p className={cn('text-sm font-semibold text-info')}>생성 구조</p>
+                <p className={cn('mt-2 text-sm leading-6 text-info/80')}>
+                  AI 1회 호출로 제목, 본문, 댓글, 대댓글까지 한 번에 생성.
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
 
-        {/* 게시 옵션 */}
-        <div className={cn('space-y-3')}>
-          <span className={labelClassName}>게시 옵션</span>
-          <div className={cn('rounded-xl border border-border-light bg-surface-muted p-4')}>
-            <PostOptionsUI options={postOptions} onChange={setPostOptions} />
-          </div>
-        </div>
-      </div>
-
-      {/* 바이럴 배치 가이드 */}
-      <div className={cn('rounded-xl border border-info/20 bg-info-soft p-4 space-y-4')}>
-        {/* 스타일 가이드 */}
-        <div className={cn('space-y-1.5')}>
-          <p className={cn('text-sm font-semibold text-info')}>원고 스타일</p>
-          <div className={cn('text-xs text-info/80 space-y-0.5')}>
-            <p><strong>자사키워드</strong> (기본): 300~500자 고민글 · 댓글에서 제품 추천 · 바이럴 광고</p>
-            <p><strong>일상</strong>: 1~3문장 혼잣말 · 광고 없음 · 카페 활동용</p>
-            <p><strong>애니</strong>: 애니메이션 캐릭터 스타일</p>
-          </div>
-        </div>
-
-        {/* 키워드 분류 */}
-        <div className={cn('space-y-1.5')}>
-          <p className={cn('text-sm font-semibold text-info')}>키워드 자동 분류</p>
-          <div className={cn('text-xs text-info/80 space-y-0.5')}>
-            <p><strong>자사</strong>: 기력보충, 흐염소, 피로회복 등 → 직접 제품 홍보</p>
-            <p><strong>타사</strong>: 경쟁 제품명 → 중립적 질문 후 대안 제시</p>
-          </div>
-        </div>
-
-        {/* 댓글 태그 규칙 */}
-        <div className={cn('space-y-1.5')}>
-          <p className={cn('text-sm font-semibold text-info')}>댓글 태그 규칙</p>
-          <div className={cn('grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-info/80')}>
-            <p><code className={cn('bg-info/10 px-1 rounded')}>[댓글N]</code> 일반 댓글</p>
-            <p><code className={cn('bg-info/10 px-1 rounded')}>[작성자-N]</code> 글쓴이 대댓</p>
-            <p><code className={cn('bg-info/10 px-1 rounded')}>[댓글러-N]</code> 댓글 작성자 대댓</p>
-            <p><code className={cn('bg-info/10 px-1 rounded')}>[제3자-N]</code> 제3자 대댓</p>
-          </div>
-        </div>
-
-        {/* 특징 */}
-        <div className={cn('text-xs text-info/70 flex flex-wrap gap-2')}>
-          <span className={cn('bg-info/10 px-2 py-0.5 rounded-full')}>AI 1회 호출로 전체 생성</span>
-          <span className={cn('bg-info/10 px-2 py-0.5 rounded-full')}>맥락 기반 댓글 흐름</span>
-          <span className={cn('bg-info/10 px-2 py-0.5 rounded-full')}>태그 자동 파싱</span>
+        <div className={cn('order-first xl:order-none')}>
+          <ViralBatchSummaryCard
+            activeCount={activeCount}
+            blockers={blockers}
+            canRun={canRunBatch}
+            categoryCount={categories.length}
+            commenterCount={commenterCount}
+            imageSummary={imageSummary}
+            isPending={isPending}
+            keywordCount={keywordCount}
+            modelLabel={modelLabel}
+            onRunClick={handleRunClick}
+            partialResults={partialResults}
+            readinessCount={readinessCount}
+            readinessTotal={readinessTotal}
+            selectedCafeCount={selectedCafeIds.length}
+            selectedCafeNames={selectedCafeNames}
+            writerCount={writerCount}
+          />
         </div>
       </div>
 
-      {/* 실행 확인 모달 */}
+      <ViralBatchStatusPanel
+        isPending={isPending}
+        keywordCount={keywordCount}
+        partialResults={partialResults}
+        result={result}
+      />
+
       <ExecuteConfirmModal
         isOpen={showExecuteModal}
         onClose={() => setShowExecuteModal(false)}
         onConfirm={handleRun}
         title="바이럴 배치를 실행하시겠습니까?"
         description="아래 설정으로 바이럴 콘텐츠가 생성됩니다."
-        settings={[
-          { label: '키워드', value: `${keywordCount}개`, highlight: true },
-          { label: '카페', value: selectedCafeIds.length > 0 ? `${selectedCafeIds.length}개 (${selectedCafes.map((c) => c.name).join(', ')})` : '선택 안됨' },
-          {
-            label: 'AI 모델',
-            value: MODELS.find((m) => m.value === model)?.label || '기본 (Claude Sonnet 4.6)',
-          },
-          {
-            label: '이미지',
-            value: enableImage
-              ? `${imageSource === 'ai' ? 'AI 생성' : '구글 검색'} / ${imageCount === 0 ? '랜덤 1~2장' : `${imageCount}장`}`
-              : '사용 안함',
-          },
-          {
-            label: '글 작성 계정',
-            value: `${accounts.filter((a) => ['both', 'writer'].includes(accountRoles.get(a.id) || 'both')).length}개`,
-          },
-          {
-            label: '댓글 작성 계정',
-            value: `${accounts.filter((a) => ['both', 'commenter'].includes(accountRoles.get(a.id) || 'both')).length}개`,
-          },
-        ]}
+        settings={modalSettings}
         confirmText="실행"
         isLoading={isPending}
       />
-
-      {/* 실행 버튼 */}
-      <Button
-        onClick={handleRunClick}
-        disabled={keywordCount === 0}
-        isLoading={isPending}
-        size="lg"
-        fullWidth
-      >
-        바이럴 배치 실행 ({keywordCount}개)
-      </Button>
-
-      {/* 실시간 진행 결과 */}
-      <AnimatePresence>
-        {isPending && partialResults.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className={cn('space-y-2')}
-          >
-            <div className={cn('flex items-center justify-between')}>
-              <span className={cn('text-sm font-medium text-ink')}>진행 중...</span>
-              <span className={cn('text-xs text-ink-muted')}>
-                성공 {partialResults.filter((r) => r.success).length} / 실패{' '}
-                {partialResults.filter((r) => !r.success).length}
-              </span>
-            </div>
-            <div className={cn('space-y-1.5 max-h-60 overflow-y-auto')}>
-              {partialResults.map((r, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
-                    r.success ? 'bg-success/10' : 'bg-danger/10'
-                  )}
-                >
-                  <span className={r.success ? 'text-success' : 'text-danger'}>
-                    {r.success ? '✓' : '✗'}
-                  </span>
-                  <span className={cn('font-medium text-ink')}>{r.keyword}</span>
-                  {r.success && r.title && (
-                    <span className={cn('text-ink-muted truncate flex-1')}>{r.title}</span>
-                  )}
-                  {!r.success && r.error && (
-                    <span className={cn('text-danger/80 truncate flex-1')}>{r.error}</span>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 최종 결과 */}
-      <AnimatePresence>
-        {result && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={cn('space-y-4')}
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              className={cn(
-                'rounded-xl border p-4',
-                result.success
-                  ? 'border-success/30 bg-success-soft'
-                  : 'border-warning/30 bg-warning-soft'
-              )}
-            >
-              <div className={cn('flex items-center justify-between')}>
-                <h4
-                  className={cn(
-                    'text-base font-semibold',
-                    result.success ? 'text-success' : 'text-warning'
-                  )}
-                >
-                  {result.success ? '배치 완료' : '부분 완료'}
-                </h4>
-                <span className={cn('text-sm text-ink-muted')}>
-                  {result.completed}/{result.totalKeywords} 성공
-                </span>
-              </div>
-            </motion.div>
-
-            {/* 개별 결과 */}
-            <div className={cn('space-y-2')}>
-              {result.results.map((r, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className={cn(
-                    'rounded-xl border p-4',
-                    r.success
-                      ? 'border-success/20 bg-success-soft'
-                      : 'border-danger/20 bg-danger-soft'
-                  )}
-                >
-                  <div className={cn('flex items-center justify-between')}>
-                    <div className={cn('flex items-center gap-2')}>
-                      <span
-                        className={cn(
-                          'text-sm font-semibold px-2.5 py-1 rounded-lg',
-                          r.success ? 'text-success bg-success/10' : 'text-danger bg-danger/10'
-                        )}
-                      >
-                        {r.keyword}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-xs px-2 py-0.5 rounded-md font-medium',
-                          r.keywordType === 'own'
-                            ? 'text-info bg-info/10'
-                            : 'text-warning bg-warning/10'
-                        )}
-                      >
-                        {r.keywordType === 'own' ? '자사' : '타사'}
-                      </span>
-                    </div>
-                    {r.success && (
-                      <span className={cn('text-sm text-success')}>
-                        댓글 {r.commentCount}개, 대댓글 {r.replyCount}개
-                      </span>
-                    )}
-                  </div>
-                  {r.success && r.title && (
-                    <p className={cn('text-sm text-success/80 mt-2 truncate')}>{r.title}</p>
-                  )}
-                  {!r.success && r.error && (
-                    <p className={cn('text-sm text-danger/80 mt-2')}>{r.error}</p>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
-}
+};

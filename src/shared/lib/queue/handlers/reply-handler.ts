@@ -35,8 +35,10 @@ const normalizeText = (value: string | null | undefined): string =>
   (value ?? '').replace(/\s+/g, ' ').trim();
 
 const removeSequenceFields = (data: ReplyJobData): Omit<ReplyJobData, 'sequenceId' | 'sequenceIndex'> => {
-  const { sequenceId, sequenceIndex, ...rest } = data;
-  return rest;
+  const nextData = { ...data };
+  delete nextData.sequenceId;
+  delete nextData.sequenceIndex;
+  return nextData;
 };
 
 const findParentCommentId = async (
@@ -117,7 +119,7 @@ export const handleReplyJob = async (
   }
 
   if (articleId === 0 && data.keyword) {
-    const retryCount = (data as Record<string, unknown>)._retryCount as number | undefined;
+    const retryCount = data._retryCount;
     if (retryCount && retryCount >= MAX_ARTICLE_RETRY) {
       log.warn('글 미발행 재시도 초과 — 포기', { accountId: account.id, keyword: data.keyword });
       await advanceIfNeeded();

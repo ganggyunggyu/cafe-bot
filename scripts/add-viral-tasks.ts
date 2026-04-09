@@ -1,7 +1,7 @@
 import { connectDB } from '@/shared/lib/mongodb';
 import { Account, Cafe } from '@/shared/models';
 import { addTaskJob } from '@/shared/lib/queue';
-import { generateContent } from '@/shared/api/content-api';
+import { generateContentWithPrompt } from '@/shared/api/content-api';
 
 const keywords = [
   { keyword: '말초신경병증증상', category: '광고' },
@@ -45,7 +45,8 @@ async function main() {
 [답글1-1] 작성자 답글
 [댓글2] 두 번째 댓글`;
 
-    const result = await generateContent(prompt);
+    const generated = await generateContentWithPrompt({ prompt });
+    const result = generated.content || '';
     
     const titleMatch = result.match(/\[제목\]\s*(.+)/);
     const bodyMatch = result.match(/\[본문\]\s*([\s\S]+?)(?=\[댓글|$)/);
@@ -57,16 +58,19 @@ async function main() {
     
     await addTaskJob(writerAccount.accountId, {
       type: 'post',
+      accountId: writerAccount.accountId,
       cafeId: cafe.cafeId,
       menuId: cafe.menuId,
       subject: title,
       content: body,
-      options: {
+      postOptions: {
         allowComment: true,
         allowScrap: true,
         allowCopy: false,
         useAutoSource: false,
-        useCcl: false
+        useCcl: false,
+        cclCommercial: 'disallow',
+        cclModify: 'disallow',
       }
     });
     

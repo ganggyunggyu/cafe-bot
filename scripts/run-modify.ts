@@ -15,6 +15,7 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env" });
 
+import { readFileSync } from "fs";
 import mongoose from "mongoose";
 import { google } from "googleapis";
 import { User } from "../src/shared/models/user";
@@ -23,7 +24,7 @@ import { PublishedArticle } from "../src/shared/models";
 import { modifyArticleWithAccount } from "../src/features/auto-comment/batch/article-modifier";
 import { generateViralContent } from "../src/shared/api/content-api";
 import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
-import { buildCompetitorKeywordPrompt } from "../src/features/viral/prompts/build-competitor-keyword-prompt";
+import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
 import { buildViralPrompt } from "../src/features/viral/viral-prompt";
 import { getViralContentStyleForLoginId } from "../src/shared/config/user-profile";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
@@ -77,9 +78,18 @@ interface ModifyItem {
   link: string;
   keyword: string;
   keywordType?: 'own' | 'competitor';
+  category?: string;
 }
 
-const DELAY_BETWEEN_MS = 15 * 60 * 1000; // 15분
+const DELAY_BETWEEN_MS = parseInt(process.env.MODIFY_DELAY_MS || "", 10) || 15 * 60 * 1000; // 기본 15분
+const TARGET_ARTICLE_IDS = (process.env.ARTICLE_IDS || "")
+  .split(",")
+  .map((value) => parseInt(value.trim(), 10))
+  .filter((value) => Number.isFinite(value));
+const MODIFY_SCHEDULE_FILE = process.env.MODIFY_SCHEDULE_FILE || "";
+const CHANEL_MODIFY_CATEGORY = "_ 일상샤반사 📆";
+const MODIFY_OVERLOAD_FALLBACK_MODEL =
+  process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
 
 const MODIFY_SCHEDULE: ModifyItem[] = [
   // 자사-타사 번갈아 배치
@@ -95,7 +105,7 @@ const MODIFY_SCHEDULE: ModifyItem[] = [
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288889", keyword: "매포흑염소목장 효능", keywordType: "competitor" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290021", keyword: "배란통", keywordType: "own" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288843", keyword: "한살림 흑염소진액 효능", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289754", keyword: "홍삼스틱", keywordType: "own" },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289754", keyword: "홍삼스틱", keywordType: "own", category: CHANEL_MODIFY_CATEGORY },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288628", keyword: "천호엔케어 흑염소진액 후기", keywordType: "competitor" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289728", keyword: "칼슘영양제", keywordType: "own" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288540", keyword: "CMG제약 본래원 흑염소진액 가격", keywordType: "competitor" },
@@ -103,7 +113,7 @@ const MODIFY_SCHEDULE: ModifyItem[] = [
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288539", keyword: "뉴트리원라이프 흑염소진액 가격", keywordType: "competitor" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289706", keyword: "엽산효능", keywordType: "own" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288505", keyword: "건국 흑염소진액 골드 가격", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289677", keyword: "임산부영양제", keywordType: "own" },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289677", keyword: "임산부영양제", keywordType: "own", category: CHANEL_MODIFY_CATEGORY },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288479", keyword: "보령 흑염소진액 가격", keywordType: "competitor" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289362", keyword: "비타민D부족증상", keywordType: "own" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288439", keyword: "팔도감 흑염소진액 효능", keywordType: "competitor" },
@@ -111,6 +121,35 @@ const MODIFY_SCHEDULE: ModifyItem[] = [
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288077", keyword: "한비담 흑염소진액 효능", keywordType: "competitor" },
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289344", keyword: "나팔관조영술", keywordType: "own" },
 ];
+
+const getModifySchedule = (): ModifyItem[] => {
+  const scheduleFromFile = (() => {
+    if (!MODIFY_SCHEDULE_FILE) {
+      return null;
+    }
+
+    const raw = readFileSync(MODIFY_SCHEDULE_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("MODIFY_SCHEDULE_FILE must be a JSON array");
+    }
+
+    return parsed as ModifyItem[];
+  })();
+
+  const baseSchedule = scheduleFromFile ?? MODIFY_SCHEDULE;
+
+  if (TARGET_ARTICLE_IDS.length === 0) {
+    return baseSchedule;
+  }
+
+  return baseSchedule.filter((item) => {
+    const parsed = parseCafeLink(item.link);
+    if (!parsed) return false;
+    return TARGET_ARTICLE_IDS.includes(parsed.articleId);
+  });
+};
 
 // 카페 링크에서 cafeId + articleId 파싱
 const parseCafeLink = (
@@ -168,6 +207,46 @@ const BETWEEN_COMMENTS_DELAY = { min: 30 * 1000, max: 90 * 1000 };
 
 const getRandomDelay = (range: { min: number; max: number }): number =>
   range.min + Math.floor(Math.random() * (range.max - range.min));
+
+const sleep = async (ms: number): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+const isOverloadedError = (error: unknown): boolean => {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  return /529|overloaded|overloaded_error/i.test(errorMessage);
+};
+
+const generateViralContentWithRetry = async (
+  prompt: string,
+  maxAttempts: number = 3,
+): Promise<Awaited<ReturnType<typeof generateViralContent>>> => {
+  let lastError: unknown;
+  let retryModel: string | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await generateViralContent({ prompt, model: retryModel });
+    } catch (error) {
+      lastError = error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`  ⚠️ 원고 생성 실패 (${attempt}/${maxAttempts}): ${errorMessage}`);
+
+      if (!retryModel && isOverloadedError(error)) {
+        retryModel = MODIFY_OVERLOAD_FALLBACK_MODEL;
+        console.log(
+          `  ↪ 529 과부하 감지, 다음 시도부터 ${retryModel} 사용`,
+        );
+      }
+
+      if (attempt < maxAttempts) {
+        await sleep(3000 * attempt);
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+};
 
 const addViralCommentJobs = async (
   articleId: number,
@@ -299,7 +378,9 @@ const addViralCommentJobs = async (
 
 const main = async (): Promise<void> => {
   if (!MONGODB_URI) throw new Error("MONGODB_URI missing");
-  if (MODIFY_SCHEDULE.length === 0) {
+  const modifySchedule = getModifySchedule();
+
+  if (modifySchedule.length === 0) {
     console.log("MODIFY_SCHEDULE이 비어있음");
     return;
   }
@@ -321,12 +402,12 @@ const main = async (): Promise<void> => {
     .filter((a) => a.role === "commenter")
     .map((a) => a.accountId);
 
-  console.log(`=== 글 수정 시작 (${MODIFY_SCHEDULE.length}건) ===\n`);
+  console.log(`=== 글 수정 시작 (${modifySchedule.length}건) ===\n`);
 
   let successCount = 0;
   let failCount = 0;
 
-  for (const item of MODIFY_SCHEDULE) {
+  for (const item of modifySchedule) {
     const parsed = parseCafeLink(item.link);
     if (!parsed) {
       console.log(`❌ 링크 파싱 실패: ${item.link}`);
@@ -364,11 +445,11 @@ const main = async (): Promise<void> => {
     try {
       const kType = item.keywordType || "own";
       const prompt = kType === "competitor"
-        ? buildCompetitorKeywordPrompt({ keyword: item.keyword, keywordType: "competitor" })
+        ? buildCompetitorAdvocacyPrompt({ keyword: item.keyword, keywordType: "competitor" })
         : buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" });
 
       process.stdout.write(`  원고 생성 중... `);
-      const { content } = await generateViralContent({ prompt });
+      const { content } = await generateViralContentWithRetry(prompt);
       const parsedContent = parseViralResponse(content);
       const title = parsedContent?.title || parseTitle(content);
       const body = parsedContent?.body || parseBody(content);
@@ -389,6 +470,7 @@ const main = async (): Promise<void> => {
         articleId,
         newTitle: title,
         newContent: body,
+        category: item.category || (cafeId === "25460974" ? CHANEL_MODIFY_CATEGORY : undefined),
         enableComments: true,
       });
 
@@ -457,8 +539,8 @@ const main = async (): Promise<void> => {
     console.log("");
 
     // 다음 글까지 딜레이 (마지막 글 제외)
-    const idx = MODIFY_SCHEDULE.indexOf(item);
-    if (idx < MODIFY_SCHEDULE.length - 1) {
+    const idx = modifySchedule.indexOf(item);
+    if (idx < modifySchedule.length - 1) {
       const delayMin = Math.round(DELAY_BETWEEN_MS / 60000);
       console.log(`  ⏳ 다음 글까지 ${delayMin}분 대기...\n`);
       await new Promise((r) => setTimeout(r, DELAY_BETWEEN_MS));

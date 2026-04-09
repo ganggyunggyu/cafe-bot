@@ -103,7 +103,9 @@ export const generateViralContent = async (
   if (!response.ok) {
     const errorBody = await response.text();
     console.error('[VIRAL API] 에러 응답:', response.status, errorBody);
-    throw new Error(`Viral content generation failed: ${response.status}`);
+    throw new Error(
+      `Viral content generation failed: ${response.status} - ${errorBody}`
+    );
   }
 
   return response.json();

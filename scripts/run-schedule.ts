@@ -14,26 +14,17 @@ import { generateViralContent } from "../src/shared/api/content-api";
 import { buildViralPrompt } from "../src/features/viral/viral-prompt";
 import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
 import { buildCompetitorKeywordPrompt } from "../src/features/viral/prompts/build-competitor-keyword-prompt";
+import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
 import { buildShortDailyPrompt } from "../src/features/viral/prompts/build-short-daily-prompt";
 import { getViralContentStyleForLoginId } from "../src/shared/config/user-profile";
-import {
-  browseCafePosts,
-  pickRandomArticles,
-} from "../src/shared/lib/cafe-browser";
-import { readCafeArticleContent } from "../src/shared/lib/cafe-article-reader";
-import { generateComment } from "../src/shared/api/comment-gen-api";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
 import type {
   PostJobData,
-  CommentJobData,
-  LikeJobData,
   ViralCommentsData,
 } from "../src/shared/lib/queue/types";
-import type { NaverAccount } from "../src/shared/lib/account-manager";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 const LOGIN_ID = process.env.LOGIN_ID || "21lab";
-const SIDE_ACTIVITY_BUFFER_MS = 3 * 60 * 1000;
 
 interface ScheduleItem {
   cafe: string;
@@ -41,70 +32,61 @@ interface ScheduleItem {
   keyword: string;
   category: string;
   type: "ad" | "daily" | "daily-ad";
-  keywordType?: "own" | "competitor";
+  keywordType?: "own" | "competitor" | "competitor-advocacy";
   accountId: string;
   time: string; // "HH:MM"
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // 2026-04-07 캠페인 37건 (16:45~23:00)
-  // 쇼핑: ad10(타6+자4)+daily5 | 샤넬: daily5+daily-ad5 | 건강노후: ad6 | 건강관리: ad6
-
-  // === 쇼핑지름신 (15건: ad10 + daily5) ===
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "메가커피 꿀복숭아 아이스티 마셨는데 생각보다 안 달아서 좋았음", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "16:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "정식품 베지밀 고단백두유 검은콩", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor", accountId: "eytkgy5500", time: "17:25" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "어린이 면역력 영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "17:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "스타필드 하남 돌다가 뉴발란스 운동화만 오래 봄", category: "일상톡톡", type: "daily", accountId: "4giccokx", time: "18:05" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "닥터파이토 덴티백 PRO 구강유산균 M18", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor", accountId: "yenalk", time: "18:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "60대 엄마 생일선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "19:10" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "종근당건강 프로메가 알티지 오메가3 비타민D", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor", accountId: "eytkgy5500", time: "19:55" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "JTBC 모두가 자신의 무가치함과 싸우고 있다 티저 보다가 몰입됨", category: "일상톡톡", type: "daily", accountId: "uqgidh2690", time: "20:15" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후 영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "20:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "지그재그 앱 켜자마자 봄 아우터만 한참 넘겨봄", category: "일상톡톡", type: "daily", accountId: "yenalk", time: "20:55" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "락토핏 맥스19 유산균", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor", accountId: "olgdmp9921", time: "22:10" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "SBS 오늘도 매진했습니다 티저 보고 야식 검색하다가 시간 감", category: "일상톡톡", type: "daily", accountId: "eytkgy5500", time: "22:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "키크는 영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "22:30" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "김오곤 프리미엄 마가목 흑염소 진액", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor", accountId: "uqgidh2690", time: "22:40" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "164 루테인지아잔틴GR", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor", accountId: "4giccokx", time: "23:00" },
-
-  // === 샤넬오픈런 (10건: daily5 + daily-ad5) ===
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "지그재그 직잭세일 보다가 샤넬 25K 플랩백 코디 저장해둠", category: "일상샤반사", type: "daily-ad", accountId: "yenalk", time: "17:05" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "H&M 봄 셔츠 원피스 색감 괜찮아서 장바구니 넣음", category: "일상샤반사", type: "daily", accountId: "olgdmp9921", time: "17:55" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "올리브영에서 롬앤 틴트 색상표 다시 비교함", category: "일상샤반사", type: "daily", accountId: "eytkgy5500", time: "18:40" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "SBS 오늘도 매진했습니다 티저 보고 퇴근룩 자켓 검색함", category: "일상샤반사", type: "daily-ad", accountId: "uqgidh2690", time: "19:00" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "무신사 스탠다드 카디건 후기 보다가 베이지에 꽂힘", category: "일상샤반사", type: "daily", accountId: "4giccokx", time: "19:20" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 25S 메리제인 후기 영상보다가 굽 높이만 한참 봄", category: "일상샤반사", type: "daily", accountId: "yenalk", time: "19:40" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "마뗑킴 카드지갑 재입고 알림 보다가 샤넬 미니백 생각남", category: "일상샤반사", type: "daily-ad", accountId: "olgdmp9921", time: "20:35" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "JTBC 모두가 자신의 무가치함과 싸우고 있다 포스터 보니 블랙 트위드만 눈에 들어옴", category: "일상샤반사", type: "daily-ad", accountId: "eytkgy5500", time: "21:15" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "COS 매장 들렀다가 봄 트렌치 핏이 괜찮았음", category: "일상샤반사", type: "daily", accountId: "uqgidh2690", time: "21:30" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "올리브영 배송 기다리면서 샤넬 뷰티 파우치 정리함", category: "일상샤반사", type: "daily-ad", accountId: "4giccokx", time: "21:50" },
-
-  // === 건강한노후준비 (6건: ad6) ===
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "몸을 따뜻하게 하는 음식", category: "건강상식", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "16:55" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "갱년기 오한", category: "건강정보", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "17:35" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "피로회복 음식", category: "자유게시판", type: "ad", keywordType: "own", accountId: "njmzdksm", time: "18:50" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "흑염소 효능", category: "흑염소진액정보", type: "ad", keywordType: "own", accountId: "e6yb5u4k", time: "20:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "수족냉증 원인 치료", category: "질문게시판", type: "ad", keywordType: "own", accountId: "suc4dce7", time: "21:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "국내산토종흑염소진액", category: "한약재정보", type: "ad", keywordType: "own", accountId: "xzjmfn3f", time: "22:00" },
-
-  // === 건강관리소 (6건: ad6) ===
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "영양제 복용시간", category: "건강이야기", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "17:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "커피 대신 녹차", category: "자유로운이야기", type: "ad", keywordType: "own", accountId: "0ehz3cb2", time: "18:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "고단백 음식", category: "건강이야기", type: "ad", keywordType: "own", accountId: "umhu0m83", time: "19:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "산후 영양제", category: "건강 관리 후기", type: "ad", keywordType: "own", accountId: "br5rbg", time: "20:25" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "흑염소 복용법", category: "건강이야기", type: "ad", keywordType: "own", accountId: "beautifulelephant274", time: "21:40" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "자궁에 좋은 음식", category: "건강이야기", type: "ad", keywordType: "own", accountId: "angrykoala270", time: "22:50" },
-];
-
-const COMMENT_TEMPLATES = [
-  "좋은 정보 감사합니다. 참고해볼게요.",
-  "저도 비슷하게 느꼈는데 정리 잘해주셨네요.",
-  "경험 공유 감사합니다. 도움이 됐어요.",
-  "내용이 깔끔해서 이해하기 편했어요.",
-  "실사용 관점에서 도움 되는 글이네요.",
-  "핵심만 잘 정리돼서 바로 참고했어요.",
-  "저랑 상황이 비슷해서 공감하면서 읽었습니다.",
-  "정성글 감사합니다. 다음 글도 기대할게요.",
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "닥터린 하이퍼셀 대마종자유", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "olgdmp9921", time: "13:00" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "수원 난임병원", category: "자유게시판", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "13:12" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 25 사진 계속 넘겨보다가 점심시간 순삭", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "yenalk", time: "13:25" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "출산 후 몸조리", category: "취미이야기", type: "ad", keywordType: "own", accountId: "0ehz3cb2", time: "13:37" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "비에날씬 프로 패밀리세트", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "eytkgy5500", time: "13:50" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "흑염소 효능", category: "흑염소진액정보", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "14:02" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 22 매장 사진 보다가 오후 코디 고민", category: "_ 일상샤반사 📆", type: "daily", accountId: "uqgidh2690", time: "14:15" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "난임지원비", category: "건강이야기", type: "ad", keywordType: "own", accountId: "umhu0m83", time: "14:27" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 BRING GREEN 티트리 시카 수딩 토너 세일 페이지만 계속 보는 중", category: "일상톡톡", type: "daily", accountId: "4giccokx", time: "14:40" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산후조리 한약", category: "한약재정보", type: "ad", keywordType: "own", accountId: "njmzdksm", time: "14:52" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "클래식 11.12랑 CHANEL 22 중 데일리 고민", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "olgdmp9921", time: "15:05" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "산전검사 비용", category: "자유로운이야기", type: "ad", keywordType: "own", accountId: "br5rbg", time: "15:17" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "대원제약 혈당파이터", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "yenalk", time: "15:30" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "난임검사 지원", category: "건강상식", type: "ad", keywordType: "own", accountId: "suc4dce7", time: "15:42" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 월간남친 공개 소식 보고 커피 리필함", category: "일상톡톡", type: "daily", accountId: "eytkgy5500", time: "15:55" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "출산 후 한약", category: "건강 챌린지", type: "ad", keywordType: "own", accountId: "beautifulelephant274", time: "16:07" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "카무트 브랜드밀 견과바", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "uqgidh2690", time: "16:20" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "시험관 동결 이식 비용", category: "건강정보", type: "ad", keywordType: "own", accountId: "xzjmfn3f", time: "16:32" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "봄여름 2026 프리컬렉션 쇼핑백 컬러 비교 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "4giccokx", time: "16:45" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "국내산토종흑염소진액", category: "건강 관리 후기", type: "ad", keywordType: "own", accountId: "angrykoala270", time: "16:57" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 이 사랑 통역 되나요 라인업 다시 보는 중", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "17:10" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "42세 임신 가능성", category: "질문게시판", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "17:22" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 31 Mini Shopping Bag 실물 후기 계속 찾는 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "yenalk", time: "17:35" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "기력회복 한약", category: "오늘의 운동", type: "ad", keywordType: "own", accountId: "tinyfish183", time: "17:47" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "프리미엄 윤방부박사의 넘버원 알부민", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "eytkgy5500", time: "18:00" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "어머니 환갑 선물", category: "자유게시판", type: "ad", keywordType: "own", accountId: "0ehz3cb2", time: "18:12" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "봄여름 2026 프리컬렉션 밝은 트위드 체크가 계속 생각남", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "uqgidh2690", time: "18:25" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "자궁 따뜻하게", category: "취미이야기", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "18:37" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "담백한 베지밀A 검은콩두유", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "4giccokx", time: "18:50" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산전검사 남자", category: "흑염소진액정보", type: "ad", keywordType: "own", accountId: "umhu0m83", time: "19:02" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "클래식 11.12 체인 길이 후기만 계속 읽는 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "olgdmp9921", time: "19:15" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "자연임신 확률", category: "건강이야기", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "19:27" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 BRING GREEN 티트리 시카 토너 장바구니 정리 중", category: "일상톡톡", type: "daily", accountId: "yenalk", time: "19:40" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "임신준비 홍삼", category: "한약재정보", type: "ad", keywordType: "own", accountId: "br5rbg", time: "19:52" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 31 Mini Shopping Bag 실루엣이 자꾸 눈에 밟힘", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "eytkgy5500", time: "20:05" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "산후 영양제", category: "자유로운이야기", type: "ad", keywordType: "own", accountId: "njmzdksm", time: "20:17" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "비에날 씬 프로", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "uqgidh2690", time: "20:30" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "임신 준비기간", category: "건강상식", type: "ad", keywordType: "own", accountId: "beautifulelephant274", time: "20:42" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "한미사이언스 완 전두유", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "4giccokx", time: "20:55" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "임신준비 종합영양제", category: "건강 챌린지", type: "ad", keywordType: "own", accountId: "suc4dce7", time: "21:07" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "60대 엄마 생일선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "21:20" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "난임검사 시점", category: "건강정보", type: "ad", keywordType: "own", accountId: "angrykoala270", time: "21:32" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후 산모 선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "21:45" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "흑염소 살찌는지", category: "건강 관리 후기", type: "ad", keywordType: "own", accountId: "xzjmfn3f", time: "21:57" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 25랑 2.55 중 뭐부터 볼지 아직도 못 정함", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "4giccokx", time: "22:10" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "착상에 좋은 음식", category: "질문게시판", type: "ad", keywordType: "own", accountId: "tinyfish183", time: "22:22" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 원더풀스 얘기 보다 보니 야식 고민됨", category: "일상톡톡", type: "daily", accountId: "uqgidh2690", time: "22:35" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "산후도우미 기간", category: "오늘의 운동", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "22:47" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "잠들기 전에 CHANEL 31 Mini Shopping Bag 후기만 또 보는 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "eytkgy5500", time: "23:00" },
 ];
 
 const parseTitle = (text: string): string => {
@@ -133,124 +115,6 @@ const getDelayMs = (timeStr: string): number => {
   return target.getTime() - SCRIPT_START;
 };
 
-const generateSmartComment = async (
-  writer: NaverAccount,
-  cafeId: string,
-  articleId: number,
-  fallbackIndex: number,
-): Promise<string> => {
-  const fallback = COMMENT_TEMPLATES[fallbackIndex % COMMENT_TEMPLATES.length];
-  try {
-    const article = await readCafeArticleContent(writer, cafeId, articleId);
-    if (!article.success || !article.content) return fallback;
-    const postContext = article.title
-      ? `${article.title}\n\n${article.content}`
-      : article.content;
-    const generated = await generateComment(
-      postContext,
-      null,
-      article.authorNickname,
-    );
-    return generated.trim() || fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const addSideActivityJobs = async (
-  writer: { accountId: string; password: string; nickname?: string },
-  cafeId: string,
-  menuId: string,
-  baseDelay: number,
-  idx: number,
-  commentableMenuIds?: number[],
-): Promise<{ comments: number; likes: number }> => {
-  const naverAccount: NaverAccount = {
-    id: writer.accountId,
-    password: writer.password,
-    nickname: writer.nickname,
-  };
-
-  const useCommentableFilter =
-    commentableMenuIds && commentableMenuIds.length > 0;
-  const browseMenuId = useCommentableFilter ? undefined : Number(menuId);
-  const browse = await browseCafePosts(naverAccount, cafeId, browseMenuId, {
-    perPage: 40,
-  });
-  if (!browse.success || browse.articles.length === 0) {
-    console.log(`    사이드: 글 없음 - 스킵`);
-    return { comments: 0, likes: 0 };
-  }
-
-  const menuFilteredSet = useCommentableFilter
-    ? new Set(commentableMenuIds)
-    : null;
-  const menuFiltered = menuFilteredSet
-    ? browse.articles.filter((a) => menuFilteredSet.has(a.menuId))
-    : browse.articles;
-
-  const filtered = writer.nickname
-    ? menuFiltered.filter((a) => a.nickname !== writer.nickname)
-    : menuFiltered;
-  const pool =
-    filtered.length > 0
-      ? filtered
-      : menuFiltered.length > 0
-        ? menuFiltered
-        : browse.articles;
-
-  let commentCount = 0;
-  let likeCount = 0;
-
-  const commentTargets = pickRandomArticles(pool, Math.min(2, pool.length));
-  for (let i = 0; i < commentTargets.length; i++) {
-    const target = commentTargets[i];
-    const commentText = await generateSmartComment(
-      naverAccount,
-      cafeId,
-      target.articleId,
-      idx + i,
-    );
-    const delay = baseDelay + i * SIDE_ACTIVITY_BUFFER_MS;
-    const commentJob: CommentJobData = {
-      type: "comment",
-      accountId: writer.accountId,
-      cafeId,
-      articleId: target.articleId,
-      content: commentText,
-    };
-    await addTaskJob(writer.accountId, commentJob, delay);
-    commentCount++;
-    console.log(
-      `    사이드 댓글 #${target.articleId} (딜레이: ${Math.round(delay / 60000)}분)`,
-    );
-  }
-
-  const commentedIds = new Set(commentTargets.map((t) => t.articleId));
-  const likePool = pool.filter((a) => !commentedIds.has(a.articleId));
-  const likeTargets = pickRandomArticles(
-    likePool.length > 0 ? likePool : pool,
-    1,
-  );
-
-  for (const target of likeTargets) {
-    const delay = baseDelay + commentTargets.length * SIDE_ACTIVITY_BUFFER_MS;
-    const likeJob: LikeJobData = {
-      type: "like",
-      accountId: writer.accountId,
-      cafeId,
-      articleId: target.articleId,
-    };
-    await addTaskJob(writer.accountId, likeJob, delay);
-    likeCount++;
-    console.log(
-      `    사이드 좋아요 #${target.articleId} (딜레이: ${Math.round(delay / 60000)}분)`,
-    );
-  }
-
-  return { comments: commentCount, likes: likeCount };
-};
-
 const main = async (): Promise<void> => {
   if (!MONGODB_URI) throw new Error("MONGODB_URI missing");
   await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
@@ -277,15 +141,12 @@ const main = async (): Promise<void> => {
 
   let totalPosts = 0;
   let failCount = 0;
-  let totalSideComments = 0;
-  let totalSideLikes = 0;
+  const totalSideComments = 0;
+  const totalSideLikes = 0;
 
   const sortedSchedule = [...SCHEDULE].sort((a, b) =>
     a.time.localeCompare(b.time),
   );
-
-  // 사이드 활동 추적 (계정+카페 조합별 1회)
-  const sideActivityDone = new Set<string>();
 
   for (const item of sortedSchedule) {
     const delayMs = getDelayMs(item.time);
@@ -313,18 +174,20 @@ const main = async (): Promise<void> => {
       const contentStyle = getViralContentStyleForLoginId(LOGIN_ID);
       const isDailyContent = item.type === "daily" || item.type === "daily-ad";
       const kwType = item.keywordType || "own";
-      const buildAdPrompt = kwType === "competitor"
-        ? () => buildCompetitorKeywordPrompt({ keyword: item.keyword, keywordType: "competitor" })
-        : contentStyle !== '정보'
-          ? () => buildViralPrompt({ keyword: item.keyword, keywordType: "own" }, contentStyle)
-          : () => buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" });
+      const buildAdPrompt = kwType === "competitor-advocacy"
+        ? () => buildCompetitorAdvocacyPrompt({ keyword: item.keyword, keywordType: "competitor" })
+        : kwType === "competitor"
+          ? () => buildCompetitorKeywordPrompt({ keyword: item.keyword, keywordType: "competitor" })
+          : contentStyle !== '정보'
+            ? () => buildViralPrompt({ keyword: item.keyword, keywordType: "own" }, contentStyle)
+            : () => buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" });
       const prompt = isDailyContent
         ? buildShortDailyPrompt({ keyword: item.keyword, keywordType: "own" })
         : buildAdPrompt();
 
       const { content } = await generateViralContent({
         prompt,
-        // model은 text-gen-hub의 cafe_total_service DEFAULT_MODEL 사용
+        model: "gemini-3.1-pro-preview",
       });
       const parsed = parseViralResponse(content);
       const title = parsed?.title || parseTitle(content);

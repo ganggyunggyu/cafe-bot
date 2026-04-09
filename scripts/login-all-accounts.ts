@@ -1,7 +1,7 @@
 import { chromium, Browser, Page } from 'playwright';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
-import accountsJson from '@/shared/config/accounts.json';
+import { getAllAccountsForMonitoring } from '@/shared/config/accounts';
 
 const SESSION_DIR = join(process.cwd(), '.playwright-session');
 const SCREENSHOT_DIR = '/tmp/login-screenshots';
@@ -140,7 +140,9 @@ const loginSingleAccount = async (
 
 const main = async () => {
   const SKIP_DONE = ['cookie4931','wound12567','precede1451','dyulp','lesyt','aryunt','loand3324'];
-  const accounts = (accountsJson as { accountId: string; password: string }[]).filter(a => !SKIP_DONE.includes(a.accountId));
+  const accounts = (await getAllAccountsForMonitoring())
+    .map(({ id, password }) => ({ accountId: id, password }))
+    .filter((account) => !SKIP_DONE.includes(account.accountId));
 
   console.log(`총 ${accounts.length}개 계정 로그인 시작\n`);
 

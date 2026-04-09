@@ -36,6 +36,8 @@
 - 작업 종료 시에는 의미 단위 커밋이 가능한 상태로 변경 범위를 정리
 - 새 하네스가 없으면 최소한 기존 테스트 또는 새 계약 테스트를 추가해 회귀 지점을 남김
 - 가능하면 `npm run verify:task` 를 공통 진입점으로 사용
+- lint gate는 changed file strict mode를 기본으로 적용해, 수정한 파일은 warning 없이 유지
+- Next build는 앱 코드(`src/` 중심) 검증에 집중하고, 운영 스크립트는 별도 lint/test 게이트로 분리
 
 ## 현재 하네스 파일
 

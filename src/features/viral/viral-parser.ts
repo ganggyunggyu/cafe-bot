@@ -121,6 +121,14 @@ const parseComments = (raw: string): ParsedComment[] => {
     };
   };
 
+  const appendCurrentLine = (line: string) => {
+    if (!current) {
+      return;
+    }
+
+    current.contentLines.push(line);
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
     if (!trimmed) continue;
@@ -223,9 +231,7 @@ const parseComments = (raw: string): ParsedComment[] => {
     }
 
     // 태그 아닌 줄 → 현재 댓글에 이어붙이기
-    if (current) {
-      current.contentLines.push(trimmed);
-    }
+    appendCurrentLine(trimmed);
   }
 
   finalizeCurrent();

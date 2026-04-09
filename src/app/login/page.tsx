@@ -46,10 +46,10 @@ export default function LoginPage() {
               'mx-auto h-14 w-14 rounded-2xl bg-accent text-background flex items-center justify-center text-xl font-bold'
             )}
           >
-            CB
+            V
           </div>
-          <h1 className={cn('text-2xl font-semibold text-ink mt-4')}>Cafe Bot</h1>
-          <p className={cn('text-sm text-ink-muted')}>네이버 카페 자동 발행 시스템</p>
+          <h1 className={cn('text-2xl font-semibold text-ink mt-4')}>Viro</h1>
+          <p className={cn('text-sm text-ink-muted')}>네이버 카페 운영 콘솔</p>
         </div>
 
         <div className={cn('rounded-2xl border border-border-light bg-surface p-6 space-y-6')}>
