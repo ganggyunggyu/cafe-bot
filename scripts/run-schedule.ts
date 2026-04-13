@@ -38,55 +38,58 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "친구 출산선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "17:45" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "임신 전 건강 검진", category: "건강상식", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "17:50" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Small Bowling Bag 컬러 보다 보니 저녁 약속 가방 고민됐어요", category: "_ 일상샤반사 📆", type: "daily", accountId: "yenalk", time: "17:55" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "나팔관조영술 실비", category: "건강 관리 후기", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "18:00" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "아이들 영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "18:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "오므론 혈압계 숫자 적다 보니 저녁 루틴이 생겼어요", category: "자유게시판", type: "daily", accountId: "heavyzebra240", time: "18:10" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Classic 11.12 체인 길이 비교하다 저녁 시간이 순삭됐어요", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "uqgidh2690", time: "18:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "쿠팡 로켓프레시 샐러드 꺼내 놓으니 야식 욕심이 좀 줄었어요", category: "건강이야기", type: "daily", accountId: "0ehz3cb2", time: "18:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "오쏘몰 이뮨", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "18:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "다이슨 공기청정기 필터 갈고 나니 괜히 창문 여닫게 돼요", category: "건강정보", type: "daily", accountId: "njmzdksm", time: "18:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "나이키 런클럽 켜고 걷기 페이스 보는 재미가 생겼어요", category: "오늘의 운동", type: "daily", accountId: "umhu0m83", time: "18:40" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 25 사진 넘기다가 퇴근 버스 놓칠 뻔했어요", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "olgdmp9921", time: "18:45" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "삼성 헬스 만보기 채우려고 동네 한 바퀴 더 돌았어요", category: "건강정보", type: "daily", accountId: "e6yb5u4k", time: "18:50" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "갱년기 선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "18:55" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "닥터유 프로틴바 하나 챙겨두니 군것질 타이밍이 줄었어요", category: "건강 챌린지", type: "daily", accountId: "br5rbg", time: "19:00" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 브링그린 티트리 패드 세일 페이지 다시 열었어요", category: "일상톡톡", type: "daily", accountId: "eytkgy5500", time: "19:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "갱년기 병원", category: "질문게시판", type: "ad", keywordType: "own", accountId: "suc4dce7", time: "19:10" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산 후 종합영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "19:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "산후도우미 지원기간", category: "자유로운이야기", type: "ad", keywordType: "own", accountId: "beautifulelephant274", time: "19:20" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "클래식 11.12 블랙은 왜 매번 다시 보게 되는지 모르겠어요", category: "_ 일상샤반사 📆", type: "daily", accountId: "4giccokx", time: "19:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "스타벅스 디카페인 라떼로 저녁 커피 욕심 눌렀어요", category: "자유게시판", type: "daily", accountId: "xzjmfn3f", time: "19:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "유튜브 핏블리 스트레칭 따라 했더니 저녁이 덜 무거웠어요", category: "건강이야기", type: "daily", accountId: "angrykoala270", time: "19:40" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 블러드하운즈 틀어두고 간식 고르다 저녁이 늦어졌어요", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "19:45" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "애플워치 스탠드 링 닫으려고 설거지 끝나고 제자리걸음 했어요", category: "건강상식", type: "daily", accountId: "8ua1womn", time: "19:50" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Spring-Summer 2026 트위드 보고 봄옷 괜히 다시 찾았어요", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "yenalk", time: "19:55" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "카카오맵 산책 코스 저장해두고 동네 길 바꿔 걸었어요", category: "취미이야기", type: "daily", accountId: "tinyfish183", time: "20:00" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 31 Mini Shopping Bag 후기만 계속 읽고 있어요", category: "_ 일상샤반사 📆", type: "daily", accountId: "eytkgy5500", time: "20:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "필로우 낮잠 알람 맞춰두니 오후가 덜 무너졌어요", category: "건강정보", type: "daily", accountId: "0ehz3cb2", time: "20:10" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "EXO EXhOrizon 후기 영상 보다가 주말 약속부터 잡았어요", category: "일상톡톡", type: "daily", accountId: "uqgidh2690", time: "20:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "테팔 에어프라이어에 고구마 돌려두니 냉장고 덜 열게 돼요", category: "자유로운이야기", type: "daily", accountId: "orangeswan630", time: "20:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "아기엄마 선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "20:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "골다공증 주사 효과", category: "건강정보", type: "ad", keywordType: "own", accountId: "umhu0m83", time: "20:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "제왕절개 회복기간", category: "건강 관리 후기", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "20:40" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Maxi Hobo Bag 실착 영상보다 위시만 늘었어요", category: "_ 일상샤반사 📆", type: "daily", accountId: "olgdmp9921", time: "20:45" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "오쏘몰 이뮨은 못 챙겨도 물병은 끝까지 비웠어요", category: "자유게시판", type: "daily", accountId: "br5rbg", time: "20:50" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "이노시톨 추천", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "20:55" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "배달의민족 샐러드 검색하다 결국 집 반찬으로 버텼어요", category: "건강 챌린지", type: "daily", accountId: "heavyzebra240", time: "21:00" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "임신 준비 비타민c", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "21:05" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "듀오링고 불꽃 이어가려다 밤 산책까지 하고 들어왔어요", category: "건강상식", type: "daily", accountId: "beautifulelephant274", time: "21:10" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 25 데님 버전 캡처만 잔뜩 저장했어요", category: "_ 일상샤반사 📆", type: "daily", accountId: "uqgidh2690", time: "21:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "삼성 헬스 수면 점수 낮게 떠서 오늘은 일찍 눕기로 했어요", category: "건강이야기", type: "daily", accountId: "njmzdksm", time: "21:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "쿠팡 로켓배송 장바구니에서 휴지랑 과자만 다시 정리했어요", category: "일상톡톡", type: "daily", accountId: "4giccokx", time: "21:25" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "유튜브 요가소년 스트레칭 따라 하니 어깨가 덜 굳는 느낌이에요", category: "건강정보", type: "daily", accountId: "angrykoala270", time: "21:30" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "유튜브 말왕 홈트 보다가 매트부터 다시 펼쳤어요", category: "오늘의 운동", type: "daily", accountId: "e6yb5u4k", time: "21:40" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "60대 엄마 생신선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "21:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "스타벅스 디카페인 라떼 들고 퇴근길 한 바퀴 돌았어요", category: "일상톡톡", type: "daily", accountId: "yenalk", time: "21:55" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "2.55랑 CHANEL 22 중 뭐가 먼저일지 아직도 못 정했어요", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "eytkgy5500", time: "22:05" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "어린이 종합영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "22:15" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Spring-Summer 2026 Pre-Collection 컬러감이 계속 생각나요", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "4giccokx", time: "22:25" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "비에날씬", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "olgdmp9921", time: "17:56" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "이경제 흑염소 스틱", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "18:21" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 닥터지 레드 블레미쉬 수딩 크림 기획 다시 보게 되는 저녁", category: "일상톡톡", type: "daily", accountId: "uqgidh2690", time: "18:46" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 이 사랑 통역 되나요 켜두고 야식 메뉴만 늦게 고름", category: "일상톡톡", type: "daily", accountId: "eytkgy5500", time: "19:12" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "콘드로이친 MBP", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "yenalk", time: "19:37" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 폭싹 속았수다 얘기하다가 과자 봉지만 하나 더 뜯음", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "20:02" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "넷플릭스 약한영웅 다시 보기 시작하니 커피가 식는 줄도 몰랐음", category: "일상톡톡", type: "daily", accountId: "4giccokx", time: "20:28" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "리포좀 글루타치온", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "uqgidh2690", time: "20:53" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "김소형원방 흑염소진액", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "21:18" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 닥터지 수딩 크림 오늘드림 페이지 괜히 또 열어봄", category: "일상톡톡", type: "daily", accountId: "yenalk", time: "21:44" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "종근당 주니어홍삼", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "22:09" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "80대 할머니 생신선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "22:22" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "BNR17 유산균", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "4giccokx", time: "22:34" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후 산모 선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "22:47" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "매스틱 유산균", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "uqgidh2690", time: "23:00" },
+
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 25 사진 넘기다 보니 퇴근 준비가 자꾸 밀림", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "eytkgy5500", time: "18:08" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Small Bowling Bag 컬러 보다가 저녁 약속 가방 다시 고민됨", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "yenalk", time: "18:34" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "클래식 11.12 체인 길이 후기만 계속 읽는 중", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "olgdmp9921", time: "18:59" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 31 Mini Shopping Bag 후기 캡처만 늘어남", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "4giccokx", time: "19:24" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Spring Summer 2026 Pre-Collection 트위드 컬러가 계속 눈에 남음", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "uqgidh2690", time: "19:50" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 22 매장 사진 보다가 데일리 코디 다시 상상함", category: "_ 일상샤반사 📆", type: "daily", accountId: "eytkgy5500", time: "20:15" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Maxi Hobo Bag 실루엣은 왜 밤에 더 생각나는지 모르겠음", category: "_ 일상샤반사 📆", type: "daily", accountId: "yenalk", time: "20:40" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "2.55랑 CHANEL 22 중 뭐부터 볼지 아직도 못 정함", category: "_ 일상샤반사 📆", type: "daily", accountId: "olgdmp9921", time: "21:06" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "Spring Summer 2026 쇼핑백 컬러 비교하다 또 시간 순삭", category: "_ 일상샤반사 📆", type: "daily", accountId: "4giccokx", time: "21:31" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "클래식 11.12 블랙은 왜 밤마다 다시 보게 되는지 모르겠음", category: "_ 일상샤반사 📆", type: "daily", accountId: "uqgidh2690", time: "21:56" },
+
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "삼성 헬스 수면 점수 보고 커피 한 잔 줄여볼까 고민 중", category: "자유게시판", type: "daily", accountId: "8i2vlbym", time: "18:02" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "40대 중반 임신 확률", category: "건강상식", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "18:27" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "오므론 혈압계 숫자 적다 보니 저녁 루틴이 생김", category: "한약재정보", type: "daily", accountId: "njmzdksm", time: "18:53" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "착상 음식", category: "한약재정보", type: "ad", keywordType: "own", accountId: "suc4dce7", time: "19:18" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "다이슨 공기청정기 필터 갈고 나니 창문 여닫는 타이밍이 달라짐", category: "건강정보", type: "daily", accountId: "xzjmfn3f", time: "19:43" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "e보건소 난소검사 결과", category: "건강정보", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "20:09" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "스타벅스 디카페인 라떼로 바꾸니 밤이 조금 가벼운 느낌", category: "자유게시판", type: "daily", accountId: "0ehz3cb2", time: "20:34" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "자라탕 효능", category: "질문게시판", type: "ad", keywordType: "own", accountId: "umhu0m83", time: "20:59" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "마보 10분 명상 켜두니 퇴근 뒤 집중이 덜 무너짐", category: "한약재정보", type: "daily", accountId: "br5rbg", time: "21:25" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "태반주사 효과", category: "자유게시판", type: "ad", keywordType: "own", accountId: "beautifulelephant274", time: "21:50" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "필로우 낮잠 알람 맞춰두고 오후 컨디션 챙기는 중", category: "건강정보", type: "daily", accountId: "angrykoala270", time: "22:15" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "광명 난임병원", category: "질문게시판", type: "ad", keywordType: "own", accountId: "tinyfish183", time: "22:41" },
+
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "나이키 런클럽 켜고 걷기 페이스 보는 재미가 다시 붙음", category: "자유로운이야기", type: "daily", accountId: "0ehz3cb2", time: "18:15" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "후비루치료", category: "건강이야기", type: "ad", keywordType: "own", accountId: "umhu0m83", time: "18:40" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "삼성 헬스 만보기 채우려고 저녁 산책 한 바퀴 더 함", category: "건강이야기", type: "daily", accountId: "br5rbg", time: "19:05" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "독감에 좋은 음식", category: "건강 챌린지", type: "ad", keywordType: "own", accountId: "beautifulelephant274", time: "19:31" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "닥터유 프로틴바 하나 챙겨두니 군것질 타이밍이 줄어듦", category: "건강 관리 후기", type: "daily", accountId: "angrykoala270", time: "19:56" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "제왕절개 입원기간", category: "오늘의 운동", type: "ad", keywordType: "own", accountId: "tinyfish183", time: "20:21" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "쿠팡 로켓프레시 샐러드 꺼내 놓으니 야식 욕심이 덜함", category: "취미이야기", type: "daily", accountId: "8i2vlbym", time: "20:47" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "맘모톰수술비용", category: "건강이야기", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "21:12" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "듀오링고 불꽃 이어가려고 밤 산책까지 하고 들어옴", category: "건강 관리 후기", type: "daily", accountId: "njmzdksm", time: "21:37" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "유방 조직검사", category: "건강 챌린지", type: "ad", keywordType: "own", accountId: "suc4dce7", time: "22:03" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "유튜브 핏블리 스트레칭 따라 하고 나니 어깨가 덜 굳는 느낌", category: "오늘의 운동", type: "daily", accountId: "xzjmfn3f", time: "22:28" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "출산 후 러닝", category: "오늘의 운동", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "22:53" },
 ];
 
 const parseTitle = (text: string): string => {
@@ -99,20 +102,17 @@ const parseBody = (text: string): string => {
   return match ? match[1].trim() : "";
 };
 
-// 스크립트 시작 시점 고정 (순차 처리 중 시간 밀림 방지)
-const SCRIPT_START = Date.now();
-
 const getDelayMs = (timeStr: string): number => {
   const [h, m] = timeStr.split(":").map(Number);
-  const target = new Date(SCRIPT_START);
+  const now = new Date();
+  const target = new Date(now);
   target.setHours(h, m, 0, 0);
 
-  // 예약 시간이 스크립트 시작 시점보다 이전이면 즉시 실행 (0)
-  if (target.getTime() <= SCRIPT_START) {
+  if (target.getTime() <= now.getTime()) {
     return 0;
   }
 
-  return target.getTime() - SCRIPT_START;
+  return target.getTime() - now.getTime();
 };
 
 const main = async (): Promise<void> => {

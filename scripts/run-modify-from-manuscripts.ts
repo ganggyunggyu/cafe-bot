@@ -13,10 +13,10 @@ import { PublishedArticle } from "../src/shared/models";
 import { modifyArticleWithAccount } from "../src/features/auto-comment/batch/article-modifier";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
 import { addTaskJob } from "../src/shared/lib/queue";
+import { closeContextForAccount, invalidateLoginCache } from "../src/shared/lib/multi-session";
 import type {
   CommentJobData,
   ReplyJobData,
-  DisableCommentJobData,
   ViralCommentsData,
 } from "../src/shared/lib/queue/types";
 import type { NaverAccount } from "../src/shared/lib/account-manager";
@@ -24,8 +24,10 @@ import type { NaverAccount } from "../src/shared/lib/account-manager";
 const MONGODB_URI = process.env.MONGODB_URI!;
 const LOGIN_ID = process.env.LOGIN_ID || "21lab";
 const CAFE_ID = process.argv[2] || "31642514";
-const MANUSCRIPTS_FILE = "/tmp/generated-manuscripts.json";
-const DELAY_BETWEEN_MODIFY_MS = 10 * 60 * 1000;
+const MANUSCRIPTS_FILE = process.env.MANUSCRIPTS_FILE || "/tmp/generated-manuscripts.json";
+const DELAY_BETWEEN_MODIFY_MS = parseInt(process.env.MODIFY_DELAY_MS || "", 10) || 10 * 60 * 1000;
+const CHANEL_MODIFY_CATEGORY = "_ 일상샤반사 📆";
+const FORCE_RELOGIN = process.env.FORCE_RELOGIN === "true";
 
 interface Manuscript {
   articleId: number;
@@ -176,20 +178,6 @@ const addViralCommentJobs = async (
     cumulativeDelay += getRandomDelay(BETWEEN_COMMENTS_DELAY);
   }
 
-  // 마지막 댓글/대댓글 이후 60초 뒤 댓글 차단
-  const disableDelay = cumulativeDelay + 60 * 1000;
-  const disableJobData: DisableCommentJobData = {
-    type: 'disable-comment',
-    accountId: writerAccountId,
-    cafeId,
-    articleId,
-    sequenceId,
-  };
-  await addTaskJob(writerAccountId, disableJobData, disableDelay);
-  console.log(
-    `    댓글 차단 Job: ${writerAccountId} (${Math.round(disableDelay / 1000)}초 후)`,
-  );
-
   return { comments: commentCount, replies: replyCount };
 };
 
@@ -267,12 +255,19 @@ const main = async (): Promise<void> => {
       nickname: account.nickname,
     };
 
+    if (FORCE_RELOGIN) {
+      await closeContextForAccount(writerAccountId);
+      invalidateLoginCache(writerAccountId);
+      console.log(`  강제 재로그인 준비: ${writerAccountId}`);
+    }
+
     process.stdout.write(`  글 수정 중... `);
     const modifyResult = await modifyArticleWithAccount(naverAccount, {
       cafeId: CAFE_ID,
       articleId: ms.articleId,
       newTitle: title,
       newContent: body,
+      category: CAFE_ID === "25460974" ? CHANEL_MODIFY_CATEGORY : undefined,
       enableComments: true,
     });
 

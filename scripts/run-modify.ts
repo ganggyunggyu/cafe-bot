@@ -88,6 +88,7 @@ const TARGET_ARTICLE_IDS = (process.env.ARTICLE_IDS || "")
   .filter((value) => Number.isFinite(value));
 const MODIFY_SCHEDULE_FILE = process.env.MODIFY_SCHEDULE_FILE || "";
 const CHANEL_MODIFY_CATEGORY = "_ 일상샤반사 📆";
+const MODIFY_PRIMARY_MODEL = process.env.MODIFY_PRIMARY_MODEL || "";
 const MODIFY_OVERLOAD_FALLBACK_MODEL =
   process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
 
@@ -222,7 +223,7 @@ const generateViralContentWithRetry = async (
   maxAttempts: number = 3,
 ): Promise<Awaited<ReturnType<typeof generateViralContent>>> => {
   let lastError: unknown;
-  let retryModel: string | undefined;
+  let retryModel: string | undefined = MODIFY_PRIMARY_MODEL || undefined;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -232,7 +233,7 @@ const generateViralContentWithRetry = async (
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.log(`  ⚠️ 원고 생성 실패 (${attempt}/${maxAttempts}): ${errorMessage}`);
 
-      if (!retryModel && isOverloadedError(error)) {
+      if (isOverloadedError(error) && MODIFY_OVERLOAD_FALLBACK_MODEL && MODIFY_OVERLOAD_FALLBACK_MODEL !== retryModel) {
         retryModel = MODIFY_OVERLOAD_FALLBACK_MODEL;
         console.log(
           `  ↪ 529 과부하 감지, 다음 시도부터 ${retryModel} 사용`,
