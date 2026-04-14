@@ -18,6 +18,18 @@
 ### 2단계: 키워드 선정
 
 1. **광고 키워드 파일 로드**: `scripts/keywords/ad-keywords.txt`
+   - 단, **건강카페 자사 광고 키워드 우선 소스**는 아래 구글 시트를 먼저 확인
+   - Spreadsheet ID: `1zU8Jr2qH_T1JkMoi6SHgWbeeQBLMbLan8wLQ3jSlmhI`
+   - 탭: `카페_관련 키워드` (gid: `1588523146`)
+   - 읽는 범위: `E:H`
+   - 컬럼 해석:
+     - `E`: 키워드
+     - `F`: 카페명 — 비어 있으면 자사, 값이 있으면 타사
+     - `G`: 노출구좌
+     - `H`: 노출 유/무
+   - 관련 임시 조회 스크립트:
+     - `scripts/fetch-kw-temp.ts` — 원본 E:H 조회
+     - `scripts/filter-kw-temp.ts` — `used-keywords.txt` 제외 후 미사용 자사/타사 후보 조회
 2. **사용된 키워드 제외**: `scripts/keywords/used-keywords.txt`에 있는 키워드 제외
 3. **중복 제거 + 셔플**: 남은 키워드에서 랜덤 셔플로 필요한 수만큼 선택
 4. **일상 키워드 생성**: 시간대에 맞는 자연스러운 일상 키워드 직접 생성
@@ -167,6 +179,7 @@ EOF
 ### 키워드 파일
 - 광고 키워드 풀: `scripts/keywords/ad-keywords.txt`
 - 사용된 키워드: `scripts/keywords/used-keywords.txt`
+- 건강카페 시트 우선 소스: `1zU8Jr2qH_T1JkMoi6SHgWbeeQBLMbLan8wLQ3jSlmhI` / `카페_관련 키워드` / `E:H`
 
 ### 큐 관리 유틸
 - 전체 큐 클리어: `scripts/queue-clear-all.ts`

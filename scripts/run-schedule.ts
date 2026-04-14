@@ -25,6 +25,8 @@ import type {
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 const LOGIN_ID = process.env.LOGIN_ID || "21lab";
+const SCHEDULE_START_TIME = process.env.SCHEDULE_START_TIME || "";
+const SCHEDULE_END_TIME = process.env.SCHEDULE_END_TIME || "";
 
 interface ScheduleItem {
   cafe: string;
@@ -134,9 +136,15 @@ const main = async (): Promise<void> => {
     .filter((a) => a.role === "commenter")
     .map((a) => a.accountId);
 
+  const filteredSchedule = SCHEDULE.filter((item) => {
+    const isAfterStart = !SCHEDULE_START_TIME || item.time >= SCHEDULE_START_TIME;
+    const isBeforeEnd = !SCHEDULE_END_TIME || item.time <= SCHEDULE_END_TIME;
+    return isAfterStart && isBeforeEnd;
+  });
+
   console.log(`=== 스케줄 큐 추가 ===`);
   console.log(
-    `user: ${LOGIN_ID} / writers: ${SCHEDULE.length}건 / commenters: ${commenterIds.length}명\n`,
+    `user: ${LOGIN_ID} / writers: ${filteredSchedule.length}건 / commenters: ${commenterIds.length}명 / startFilter: ${SCHEDULE_START_TIME || "-"} / endFilter: ${SCHEDULE_END_TIME || "-"}\n`,
   );
 
   let totalPosts = 0;
@@ -144,7 +152,7 @@ const main = async (): Promise<void> => {
   const totalSideComments = 0;
   const totalSideLikes = 0;
 
-  const sortedSchedule = [...SCHEDULE].sort((a, b) =>
+  const sortedSchedule = [...filteredSchedule].sort((a, b) =>
     a.time.localeCompare(b.time),
   );
 
