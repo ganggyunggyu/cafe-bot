@@ -25,8 +25,6 @@ import { modifyArticleWithAccount } from "../src/features/auto-comment/batch/art
 import { generateViralContent } from "../src/shared/api/content-api";
 import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
 import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
-import { buildViralPrompt } from "../src/features/viral/viral-prompt";
-import { getViralContentStyleForLoginId } from "../src/shared/config/user-profile";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
 import { addTaskJob } from "../src/shared/lib/queue";
 import type {
@@ -93,34 +91,7 @@ const MODIFY_OVERLOAD_FALLBACK_MODEL =
   process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
 
 const MODIFY_SCHEDULE: ModifyItem[] = [
-  // 자사-타사 번갈아 배치
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290140", keyword: "염소탕", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289308", keyword: "이경제 흑염소 진액", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290137", keyword: "빈혈에좋은음식", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289238", keyword: "김오곤 흑염소 진액 후기", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290101", keyword: "자궁선근증", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288955", keyword: "설운도 진생록 후기", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290068", keyword: "튼살크림", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288927", keyword: "산너미목장 흑염소", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290042", keyword: "계류유산", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288889", keyword: "매포흑염소목장 효능", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/290021", keyword: "배란통", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288843", keyword: "한살림 흑염소진액 효능", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289754", keyword: "홍삼스틱", keywordType: "own", category: CHANEL_MODIFY_CATEGORY },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288628", keyword: "천호엔케어 흑염소진액 후기", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289728", keyword: "칼슘영양제", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288540", keyword: "CMG제약 본래원 흑염소진액 가격", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289723", keyword: "에스트로겐", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288539", keyword: "뉴트리원라이프 흑염소진액 가격", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289706", keyword: "엽산효능", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288505", keyword: "건국 흑염소진액 골드 가격", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289677", keyword: "임산부영양제", keywordType: "own", category: CHANEL_MODIFY_CATEGORY },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288479", keyword: "보령 흑염소진액 가격", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289362", keyword: "비타민D부족증상", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288439", keyword: "팔도감 흑염소진액 효능", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289347", keyword: "칼슘마그네슘", keywordType: "own" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/288077", keyword: "한비담 흑염소진액 효능", keywordType: "competitor" },
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/289344", keyword: "나팔관조영술", keywordType: "own" },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/292578", keyword: "출산후좋은음식", keywordType: "own", category: CHANEL_MODIFY_CATEGORY },
 ];
 
 const getModifySchedule = (): ModifyItem[] => {
