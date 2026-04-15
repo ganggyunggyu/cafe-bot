@@ -40,12 +40,6 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // === olgdmp9921 재큐잉 (비번 변경 후) ===
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "고려은단 비타민C 메가도스", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "olgdmp9921", time: "17:10" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 25백 가격 1000만원 넘었다는 기사 보고 한숨만 나옴", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "olgdmp9921", time: "18:20" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후좋은음식", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "19:30" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "21세기 대군부인 변우석 갑옷씬 보다가 치킨 시켰음", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "20:40" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "오늘도 매진했습니다 안효섭 예고편 보고 넷플릭스 찜 완료", category: "_ 일상샤반사 📆", type: "daily", accountId: "olgdmp9921", time: "21:50" },
   // === 건강한노후준비 (자사6 + 일상6) + 쇼핑/샤넬 오전 ===
   { cafe: "건강한노후준비", cafeId: "25636798", keyword: "모유수유흑염소", category: "자유게시판", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "16:15" },
   { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "고려은단 비타민C 메가도스", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "olgdmp9921", time: "16:22" },
