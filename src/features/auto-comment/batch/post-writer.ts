@@ -14,7 +14,7 @@ import type { Page } from 'playwright';
 import type { PostResult, PostOptions } from './types';
 import { DEFAULT_POST_OPTIONS } from './types';
 import { incrementActivity } from '@/shared/models/daily-activity';
-import { uploadImages, uploadSingleImage } from './image-uploader';
+import { uploadSingleImage } from './image-uploader';
 import type { ElementHandle } from 'playwright';
 
 // 팝업 닫고 클릭 재시도 헬퍼
@@ -206,6 +206,84 @@ export interface WritePostInput {
   postOptions?: PostOptions;
   images?: string[]; // Base64 이미지 배열
 }
+
+interface RecentCafeArticle {
+  articleId: number;
+  subject: string;
+  writeDateTimestamp: number;
+  menuId?: number;
+}
+
+interface FindRecentArticleOptions {
+  knownArticleIds?: Set<number>;
+  publishStartedAt?: number;
+  menuId?: number;
+}
+
+export const extractArticleIdFromUrl = (url: string): number | undefined => {
+  const decodedCandidates = new Set<string>([url]);
+  let current = url;
+
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) {
+        break;
+      }
+      decodedCandidates.add(next);
+      current = next;
+    } catch {
+      break;
+    }
+  }
+
+  for (const candidate of decodedCandidates) {
+    if (/\/articles\/write\b/i.test(candidate)) {
+      continue;
+    }
+
+    const articleIdMatch =
+      candidate.match(/articleid=(\d+)/i) ??
+      candidate.match(/\/articles\/(\d+)(?:[/?#]|$)/i);
+
+    if (articleIdMatch) {
+      return Number.parseInt(articleIdMatch[1], 10);
+    }
+  }
+
+  return undefined;
+};
+
+export const findRecentArticleBySubject = (
+  articles: RecentCafeArticle[],
+  subject: string,
+  options?: FindRecentArticleOptions,
+): RecentCafeArticle | undefined => {
+  const { knownArticleIds = new Set<number>(), publishStartedAt = 0, menuId } = options ?? {};
+
+  const matchingArticles = articles
+    .filter((article) => article.subject === subject)
+    .filter((article) => (menuId == null ? true : article.menuId === menuId))
+    .sort((left, right) => right.writeDateTimestamp - left.writeDateTimestamp);
+
+  const freshMatch = matchingArticles.find((article) => {
+    if (knownArticleIds.has(article.articleId)) {
+      return false;
+    }
+
+    if (publishStartedAt > 0 && article.writeDateTimestamp < publishStartedAt) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (freshMatch) {
+    return freshMatch;
+  }
+
+  return matchingArticles.find((article) => !knownArticleIds.has(article.articleId)) ?? matchingArticles[0];
+};
 
 export const writePostWithAccount = async (
   account: NaverAccount,
@@ -499,13 +577,10 @@ export const writePostWithAccount = async (
     const currentUrl = page.url();
     console.log('[DEBUG] 현재 URL:', currentUrl);
 
-    // URL 디코딩 (네이버 카페는 iframe_url_utf8 파라미터에 인코딩된 URL 사용)
     const decodedUrl = decodeURIComponent(decodeURIComponent(currentUrl));
     console.log('[DEBUG] 디코딩된 URL:', decodedUrl);
 
-    // articleid=숫자 또는 articles/숫자 패턴으로 추출
-    const articleIdMatch = decodedUrl.match(/articleid=(\d+)/i) || decodedUrl.match(/articles\/(\d+)/);
-    const articleId = articleIdMatch ? parseInt(articleIdMatch[1], 10) : undefined;
+    const articleId = extractArticleIdFromUrl(currentUrl);
     console.log('[DEBUG] URL에서 추출한 articleId:', articleId);
 
     await saveCookiesForAccount(id);

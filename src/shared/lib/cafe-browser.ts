@@ -12,7 +12,6 @@ export interface CafeArticle {
   articleId: number;
   subject: string;
   nickname: string;
-  maskedMemberId?: string;
   memberKey?: string;
   readCount: number;
   likeCount: number;
@@ -36,9 +35,7 @@ interface ArticleListApiResponse {
       articleList: Array<{
         articleId: number;
         subject: string;
-        nickname?: string;
-        writerNickname?: string;
-        maskedMemberId?: string;
+        nickname: string;
         memberKey?: string;
         readCount: number;
         likeItCount: number;
@@ -73,18 +70,11 @@ export const browseCafePosts = async (
     page?: number;
     perPage?: number;
     excludeAccountIds?: string[];
-    excludeMemberKeys?: string[];
     cafeUrl?: string;
   }
 ): Promise<BrowseCafeResult> => {
   const { id, password } = account;
-  const {
-    page = 1,
-    perPage = 20,
-    excludeAccountIds = [],
-    excludeMemberKeys = [],
-    cafeUrl,
-  } = options ?? {};
+  const { page = 1, perPage = 20, excludeAccountIds = [], cafeUrl } = options ?? {};
 
   await acquireAccountLock(id);
 
@@ -140,8 +130,7 @@ export const browseCafePosts = async (
       .map((item) => ({
         articleId: item.articleId,
         subject: item.subject,
-        nickname: item.writerNickname || item.nickname || item.maskedMemberId || '',
-        maskedMemberId: item.maskedMemberId,
+        nickname: item.nickname,
         memberKey: item.memberKey,
         readCount: item.readCount,
         likeCount: item.likeItCount,
@@ -151,7 +140,7 @@ export const browseCafePosts = async (
         menuName: item.menuName,
       }))
       .filter((article) => {
-        const allExcluded = [...excludeMemberKeys, ...excludeAccountIds];
+        const allExcluded = [id, ...excludeAccountIds];
         return !allExcluded.includes(article.memberKey ?? '');
       });
 

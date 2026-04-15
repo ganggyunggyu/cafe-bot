@@ -91,7 +91,6 @@ const startIdleCleanup = () => {
       lastUsedAt.delete(accountId);
     }
   }, IDLE_CHECK_INTERVAL);
-  g.__pwIdleTimer.unref?.();
 };
 
 startIdleCleanup();
