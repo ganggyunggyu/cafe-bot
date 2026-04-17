@@ -35,7 +35,7 @@ import type {
 import type { NaverAccount } from "../src/shared/lib/account-manager";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
-const LOGIN_ID = process.env.LOGIN_ID || "qwzx16";
+const LOGIN_ID = process.env.LOGIN_ID || "21lab";
 
 const SHEET_SPREADSHEET_ID = "1gyipTIEogC9Qopj8w3ggBmD0k5KvAw6yNdIMXQDnwms";
 const SHEET_TAB = "카페키워드";
@@ -91,7 +91,14 @@ const MODIFY_OVERLOAD_FALLBACK_MODEL =
   process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
 
 const MODIFY_SCHEDULE: ModifyItem[] = [
-  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/292578", keyword: "출산후좋은음식", keywordType: "own", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293152", keyword: "제주산 당찬여주 발효효소", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293486", keyword: "다이어트 유산균 비에날씬", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293490", keyword: "베지밀", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293504", keyword: "갱년기유산균YT1 메노락토 오리진", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293512", keyword: "제주산 당찬여주 발효효소_체험분", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293585", keyword: "카무트 영양견과바", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293681", keyword: "미녀의 석류 콜라겐", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
+  { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293693", keyword: "정관장 홍삼활력플러스업", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
 ];
 
 const getModifySchedule = (): ModifyItem[] => {

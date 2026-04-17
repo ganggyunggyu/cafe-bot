@@ -40,64 +40,78 @@ interface ScheduleItem {
 }
 
 const SCHEDULE: ScheduleItem[] = [
-  // === 쇼핑/샤넬 1차 + 건강카페 A그룹 ===
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후좋은음식", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "16:45" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 26SS 크러시드 트위드 백 인스타 릴스에서 봤는데 실물 궁금해요", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "yenalk", time: "16:51" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "엄마 칠순 선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "16:57" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 클래식 미니 캐비어 블랙 재입고 소식에 심장 쿵", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "uqgidh2690", time: "17:03" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "마이타민", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "17:09" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "흑염소 당뇨", category: "건강정보", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "17:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "나이키 런클럽 5km 기록 줄이는 재미에 빠짐", category: "오늘의 운동", type: "daily", accountId: "tinyfish183", time: "17:21" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "올리브영 비타민D 츄어블 하나씩 챙겨먹기 시작한 지 한 달", category: "건강상식", type: "daily", accountId: "njmzdksm", time: "17:27" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "성장한약", category: "건강이야기", type: "ad", keywordType: "own", accountId: "orangeswan630", time: "17:33" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "삼성헬스 걸음수 만보 찍으려고 퇴근 후 산책 나감", category: "자유게시판", type: "daily", accountId: "e6yb5u4k", time: "17:39" },
+  // === 1구간 (10:00~11:00): 쇼핑/샤넬 교차 ===
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "천호 흑염소", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "10:55" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 25백 스몰 1000만원 넘었다는 기사 보고 한숨만 나옴", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "yenalk", time: "11:10" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "이경제흑염소120포", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "11:25" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 코코 크러쉬 네크리스 봄 시즌 실물 보러 매장 예약함", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "uqgidh2690", time: "11:40" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "임신준비 남편 영양제", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "11:55" },
 
-  // === 쇼핑/샤넬 2차 + 건강카페 B그룹 ===
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 25백 가격 또 올랐다는 기사 보고 한숨만 나옴", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "olgdmp9921", time: "17:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "장모님선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "17:51" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "스타벅스 제주 유기농 말차 라떼 마시면서 샤넬 인스타 구경하는 수요일", category: "_ 일상샤반사 📆", type: "daily", accountId: "eytkgy5500", time: "17:57" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "둘째출산선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "18:03" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 코코 크러쉬 팔찌 봄 리미티드 실물 보러 매장 방문 예정", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "4giccokx", time: "18:09" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "오므론 혈압계 아침저녁 기록하는 게 이제 습관됨", category: "건강 관리 후기", type: "daily", accountId: "suc4dce7", time: "18:15" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "쿠팡 로켓프레시 현미밥 세트 시켜 먹기 시작한 지 2주째", category: "건강정보", type: "daily", accountId: "umhu0m83", time: "18:21" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "다이소 텀블러 사서 물 2리터 챌린지 도전 3일차", category: "건강 챌린지", type: "daily", accountId: "xzjmfn3f", time: "18:27" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "스타벅스 디카페인 카페라떼로 바꾸니 밤에 좀 나은 느낌", category: "한약재정보", type: "daily", accountId: "br5rbg", time: "18:33" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "유튜브 핏블리 어깨 스트레칭 따라하니 뻐근함이 풀림", category: "오늘의 운동", type: "daily", accountId: "0ehz3cb2", time: "18:39" },
+  // === 2구간 (11:05~12:20): 타사옹호 + 건강카페 광고 ===
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "콜라겐 비오틴", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "olgdmp9921", time: "12:00" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "홍성호 울릉도 마가목 흑염소진액", category: "흑염소진액정보", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "12:05" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "콘드로이친 킹", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "yenalk", time: "12:15" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "염소즙 가격", category: "자유로운이야기", type: "ad", keywordType: "own", accountId: "angrykoala270", time: "12:20" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "매스틱 유산균", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "eytkgy5500", time: "12:30" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "경주 한의원 난임", category: "질문게시판", type: "ad", keywordType: "own", accountId: "orangeswan630", time: "12:35" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "레티놀 A", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "uqgidh2690", time: "12:45" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "성장호르몬 검사 과정", category: "건강이야기", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "12:50" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "비에날씬 유산균", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "4giccokx", time: "13:00" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "풍산원 흑염소 진액", category: "한약재정보", type: "ad", keywordType: "own", accountId: "njmzdksm", time: "13:05" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "성장판검사비용", category: "건강이야기", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "13:15" },
 
-  // === 쇼핑/샤넬 3차 + 건강카페 C그룹 ===
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 메디힐 콜라겐 마스크팩 3+1 행사라 장바구니 가득", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "18:45" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "올리브영 봄 세일 갔다가 아무것도 안 사고 나온 의지력 대단한 나", category: "_ 일상샤반사 📆", type: "daily", accountId: "yenalk", time: "18:51" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "김소형 흑염소진액 효능", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "18:57" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "다이소 산리오 마이멜로디 텀블러 신상 퇴근길에 득템함", category: "일상톡톡", type: "daily", accountId: "uqgidh2690", time: "19:03" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "GS25 유어스 몽블랑 딸기케이크 퇴근 보상으로 구매 완료", category: "일상톡톡", type: "daily", accountId: "4giccokx", time: "19:09" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "산모 흑염소", category: "흑염소진액정보", type: "ad", keywordType: "own", accountId: "8i2vlbym", time: "19:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "편의점 프로틴바 하루 하나 사 먹는 게 요즘 루틴", category: "자유로운이야기", type: "daily", accountId: "e6yb5u4k", time: "19:21" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "21세기 대군부인 아이유 한복 보면서 건강차 한 잔", category: "건강상식", type: "daily", accountId: "beautifulelephant274", time: "19:27" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "갱년기 클리닉", category: "건강 관리 후기", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "19:33" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "사냥개들 시즌2 보면서 매운 라면 끓여먹는 수요일 밤", category: "자유게시판", type: "daily", accountId: "angrykoala270", time: "19:39" },
+  // === 3구간 (12:30~13:30): 쇼핑/샤넬 교차 ===
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 코코 크러쉬 링 파인주얼리 5% 인상 소식에 심장 쿵", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "olgdmp9921", time: "13:25" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "김소형 흑염소 스틱", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "13:40" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "CHANEL 클래식 플랩백 가격 2000만원 돌파했다길래 멘붕", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "eytkgy5500", time: "13:55" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "임신 준비물 엽산", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "14:10" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "50세 출산", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "14:25" },
 
-  // === 쇼핑/샤넬 4차 + 건강카페 D그룹 ===
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "사냥개들 시즌2 우도환 팔찌 뭔지 궁금해서 검색하다 샤넬 매장 예약함", category: "_ 일상샤반사 📆", type: "daily", accountId: "olgdmp9921", time: "19:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "쿠팡 로켓배송 아이리스 물티슈 대용량 세일이라 5팩 질렀음", category: "일상톡톡", type: "daily", accountId: "yenalk", time: "19:51" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 31 미니 쇼핑백 갤러리아 백화점 웨이팅 후기 읽는 중", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "eytkgy5500", time: "19:57" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "친구출산선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "20:03" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "부모님생일선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "4giccokx", time: "20:09" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "21세기 대군부인 변우석 몸매 보고 홈트 결심함", category: "취미이야기", type: "daily", accountId: "njmzdksm", time: "20:15" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "편의점 CU 고단백 두유 간식으로 챙겨 먹는 요즘", category: "질문게시판", type: "daily", accountId: "suc4dce7", time: "20:21" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "애플워치 수면 분석 처음 봤는데 생각보다 수면 짧아서 놀람", category: "건강이야기", type: "daily", accountId: "xzjmfn3f", time: "20:27" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "난소나이 40대 임신", category: "질문게시판", type: "ad", keywordType: "own", accountId: "heavyzebra240", time: "20:33" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "쿠팡 로켓배송 닭가슴살 도시락 냉장고에 쟁여놓는 중", category: "취미이야기", type: "daily", accountId: "0ehz3cb2", time: "20:39" },
+  // === 4구간 (13:40~14:50): 건강노후 일상 + 타사옹호 ===
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "올리브영 비타민D 츄어블 하나씩 챙겨먹기 시작한 지 한 달", category: "건강상식", type: "daily", accountId: "tinyfish183", time: "14:35" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "유산균", category: "일반 쇼핑후기", type: "ad", keywordType: "competitor-advocacy", accountId: "yenalk", time: "14:45" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "삼성헬스 걸음수 점심시간 산책으로 만보 도전 중", category: "자유게시판", type: "daily", accountId: "e6yb5u4k", time: "14:50" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "쿠팡 로켓프레시 현미밥 세트 시켜 먹기 시작한 지 2주째", category: "건강정보", type: "daily", accountId: "suc4dce7", time: "15:05" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "21세기 대군부인 변우석 몸매 보고 저속노화 실천 결심함", category: "자유게시판", type: "daily", accountId: "umhu0m83", time: "15:20" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "유미의 세포들3 김고은 보면서 감정 세포 살려야겠다 싶은 금요일", category: "질문게시판", type: "daily", accountId: "beautifulelephant274", time: "15:35" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "닥터자르트 콜라겐 이너뷰티 젤리 하루 하나 먹는 습관", category: "건강정보", type: "daily", accountId: "0ehz3cb2", time: "15:45" },
 
-  // === 쇼핑/샤넬 5차 + 건강카페 E그룹 ===
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "산모 선물", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "20:45" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "흑염소 액기스", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "20:51" },
-  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "사냥개들 시즌2 넷플릭스 보다가 치킨 시켜먹음", category: "일상톡톡", type: "daily", accountId: "eytkgy5500", time: "20:57" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "유미의 세포들3 김고은 귀걸이 샤넬 코코 크러쉬인지 확인하는 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "uqgidh2690", time: "21:03" },
-  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "21세기 대군부인 아이유 봄 향수 뭔지 궁금해서 검색 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "4giccokx", time: "21:09" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "유미의 세포들3 보면서 감정 세포 살려야겠다 싶은 하루", category: "흑염소진액정보", type: "daily", accountId: "umhu0m83", time: "21:15" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "태반주사 실비 적용 횟수", category: "자유로운이야기", type: "ad", keywordType: "own", accountId: "8ua1womn", time: "21:22" },
-  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "종근당 비타민B 복합체 먹기 시작한 지 일주일째 좀 나은 듯", category: "한약재정보", type: "daily", accountId: "br5rbg", time: "21:29" },
-  { cafe: "건강관리소", cafeId: "25227349", keyword: "사냥개들 시즌2 보면서 팔굽혀펴기 10개 하겠다고 선언함", category: "건강 챌린지", type: "daily", accountId: "heavyzebra240", time: "21:39" },
+  // === 5구간 (15:00~16:00): 쇼핑/샤넬 교차 ===
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "녹색흑염소", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "olgdmp9921", time: "15:55" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "스타벅스 제주 유기농 말차 라떼 마시면서 샤넬 인스타 구경하는 금요일", category: "_ 일상샤반사 📆", type: "daily", accountId: "yenalk", time: "16:10" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "이경제 흑염소 진액진", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "eytkgy5500", time: "16:25" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "유미의 세포들3 김고은 귀걸이 샤넬 코코 크러쉬인지 확인하는 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "uqgidh2690", time: "16:40" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "샤넬 프리미에르 워치 가격 또 올랐는데 그래도 갖고 싶음", category: "_ 일상샤반사 📆", type: "daily-ad", accountId: "4giccokx", time: "16:55" },
+
+  // === 6구간 (16:10~17:15): 건강카페 일상 ===
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "스타벅스 디카페인 카페라떼로 바꾸니 밤에 좀 나은 느낌", category: "건강상식", type: "daily", accountId: "xzjmfn3f", time: "17:05" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "나이키 런클럽 5km 기록 줄이는 재미에 빠짐", category: "오늘의 운동", type: "daily", accountId: "8i2vlbym", time: "17:20" },
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "종근당 비타민B 복합체 먹기 시작한 지 일주일째 좀 나은 듯", category: "한약재정보", type: "daily", accountId: "br5rbg", time: "17:35" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "유튜브 핏블리 어깨 스트레칭 따라하니 뻐근함이 풀림", category: "오늘의 운동", type: "daily", accountId: "njmzdksm", time: "17:50" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "애플워치 수면 분석 처음 봤는데 생각보다 수면 짧아서 놀람", category: "건강이야기", type: "daily", accountId: "tinyfish183", time: "18:00" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "다이소 텀블러 사서 물 2리터 챌린지 도전 3일차", category: "건강 챌린지", type: "daily", accountId: "e6yb5u4k", time: "18:10" },
+
+  // === 7구간 (17:30~18:30): 쇼핑/샤넬 교차 ===
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "21세기 대군부인 아이유 봄 스타일링 보면서 샤넬 매거진 꺼냄", category: "_ 일상샤반사 📆", type: "daily", accountId: "olgdmp9921", time: "18:25" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "산모음식", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "yenalk", time: "18:40" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "올리브영 올영데이 준비하면서 샤넬 립스틱 재고 확인하는 중", category: "_ 일상샤반사 📆", type: "daily", accountId: "eytkgy5500", time: "18:55" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "출산후 붓기 차 한약", category: "일반 쇼핑후기", type: "ad", keywordType: "own", accountId: "uqgidh2690", time: "19:10" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "21세기 대군부인 아이유 한복 장신구 보고 악세사리 쇼핑 욕구 폭발", category: "일상톡톡", type: "daily", accountId: "4giccokx", time: "19:25" },
+
+  // === 8구간 (18:40~19:45): 건강카페 일상 ===
+  { cafe: "건강한노후준비", cafeId: "25636798", keyword: "편의점 CU 고단백 두유 간식으로 챙겨 먹는 요즘", category: "건강정보", type: "daily", accountId: "angrykoala270", time: "19:35" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "오므론 혈압계 아침저녁 기록하는 게 이제 습관됨", category: "건강 관리 후기", type: "daily", accountId: "suc4dce7", time: "19:50" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "쿠팡 로켓배송 닭가슴살 도시락 냉장고에 쟁여놓는 중", category: "취미이야기", type: "daily", accountId: "umhu0m83", time: "20:00" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "유튜브 제이제이살롱드핏 등운동 따라하니 자세가 바뀌는 느낌", category: "자유로운이야기", type: "daily", accountId: "xzjmfn3f", time: "20:10" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "편의점 프로틴바 하루 하나 사 먹는 게 요즘 루틴", category: "자유로운이야기", type: "daily", accountId: "br5rbg", time: "20:25" },
+  { cafe: "건강관리소", cafeId: "25227349", keyword: "21세기 대군부인 아이유 보면서 건강차 한 잔", category: "취미이야기", type: "daily", accountId: "orangeswan630", time: "20:40" },
+
+  // === 9구간 (20:00~21:00): 쇼핑/샤넬 일상 마무리 ===
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "올리브영 올영데이 4/25 대기 중인데 장바구니 벌써 10만원 넘음", category: "일상톡톡", type: "daily", accountId: "olgdmp9921", time: "20:55" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "유미의 세포들3 김고은 착장 검색하다 쿠팡에서 비슷한 거 장바구니 담음", category: "일상톡톡", type: "daily", accountId: "yenalk", time: "21:10" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "다이소 산리오 쿠로미 파우치 신상 금요일 저녁에 득템함", category: "일상톡톡", type: "daily", accountId: "eytkgy5500", time: "21:25" },
+  { cafe: "쇼핑지름신", cafeId: "25729954", keyword: "쿠팡 로켓배송 비비고 왕교자 만두 대용량 세일이라 냉동실 채움", category: "일상톡톡", type: "daily", accountId: "uqgidh2690", time: "21:40" },
+  { cafe: "샤넬오픈런", cafeId: "25460974", keyword: "인스타 릴스에서 블랙핑크 제니 샤넬 앰버서더 화보 보다가 잠 안 옴", category: "_ 일상샤반사 📆", type: "daily", accountId: "4giccokx", time: "21:55" },
 ];
 
 const parseTitle = (text: string): string => {
