@@ -17,8 +17,8 @@
 
 ### 2단계: 키워드 선정
 
-1. **광고 키워드 파일 로드**: `scripts/keywords/ad-keywords.txt`
-   - 단, **건강카페 자사 광고 키워드 우선 소스**는 아래 구글 시트를 먼저 확인
+1. **광고 키워드 소스 (구글 시트 우선)**:
+   - **1순위: 구글 시트** — 모든 카페 광고 키워드의 주 소스
    - Spreadsheet ID: `1zU8Jr2qH_T1JkMoi6SHgWbeeQBLMbLan8wLQ3jSlmhI`
    - 탭: `카페_관련 키워드` (gid: `1588523146`)
    - 읽는 범위: `E:H`
@@ -27,9 +27,15 @@
      - `F`: 카페명 — 비어 있으면 자사, 값이 있으면 타사
      - `G`: 노출구좌
      - `H`: 노출 유/무
+   - **다양하게 랜덤 추출**: 특정 주제(선물, 흑염소 등)에 편중되지 않게 다양한 카테고리에서 골고루 선택
    - 관련 임시 조회 스크립트:
      - `scripts/fetch-kw-temp.ts` — 원본 E:H 조회
      - `scripts/filter-kw-temp.ts` — `used-keywords.txt` 제외 후 미사용 자사/타사 후보 조회
+   - **2순위: `scripts/keywords/ad-keywords.txt`** — 시트에 키워드가 부족할 때 보조 소스
+   - **3순위: 기존 사용 키워드 재사용** (`used-keywords.txt`에서 재활용) — 1·2순위 모두 소진 시
+   - **쇼핑지름신 광고 구성**: 타사옹호(competitor-advocacy) 7개 + 자사(own) 3개 = 10개
+     - 타사옹호: 사용자가 직접 제공하는 제품 키워드 (keywordType: "competitor-advocacy")
+     - 자사: 흑염소 관련 키워드 (keywordType: "own")
 2. **사용된 키워드 제외**: `scripts/keywords/used-keywords.txt`에 있는 키워드 제외
 3. **중복 제거 + 셔플**: 남은 키워드에서 랜덤 셔플로 필요한 수만큼 선택
 4. **일상 키워드 생성**: 시간대에 맞는 자연스러운 일상 키워드 직접 생성
