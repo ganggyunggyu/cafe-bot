@@ -243,10 +243,32 @@ export const getContextForAccount = async (accountId: string): Promise<BrowserCo
   }
 
   const b = await getBrowser();
-  const context = await b.newContext({
+
+  const useFingerprint = process.env.FINGERPRINT_ENABLED === 'true';
+  let contextOptions: Parameters<typeof b.newContext>[0] = {
     userAgent:
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
-  });
+  };
+
+  if (useFingerprint) {
+    const { getProfileForAccount } = await import('./fingerprint');
+    const profile = getProfileForAccount(accountId);
+    contextOptions = {
+      userAgent: profile.userAgent,
+      viewport: profile.viewport,
+      deviceScaleFactor: profile.deviceScaleFactor,
+      locale: profile.locale,
+      timezoneId: profile.timezoneId,
+      colorScheme: profile.colorScheme,
+    };
+  }
+
+  const context = await b.newContext(contextOptions);
+
+  if (useFingerprint) {
+    const { getProfileForAccount, applyStealth } = await import('./fingerprint');
+    await applyStealth(context, getProfileForAccount(accountId));
+  }
 
   const cookies = loadCookiesForAccount(accountId);
   if (cookies.length > 0) {
