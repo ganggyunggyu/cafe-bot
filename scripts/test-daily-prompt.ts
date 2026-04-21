@@ -39,7 +39,8 @@ const main = async () => {
       if (parsed?.comments?.length) {
         results.push(`### 댓글 (${parsed.comments.length}개)`);
         for (const c of parsed.comments) {
-          results.push(`- [${c.role}${c.replyTo ? `→${c.replyTo}` : ""}] ${c.text}`);
+          const tag = c.type === "comment" ? `댓글${c.index}` : c.type === "author_reply" ? `작성자→${c.parentIndex}` : c.type === "commenter_reply" ? `댓글러→${c.parentIndex}` : `제3자→${c.parentIndex}`;
+          results.push(`- [${tag}] ${c.content}`);
         }
         results.push("");
       }
