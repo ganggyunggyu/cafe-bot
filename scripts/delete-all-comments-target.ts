@@ -57,10 +57,10 @@ const deleteAllMyCommentsOnArticle = async (
 ): Promise<number> => {
   const url = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(5000);
 
   try {
-    await page.waitForSelector('.CommentItem', { timeout: 5000 });
+    await page.waitForSelector('.CommentItem', { timeout: 8000 });
   } catch {
     return 0;
   }
@@ -71,24 +71,21 @@ const deleteAllMyCommentsOnArticle = async (
   while (safety < 60) {
     safety += 1;
 
-    const myIds = await page.evaluate(() => {
-      const items = document.querySelectorAll('li.CommentItem--mine');
-      return Array.from(items).map((item) => item.id).filter(Boolean);
+    const mineCount = await page.evaluate(() => {
+      return document.querySelectorAll('.CommentItem--mine').length;
     });
 
-    if (myIds.length === 0) break;
+    if (mineCount === 0) break;
 
-    const targetId = myIds[0];
     try {
-      const liSelector = `li#${targetId}.CommentItem--mine`;
-      const li = await page.$(liSelector);
+      const li = await page.$('.CommentItem--mine');
       if (!li) break;
+
+      await li.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(300);
 
       const btn = await li.$('button.comment_tool_button');
       if (!btn) {
-        // 더보기 버튼 없음 → 스크롤하며 렌더 시도
-        await li.scrollIntoViewIfNeeded();
-        await page.waitForTimeout(400);
         const retry = await li.$('button.comment_tool_button');
         if (!retry) break;
         await retry.click();
