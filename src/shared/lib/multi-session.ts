@@ -15,6 +15,7 @@ type LoginAccountOptions = {
   waitForLoginMs?: number;
   pollIntervalMs?: number;
   reason?: string;
+  forceFreshLogin?: boolean;
 };
 
 type WarmupScheduleSessionsOptions = {
@@ -441,10 +442,29 @@ export const loginAccount = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const page = await getPageForAccount(accountId);
+    const forceFreshLogin = options?.forceFreshLogin ?? false;
 
     await page.goto('https://nid.naver.com/nidlogin.login', {
       waitUntil: 'networkidle',
     });
+
+    if (!isLoginRedirect(page.url())) {
+      if (forceFreshLogin) {
+        console.log(`[LOGIN] ${accountId} 강제 재로그인 시작`);
+        await page.goto('https://nid.naver.com/nidlogin.logout', {
+          waitUntil: 'networkidle',
+        }).catch(() => {});
+        await page.waitForTimeout(1000);
+        await page.goto('https://nid.naver.com/nidlogin.login', {
+          waitUntil: 'networkidle',
+        });
+      } else {
+        await saveCookiesForAccount(accountId);
+        loginStatusCache.set(accountId, Date.now());
+        console.log(`[LOGIN] ${accountId} 이미 로그인 상태`);
+        return { success: true };
+      }
+    }
 
     await page.fill('input#id', accountId);
     await page.fill('input#pw', password);

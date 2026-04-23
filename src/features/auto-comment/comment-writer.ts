@@ -2,7 +2,6 @@ import type { ElementHandle, Frame, Page } from 'playwright';
 import {
   getPageForAccount,
   saveCookiesForAccount,
-  isAccountLoggedIn,
   loginAccount,
   acquireAccountLock,
   releaseAccountLock,
@@ -12,6 +11,7 @@ import {
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import { incrementActivity } from '@/shared/models/daily-activity';
+import { isNicknameEquivalent } from './comment-writer-utils';
 
 export interface WriteCommentResult {
   accountId: string;
@@ -28,10 +28,10 @@ const ensureLoggedIn = async (
   id: string,
   password: string
 ): Promise<{ success: true } | { success: false; error: string }> => {
-  const loggedIn = await isAccountLoggedIn(id);
-  if (loggedIn) return { success: true };
-
-  const loginResult = await loginAccount(id, password);
+  const loginResult = await loginAccount(id, password, {
+    forceFreshLogin: true,
+    reason: `comment_write:${id}`,
+  });
   if (!loginResult.success) {
     return { success: false, error: loginResult.error || '로그인 실패' };
   }
@@ -46,6 +46,7 @@ const navigateToArticle = async (
   logPrefix: string
 ): Promise<{ success: true } | { success: false; error: string }> => {
   await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.waitForTimeout(1500);
 
   const currentUrl = page.url();
   if (!isLoginRedirect(currentUrl)) return { success: true };
@@ -53,12 +54,19 @@ const navigateToArticle = async (
   console.log(`[${logPrefix}] ${id} 세션 만료 감지 - 재로그인 시도`);
   invalidateLoginCache(id);
 
-  const reloginResult = await loginAccount(id, password);
+  const reloginResult = await loginAccount(id, password, {
+    forceFreshLogin: true,
+    reason: `comment_redirect:${id}`,
+  });
   if (!reloginResult.success) {
     return { success: false, error: `세션 만료 후 재로그인 실패: ${reloginResult.error}` };
   }
 
   await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.waitForTimeout(1500);
+  if (isLoginRedirect(page.url())) {
+    return { success: false, error: '재로그인 후에도 로그인 페이지로 리다이렉트됨' };
+  }
   return { success: true };
 };
 
@@ -138,11 +146,6 @@ const findCommentItemById = async (
   return null;
 };
 
-const getTopLevelCommentCount = async (root: Page | Frame): Promise<number> => {
-  const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
-  return commentItems.length;
-};
-
 const getItemText = async (
   item: ElementHandle<SVGElement | HTMLElement>,
   selector: string
@@ -194,9 +197,7 @@ const findWrittenComment = async (
       const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
       const isNicknameMatch =
         !commentNickname ||
-        commentNickname === commenterNickname ||
-        commentNickname.includes(commenterNickname) ||
-        commenterNickname.includes(commentNickname);
+        isNicknameEquivalent(commentNickname, commenterNickname);
       if (!isNicknameMatch) continue;
     }
 
@@ -276,8 +277,6 @@ export const writeCommentWithAccount = async (
     if (!submitButton) {
       return { accountId: id, success: false, error: '등록 버튼(a.btn_register)을 찾을 수 없습니다.' };
     }
-
-    const beforeTopLevelCount = await getTopLevelCommentCount(root);
 
     await submitButton.click();
     await page.waitForTimeout(2500);

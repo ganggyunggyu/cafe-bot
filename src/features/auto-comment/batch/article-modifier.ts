@@ -2,15 +2,18 @@ import {
   getPageForAccount,
   saveCookiesForAccount,
   isAccountLoggedIn,
+  isLoginRedirect,
   loginAccount,
   acquireAccountLock,
   releaseAccountLock,
+  invalidateLoginCache,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
 import { uploadImages, uploadSingleImage } from './image-uploader';
 
 // 부제 패턴 (숫자. 형식)
 const SUBTITLE_PATTERN = /^\d+\.\s*/;
+const MODIFY_LOGIN_WAIT_MS = 3 * 60 * 1000;
 
 export interface ModifyArticleInput {
   cafeId: string;
@@ -43,7 +46,10 @@ export const modifyArticleWithAccount = async (
     const loggedIn = await isAccountLoggedIn(id);
 
     if (!loggedIn) {
-      const loginResult = await loginAccount(id, password);
+      const loginResult = await loginAccount(id, password, {
+        waitForLoginMs: MODIFY_LOGIN_WAIT_MS,
+        reason: `modify_${articleId}`,
+      });
       if (!loginResult.success) {
         return {
           success: false,
@@ -67,10 +73,48 @@ export const modifyArticleWithAccount = async (
     const modifyUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}/modify`;
     console.log('[DEBUG] 수정 페이지 이동:', modifyUrl);
 
-    await page.goto(modifyUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000,
-    });
+    const navigateToModifyPage = async (): Promise<void> => {
+      await page.goto(modifyUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      });
+    };
+
+    const recoverModifyLoginRedirect = async (
+      reason: string,
+    ): Promise<ModifyResult | null> => {
+      console.log(
+        `[MODIFY] ${id} ${reason} - 강제 재로그인 후 수정 페이지 재진입`,
+      );
+      invalidateLoginCache(id);
+
+      const reloginResult = await loginAccount(id, password, {
+        waitForLoginMs: MODIFY_LOGIN_WAIT_MS,
+        reason: `modify_redirect_${articleId}`,
+        forceFreshLogin: true,
+      });
+
+      if (!reloginResult.success) {
+        return {
+          success: false,
+          articleId,
+          modifierAccountId: id,
+          error: reloginResult.error || '수정 페이지 재로그인 실패',
+        };
+      }
+
+      await navigateToModifyPage();
+      return null;
+    };
+
+    await navigateToModifyPage();
+
+    if (isLoginRedirect(page.url())) {
+      const recoverResult = await recoverModifyLoginRedirect(
+        '수정 페이지 로그인 리다이렉트 감지',
+      );
+      if (recoverResult) return recoverResult;
+    }
 
     // 에디터 로딩 대기
     try {
@@ -81,6 +125,18 @@ export const modifyArticleWithAccount = async (
       console.log('[DEBUG] 현재 URL:', page.url());
       const title = await page.title();
       console.log('[DEBUG] 페이지 제목:', title);
+
+      if (isLoginRedirect(page.url())) {
+        const recoverResult = await recoverModifyLoginRedirect(
+          '에디터 대기 중 로그인 페이지 전환 감지',
+        );
+        if (recoverResult) return recoverResult;
+        await page.waitForSelector(
+          'p.se-text-paragraph, .FlexableTextArea textarea.textarea_input, .se-component-content',
+          { timeout: 15000 },
+        );
+      }
+
       await page.waitForTimeout(5000);
     }
     await page.waitForTimeout(2000);

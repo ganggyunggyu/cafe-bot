@@ -1,7 +1,6 @@
 import {
   getPageForAccount,
   saveCookiesForAccount,
-  isAccountLoggedIn,
   loginAccount,
   acquireAccountLock,
   releaseAccountLock,
@@ -296,17 +295,16 @@ export const writePostWithAccount = async (
   await acquireAccountLock(id);
 
   try {
-    const loggedIn = await isAccountLoggedIn(id);
-
-    if (!loggedIn) {
-      const loginResult = await loginAccount(id, password);
-      if (!loginResult.success) {
-        return {
-          success: false,
-          writerAccountId: id,
-          error: loginResult.error || '로그인 실패',
-        };
-      }
+    const loginResult = await loginAccount(id, password, {
+      forceFreshLogin: true,
+      reason: `post_write:${cafeId}:${menuId}`,
+    });
+    if (!loginResult.success) {
+      return {
+        success: false,
+        writerAccountId: id,
+        error: loginResult.error || '로그인 실패',
+      };
     }
 
     const page = await getPageForAccount(id);
@@ -345,20 +343,25 @@ export const writePostWithAccount = async (
 
     // 글쓰기 페이지로 이동
     const writeUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/write?boardType=L&menuId=${menuId}`;
+    const navigateToWritePage = async (): Promise<boolean> => {
+      await page.goto(writeUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+      touchAccount(id);
+      await page.waitForTimeout(3000);
+      return !isLoginRedirect(page.url());
+    };
 
-    await page.goto(writeUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
-    });
-    touchAccount(id);
-
-    // 로그인 페이지로 리다이렉트됐는지 확인
-    const currentUrlAfterNav = page.url();
-    if (isLoginRedirect(currentUrlAfterNav)) {
+    const isWritePageReady = await navigateToWritePage();
+    if (!isWritePageReady) {
       console.log(`[POST] ${id} 세션 만료 감지 - 재로그인 시도`);
       invalidateLoginCache(id);
 
-      const reloginResult = await loginAccount(id, password);
+      const reloginResult = await loginAccount(id, password, {
+        forceFreshLogin: true,
+        reason: `post_redirect:${cafeId}:${menuId}`,
+      });
       if (!reloginResult.success) {
         return {
           success: false,
@@ -367,14 +370,15 @@ export const writePostWithAccount = async (
         };
       }
 
-      // 다시 글쓰기 페이지로 이동
-      await page.goto(writeUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000,
-      });
+      const isWritePageReadyAfterRelogin = await navigateToWritePage();
+      if (!isWritePageReadyAfterRelogin) {
+        return {
+          success: false,
+          writerAccountId: id,
+          error: '재로그인 후에도 글쓰기 페이지가 로그인 페이지로 리다이렉트됨',
+        };
+      }
     }
-
-    await page.waitForTimeout(3000);
 
     // 스마트 에디터 팝업 닫기 (지도/장소 등)
     const popupCloseButton = await page.$('.se-popup-close-button');
@@ -433,13 +437,26 @@ export const writePostWithAccount = async (
     }
 
     // 제목 입력 (.FlexableTextArea textarea.textarea_input)
-    const titleInput = await page.$('.FlexableTextArea textarea.textarea_input, textarea.textarea_input');
+    let titleInput = await page.$('.FlexableTextArea textarea.textarea_input, textarea.textarea_input');
 
     if (!titleInput) {
+      try {
+        titleInput = await page.waitForSelector(
+          '.FlexableTextArea textarea.textarea_input, textarea.textarea_input',
+          { timeout: 10000 }
+        );
+      } catch {}
+    }
+
+    if (!titleInput) {
+      const currentUrl = page.url();
+      const redirectHint = isLoginRedirect(currentUrl)
+        ? '현재 로그인 페이지로 이동된 상태'
+        : `현재 URL: ${currentUrl}`;
       return {
         success: false,
         writerAccountId: id,
-        error: '제목 입력창을 찾을 수 없습니다. 카페 가입이 필요할 수 있습니다.',
+        error: `제목 입력창을 찾을 수 없습니다. ${redirectHint}`,
       };
     }
 
