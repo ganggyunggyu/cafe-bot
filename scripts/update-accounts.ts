@@ -21,7 +21,7 @@ const COMMENTERS = [
   { accountId: "selzze", password: "sadito0229!", nickname: "해리포터 1" },
   { accountId: "4giccokx", password: "wsofzj(m1", nickname: "듣는방법" },
   { accountId: "uqgidh2690", password: "i1ytev4q1", nickname: "달리자" },
-  { accountId: "eytkgy5500", password: "zua5(p*w1", nickname: "뽀또" },
+  { accountId: "eytkgy5500", password: "pW3*zA91", nickname: "뽀또" },
   { accountId: "yenalk", password: "sadito0229!", nickname: "미식가 2" },
   { accountId: "br5rbg", password: "49thf9gz", nickname: "기쁨의꽃" },
   { accountId: "beautifulelephant274", password: "wn#5ze7#1", nickname: "뷰티풀" },
