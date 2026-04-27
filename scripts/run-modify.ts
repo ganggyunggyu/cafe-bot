@@ -27,6 +27,13 @@ import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-k
 import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
 import { addTaskJob } from "../src/shared/lib/queue";
+import {
+  acquireAccountLock,
+  closeContextForAccount,
+  invalidateLoginCache,
+  loginAccount,
+  releaseAccountLock,
+} from "../src/shared/lib/multi-session";
 import type {
   CommentJobData,
   ReplyJobData,
@@ -89,6 +96,7 @@ const CHANEL_MODIFY_CATEGORY = "_ 일상샤반사 📆";
 const MODIFY_PRIMARY_MODEL = process.env.MODIFY_PRIMARY_MODEL || "";
 const MODIFY_OVERLOAD_FALLBACK_MODEL =
   process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
+const MODIFY_FORCE_RELOGIN = process.env.MODIFY_FORCE_RELOGIN === "true";
 
 const MODIFY_SCHEDULE: ModifyItem[] = [
   { link: "https://cafe.naver.com/ca-fe/cafes/25460974/articles/293152", keyword: "제주산 당찬여주 발효효소", keywordType: "competitor", category: CHANEL_MODIFY_CATEGORY },
@@ -189,6 +197,40 @@ const getRandomDelay = (range: { min: number; max: number }): number =>
 
 const sleep = async (ms: number): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+const forceReloginBeforeModify = async (
+  accountId: string,
+  password: string,
+  articleId: number,
+): Promise<void> => {
+  let lastError = "수정 전 재로그인 실패";
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    console.log(`  수정 전 재로그인: ${accountId} (${attempt}/3)`);
+    await closeContextForAccount(accountId).catch(() => {});
+    invalidateLoginCache(accountId);
+    await sleep(1000 * attempt);
+
+    await acquireAccountLock(accountId);
+    try {
+      const loginResult = await loginAccount(accountId, password, {
+        waitForLoginMs: 3 * 60 * 1000,
+        reason: `modify_force_relogin_${articleId}`,
+        forceFreshLogin: true,
+      });
+
+      if (loginResult.success) {
+        return;
+      }
+
+      lastError = loginResult.error || lastError;
+    } finally {
+      releaseAccountLock(accountId);
+    }
+  }
+
+  throw new Error(lastError);
 };
 
 const isOverloadedError = (error: unknown): boolean => {
@@ -442,6 +484,14 @@ const main = async (): Promise<void> => {
         password: account.password,
         nickname: account.nickname,
       };
+
+      if (MODIFY_FORCE_RELOGIN) {
+        await forceReloginBeforeModify(
+          writerAccountId,
+          account.password,
+          articleId,
+        );
+      }
 
       process.stdout.write(`  글 수정 중... `);
       const modifyResult = await modifyArticleWithAccount(naverAccount, {
