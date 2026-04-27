@@ -27,6 +27,7 @@ const MONGODB_URI = process.env.MONGODB_URI!;
 const LOGIN_ID = process.env.LOGIN_ID || "21lab";
 const SCHEDULE_START_TIME = process.env.SCHEDULE_START_TIME || "";
 const SCHEDULE_END_TIME = process.env.SCHEDULE_END_TIME || "";
+const SCHEDULE_MODEL = process.env.SCHEDULE_MODEL || "deepseek-v4-flash";
 
 const getLocalDateToken = (): string => {
   const now = new Date();
@@ -203,7 +204,7 @@ const main = async (): Promise<void> => {
 
       const { content } = await generateViralContent({
         prompt,
-        model: "claude-sonnet-4-6",
+        model: SCHEDULE_MODEL,
       });
       const parsed = parseViralResponse(content);
       const title = parsed?.title || parseTitle(content);
