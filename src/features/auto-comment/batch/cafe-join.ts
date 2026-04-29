@@ -5,6 +5,122 @@ import {
   loginAccount,
 } from '@/shared/lib/multi-session';
 import type { NaverAccount } from '@/shared/lib/account-manager';
+import type { Locator, Page } from 'playwright';
+
+const JOIN_QUESTION_ANSWERS = [
+  '네 숙지했습니다',
+  '네 알겠습니다',
+  '네 확인했습니다',
+  '네 동의합니다',
+];
+
+const clickFirstVisible = async (
+  page: Page,
+  selector: string
+): Promise<boolean> => {
+  const candidates = page.locator(selector);
+  const count = await candidates.count();
+
+  for (let index = 0; index < count; index++) {
+    const candidate = candidates.nth(index);
+    const visible = await candidate.isVisible().catch(() => false);
+
+    if (!visible) {
+      continue;
+    }
+
+    await candidate.click();
+    return true;
+  }
+
+  return false;
+};
+
+const hasVisible = async (locator: Locator): Promise<boolean> => {
+  const count = await locator.count();
+
+  for (let index = 0; index < count; index++) {
+    const visible = await locator.nth(index).isVisible().catch(() => false);
+
+    if (visible) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const fillJoinForm = async (
+  page: Page,
+  fallbackNickname: string
+): Promise<void> => {
+  const textControls = page.locator(
+    'textarea:visible, input[type="text"]:visible, input:not([type]):visible'
+  );
+  const textControlCount = await textControls.count();
+  let answerIndex = 0;
+
+  for (let index = 0; index < textControlCount; index++) {
+    const control = textControls.nth(index);
+    const metadata = await control.evaluate((element) => {
+      const input = element as HTMLInputElement | HTMLTextAreaElement;
+      const label = input.labels?.[0]?.textContent || '';
+
+      return {
+        id: input.id || '',
+        name: input.name || '',
+        placeholder: input.placeholder || '',
+        value: input.value || '',
+        label,
+        maxLength: input.maxLength,
+      };
+    });
+    const joinedMetadata = [
+      metadata.id,
+      metadata.name,
+      metadata.placeholder,
+      metadata.label,
+    ].join(' ');
+    const isNicknameField =
+      joinedMetadata.includes('nick') ||
+      joinedMetadata.includes('별명') ||
+      joinedMetadata.includes('닉네임');
+
+    if (isNicknameField && metadata.value.trim()) {
+      continue;
+    }
+
+    const rawValue = isNicknameField
+      ? fallbackNickname
+      : JOIN_QUESTION_ANSWERS[answerIndex] || JOIN_QUESTION_ANSWERS.at(-1) || '네 알겠습니다';
+    const maxLength = metadata.maxLength > 0 ? metadata.maxLength : rawValue.length;
+    const value = rawValue.slice(0, maxLength);
+
+    await control.fill(value);
+
+    if (!isNicknameField) {
+      answerIndex += 1;
+    }
+  }
+
+  const checkboxes = page.locator('input[type="checkbox"]');
+  const checkboxCount = await checkboxes.count();
+
+  for (let index = 0; index < checkboxCount; index++) {
+    const checkbox = checkboxes.nth(index);
+    const checked = await checkbox.isChecked().catch(() => false);
+
+    if (!checked) {
+      await checkbox.check({ force: true }).catch(async () => {
+        await checkbox.click({ force: true });
+      });
+    }
+  }
+};
+
+const getPageText = async (page: Page): Promise<string> => {
+  return page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
+};
 
 export interface JoinCafeResult {
   success: boolean;
@@ -15,7 +131,8 @@ export interface JoinCafeResult {
 
 export const joinCafeWithAccount = async (
   account: NaverAccount,
-  cafeId: string
+  cafeId: string,
+  options: { cafeUrl?: string } = {}
 ): Promise<JoinCafeResult> => {
   const { id, password, nickname } = account;
 
@@ -35,19 +152,21 @@ export const joinCafeWithAccount = async (
 
     const page = await getPageForAccount(id);
 
-    // 카페 메인 페이지로 이동
-    const cafeUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}`;
+    const cafeHomeUrl = options.cafeUrl
+      ? `https://m.cafe.naver.com/${options.cafeUrl}`
+      : `https://m.cafe.naver.com/ca-fe/web/cafes/${cafeId}`;
 
-    await page.goto(cafeUrl, {
-      waitUntil: 'networkidle',
+    await page.goto(cafeHomeUrl, {
+      waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
 
     await page.waitForTimeout(2000);
 
-    // 이미 가입된 멤버인지 확인 (글쓰기 버튼이 있으면 이미 가입됨)
-    const writeButton = await page.$('a.btn_write, button.btn_write, a[href*="write"]');
-    if (writeButton) {
+    const writeButton = page.locator(
+      'a:has-text("글쓰기"), button:has-text("글쓰기"), a[href*="/articles/write"]'
+    );
+    if (await hasVisible(writeButton)) {
       return {
         success: true,
         accountId: id,
@@ -55,13 +174,28 @@ export const joinCafeWithAccount = async (
       };
     }
 
-    // 가입 버튼 찾기 (여러 셀렉터 시도)
-    const joinButton = await page.$(
-      'a.btn_join, button.btn_join, a[href*="join"], button:has-text("가입"), a:has-text("가입")'
+    const clickedJoin = await clickFirstVisible(
+      page,
+      [
+        'button:has-text("카페 가입하기")',
+        'a:has-text("카페 가입하기")',
+        'button:has-text("가입하기")',
+        'a:has-text("가입하기")',
+        'a[href*="/join"]',
+      ].join(', ')
     );
 
-    if (!joinButton) {
-      // 가입 버튼이 없으면 이미 가입됐거나 가입 불가능한 카페
+    if (!clickedJoin) {
+      const pageText = await getPageText(page);
+
+      if (pageText.includes('카페 가입하기') === false) {
+        return {
+          success: true,
+          accountId: id,
+          alreadyMember: true,
+        };
+      }
+
       return {
         success: false,
         accountId: id,
@@ -69,24 +203,44 @@ export const joinCafeWithAccount = async (
       };
     }
 
-    await joinButton.click();
     await page.waitForTimeout(2000);
 
-    // 닉네임 입력 필드가 있으면 입력
-    const nicknameInput = await page.$('input[name="nickname"], input.nickname_input, input#nickname');
-    if (nicknameInput) {
-      await nicknameInput.fill(nickname || id);
-      await page.waitForTimeout(500);
-    }
+    const fallbackNickname = (nickname || id).trim().slice(0, 20) || id;
+    await fillJoinForm(page, fallbackNickname);
+    await page.waitForTimeout(500);
 
-    // 가입 완료 버튼 클릭
-    const confirmButton = await page.$(
-      'button.btn_confirm, a.btn_confirm, button:has-text("가입하기"), button:has-text("확인"), button[type="submit"]'
+    const clickedSubmit = await clickFirstVisible(
+      page,
+      [
+        'button:has-text("동의 후 가입하기")',
+        'a:has-text("동의 후 가입하기")',
+        'button:has-text("가입하기")',
+        'button:has-text("확인")',
+        'button[type="submit"]',
+      ].join(', ')
     );
 
-    if (confirmButton) {
-      await confirmButton.click();
-      await page.waitForTimeout(2000);
+    if (!clickedSubmit) {
+      return {
+        success: false,
+        accountId: id,
+        error: '가입 완료 버튼을 찾을 수 없습니다.',
+      };
+    }
+
+    await page.waitForTimeout(4000);
+    const resultText = await getPageText(page);
+    if (
+      resultText.includes('사용할 수 없는 별명') ||
+      resultText.includes('별명을 다시') ||
+      resultText.includes('가입이 제한') ||
+      resultText.includes('가입할 수 없습니다')
+    ) {
+      return {
+        success: false,
+        accountId: id,
+        error: resultText.slice(0, 160),
+      };
     }
 
     await saveCookiesForAccount(id);
@@ -161,7 +315,9 @@ export const runBatchCafeJoin = async (
       for (const cafe of cafes) {
         onProgress?.(`${account.id} → ${cafe.name} 가입 시도...`);
 
-        const result = await joinCafeWithAccount(account, cafe.cafeId);
+        const result = await joinCafeWithAccount(account, cafe.cafeId, {
+          cafeUrl: cafe.cafeUrl,
+        });
 
         results.push({
           ...result,
