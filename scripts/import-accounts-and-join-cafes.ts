@@ -399,6 +399,19 @@ const loadTargetCafes = async (
   });
 };
 
+const isLoginFailure = (error?: string): boolean => {
+  if (!error) {
+    return false;
+  }
+
+  return (
+    error.includes('로그인') ||
+    error.includes('캡차') ||
+    error.includes('GEMINI_API_KEY') ||
+    error.includes('추가 인증')
+  );
+};
+
 const joinImportedAccounts = async (
   accounts: NormalizedAccount[],
   cafes: CafeTarget[]
@@ -419,7 +432,8 @@ const joinImportedAccounts = async (
 
   try {
     for (const account of activeAccounts) {
-      for (const cafe of cafes) {
+      for (let cafeIndex = 0; cafeIndex < cafes.length; cafeIndex++) {
+        const cafe = cafes[cafeIndex];
         console.log(`[JOIN] ${account.accountId} -> ${cafe.name} 시작`);
         const result = await joinCafeWithAccount(
           {
@@ -442,6 +456,19 @@ const joinImportedAccounts = async (
         } else {
           summary.failed += 1;
           console.log(`[JOIN] ${account.accountId} -> ${cafe.name}: 실패 - ${result.error}`);
+
+          if (isLoginFailure(result.error)) {
+            const remainingCount = cafes.length - cafeIndex - 1;
+
+            if (remainingCount > 0) {
+              summary.failed += remainingCount;
+              console.log(
+                `[JOIN] ${account.accountId}: 로그인/캡차 실패로 남은 카페 ${remainingCount}건 스킵`
+              );
+            }
+
+            break;
+          }
         }
 
         await new Promise((resolve) => {
