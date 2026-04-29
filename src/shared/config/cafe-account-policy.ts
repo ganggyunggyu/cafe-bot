@@ -6,6 +6,11 @@ const SPECIAL_WRITER_ACCOUNT_IDS = new Set([
   'eytkgy5500',
   'yenalk',
   'olgdmp9921',
+  'regular14631',
+  'nes1p2kx',
+  'mh8j62wm',
+  'angrykoala270',
+  'tinyfish183',
 ]);
 
 const LUXURY_CAFE_IDS = new Set([
