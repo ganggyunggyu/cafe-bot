@@ -2,15 +2,17 @@
 
 ## Target
 
-- `mh8j62wm` / 샤넬오픈런: 댓글 목표 5개
-- `mh8j62wm` / 쇼핑지름신: 댓글 목표 5개
-- `nes1p2kx` / 샤넬오픈런: 댓글 목표 5개
-- `nes1p2kx` / 쇼핑지름신: 댓글 목표 5개
-- `tinyfish183` / 샤넬오픈런: 댓글 목표 5개
+- `mh8j62wm` / 샤넬오픈런: 댓글 목표 20개
+- `mh8j62wm` / 쇼핑지름신: 댓글 목표 20개
+- `nes1p2kx` / 샤넬오픈런: 댓글 목표 20개
+- `nes1p2kx` / 쇼핑지름신: 댓글 목표 20개
+- `tinyfish183` / 샤넬오픈런: 댓글 목표 20개
 
 ## Execution Notes
 
 - `scripts/schedule-writer-levelup-comments.ts`로 목표 조합별 댓글 큐를 예약함.
+- 기본 목표 수를 조합당 20개로 변경함.
+- 쇼핑지름신 후보 글 확보를 위해 수집 범위를 30페이지까지 확장함.
 - 첫 실행 중 딜레이 계산이 과밀하게 잡혀 `mh8j62wm` 10개가 먼저 들어갔고, 이후 하네스를 수정해 대기/진행 큐와 오늘 활동 기록을 합산하게 함.
 - 댓글 검증 단계에서 실제 카페 닉네임과 DB 닉네임이 달라 false negative가 발생함.
 - `src/features/auto-comment/comment-writer.ts`를 수정해 내용이 정확히 매칭되면 닉네임 불일치여도 등록 성공으로 인정하게 함.
@@ -19,11 +21,11 @@
 
 ## Current Queue Status Snapshot
 
-- `mh8j62wm` / 샤넬오픈런: 성공 1개, 대기 4개, 초기 soft fail 10개
-- `mh8j62wm` / 쇼핑지름신: 성공 4개, 대기 1개, 초기 soft fail 2개
-- `nes1p2kx` / 샤넬오픈런: 성공 2개, 대기 3개, 초기 soft fail 2개
-- `nes1p2kx` / 쇼핑지름신: 성공 0개, 대기 5개
-- `tinyfish183` / 샤넬오픈런: 성공 1개, 대기 4개, 초기 soft fail 2개
+- `mh8j62wm` / 샤넬오픈런: 성공 9개, 대기 11개, active plan 20개
+- `mh8j62wm` / 쇼핑지름신: 성공 4개, 대기 16개, active plan 20개
+- `nes1p2kx` / 샤넬오픈런: 성공 7개, 대기 13개, active plan 20개
+- `nes1p2kx` / 쇼핑지름신: 성공 0개, 대기 20개, active plan 20개
+- `tinyfish183` / 샤넬오픈런: 성공 3개, 대기 17개, active plan 20개
 
 ## Failure Record
 

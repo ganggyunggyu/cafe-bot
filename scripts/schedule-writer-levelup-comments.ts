@@ -366,7 +366,9 @@ const main = async (): Promise<void> => {
   const articlePools = new Map<TargetCafeName, CafeArticle[]>();
   const naverFirstAccount = toNaverAccount(firstAccount);
 
-  for (const cafeName of cafeNames) {
+  const remainingCafeNames = [...new Set(remainingJobs.map(({ cafeName }) => cafeName))];
+
+  for (const cafeName of remainingCafeNames) {
     const cafe = cafesByName.get(cafeName);
     if (!cafe) {
       continue;
