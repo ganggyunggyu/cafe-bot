@@ -188,21 +188,31 @@ const findWrittenComment = async (
   commenterNickname: string
 ): Promise<{ found: boolean; commentId?: string }> => {
   const commentItems = await root.$$('.CommentItem:not(.CommentItem--reply)');
+  let textOnlyMatch: { found: boolean; commentId?: string } | null = null;
 
   for (const item of commentItems) {
     const commentText = normalizeText(await getItemText(item, '.comment_text_view'));
     if (!commentText.includes(contentPreview)) continue;
+
+    const commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
 
     if (commenterNickname) {
       const commentNickname = normalizeText(await getItemText(item, '.comment_nickname'));
       const isNicknameMatch =
         !commentNickname ||
         isNicknameEquivalent(commentNickname, commenterNickname);
-      if (!isNicknameMatch) continue;
+      if (!isNicknameMatch) {
+        textOnlyMatch ??= { found: true, commentId };
+        continue;
+      }
     }
 
-    const commentId = await getCommentIdFromItem(item as ElementHandle<HTMLElement>);
     return { found: true, commentId };
+  }
+
+  if (textOnlyMatch) {
+    console.log('[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인');
+    return textOnlyMatch;
   }
 
   return { found: false };
