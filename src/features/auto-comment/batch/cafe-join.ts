@@ -1,3 +1,15 @@
+/**
+ * 카페 가입 로직.
+ *
+ * 가입 후 검증/별명 충돌 처리 (2026-05-06 보강):
+ * - 가입 폼 제출 후, 카페 홈으로 다시 진입해 글쓰기 버튼 노출 여부로 실제 가입을 검증한다.
+ *   (resultText 텍스트만으로 판정하던 방식은 폼이 제대로 제출되지 않아도 success로 오판하던 문제 있음.)
+ * - "사용할 수 없는 별명" / "이미 사용" / "중복" 결과는 NICKNAME_DUPLICATE 에러로 분리해 반환.
+ * - 가입 후에도 가입 버튼이 여전히 보이면 JOIN_NOT_VERIFIED 에러로 반환.
+ * - 관리자 승인 대기인 경우 PENDING_APPROVAL 에러로 반환.
+ * - 별명 충돌이 잡히면 joinCafeWithNicknameRetry 가 자동 닉 변형으로 재시도하고
+ *   성공 시 DB 닉네임을 갱신한다.
+ */
 import {
   getPageForAccount,
   saveCookiesForAccount,
@@ -233,6 +245,16 @@ export const joinCafeWithAccount = async (
     if (
       resultText.includes('사용할 수 없는 별명') ||
       resultText.includes('별명을 다시') ||
+      resultText.includes('이미 사용') ||
+      resultText.includes('중복')
+    ) {
+      return {
+        success: false,
+        accountId: id,
+        error: 'NICKNAME_DUPLICATE: ' + resultText.slice(0, 100),
+      };
+    }
+    if (
       resultText.includes('가입이 제한') ||
       resultText.includes('가입할 수 없습니다')
     ) {
@@ -243,13 +265,41 @@ export const joinCafeWithAccount = async (
       };
     }
 
-    await saveCookiesForAccount(id);
+    // 가입 결과 검증: 카페로 다시 진입해서 글쓰기 버튼 노출 여부 체크
+    await page.goto(cafeHomeUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await page.waitForTimeout(2500);
+    const verifyWrite = page.locator(
+      'a:has-text("글쓰기"), button:has-text("글쓰기"), a[href*="/articles/write"]'
+    );
+    if (await hasVisible(verifyWrite)) {
+      await saveCookiesForAccount(id);
+      return { success: true, accountId: id, alreadyMember: false };
+    }
 
-    return {
-      success: true,
-      accountId: id,
-      alreadyMember: false,
-    };
+    const stillJoinBtn = page.locator(
+      'button:has-text("가입하기"), a:has-text("가입하기")'
+    );
+    if (await hasVisible(stillJoinBtn)) {
+      return {
+        success: false,
+        accountId: id,
+        error: 'JOIN_NOT_VERIFIED: 가입 후에도 가입 버튼이 보임 (별명 충돌 또는 추가 인증 필요)',
+      };
+    }
+
+    if (/가입.{0,3}신청.{0,3}완료|승인.{0,3}대기/.test(resultText)) {
+      return {
+        success: false,
+        accountId: id,
+        error: 'PENDING_APPROVAL: 가입 신청 완료, 관리자 승인 대기',
+      };
+    }
+
+    await saveCookiesForAccount(id);
+    return { success: true, accountId: id, alreadyMember: false };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return {
@@ -259,6 +309,47 @@ export const joinCafeWithAccount = async (
     };
   }
 }
+
+// 별명 충돌/검증 실패 시 변형 닉네임으로 재시도 + DB 갱신
+export const joinCafeWithNicknameRetry = async (
+  account: NaverAccount,
+  cafeId: string,
+  options: { cafeUrl?: string; updateDbNickname?: (newNickname: string) => Promise<void> } = {},
+): Promise<JoinCafeResult & { finalNickname?: string }> => {
+  const baseNick = account.nickname || account.id;
+  const variants: string[] = [
+    baseNick,
+    baseNick + '2',
+    baseNick + '쇼지',
+    baseNick + '준이',
+    baseNick + '준삼',
+    baseNick + '이야',
+    baseNick.replace(/(\d+)$/, (_, n) => String(Number(n) + 1)),
+    baseNick + Math.floor(Math.random() * 99 + 1),
+  ];
+  const seen = new Set<string>();
+  for (const nick of variants) {
+    const trimmed = nick.trim().slice(0, 20);
+    if (seen.has(trimmed) || !trimmed) continue;
+    seen.add(trimmed);
+
+    const r = await joinCafeWithAccount(
+      { ...account, nickname: trimmed },
+      cafeId,
+      options.cafeUrl ? { cafeUrl: options.cafeUrl } : {}
+    );
+    if (r.success) {
+      if (trimmed !== baseNick && options.updateDbNickname) {
+        await options.updateDbNickname(trimmed).catch(() => {});
+      }
+      return { ...r, finalNickname: trimmed };
+    }
+    if (!r.error || !/NICKNAME_DUPLICATE|JOIN_NOT_VERIFIED|별명|중복/.test(r.error)) {
+      return r;
+    }
+  }
+  return { success: false, accountId: account.id, error: '모든 닉네임 변형 시도 실패' };
+};
 
 // 여러 계정 일괄 가입
 export const joinCafeWithAccounts = async (
