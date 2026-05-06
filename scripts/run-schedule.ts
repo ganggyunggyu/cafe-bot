@@ -47,7 +47,7 @@ const GLOBAL_BLOCKED_COMMENTER_ACCOUNT_IDS = new Set([
 ]);
 
 const BLOCKED_COMMENTER_ACCOUNT_IDS_BY_CAFE_ID: Record<string, Set<string>> = {
-  "25729954": new Set(),
+  "25729954": new Set(["dhtksk1p"]),
 };
 
 interface ScheduleItem {
