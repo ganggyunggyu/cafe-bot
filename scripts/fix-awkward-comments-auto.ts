@@ -91,12 +91,26 @@ const deleteCommentOnNaver = async (target: AwkwardTarget): Promise<boolean> => 
     );
     await page.waitForTimeout(3000);
 
-    const commentElements = await page.$$(".CommentItem, .comment_item");
-    const matchKey = target.contentSnippet.slice(0, 20);
+    // Scroll to load all comments
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(800);
+    }
+    // Click 이전/더보기 댓글 buttons if any
+    const moreBtns = await page.$$('button:has-text("이전"), button:has-text("더보기"), a:has-text("더보기")');
+    for (const mb of moreBtns) {
+      try { await mb.click({ timeout: 1500 }); await page.waitForTimeout(800); } catch {}
+    }
+
+    const commentElements = await page.$$(".CommentItem, .comment_item, li.comment, .comment-area li");
+    const normalize = (s: string) => s.replace(/\s+/g, "").replace(/[.,…ㅋㅎㅠㅜ]/g, "");
+    const targetNorm = normalize(target.fullContent).slice(0, 30);
+    const targetSnipNorm = normalize(target.contentSnippet).slice(0, 15);
 
     for (const el of commentElements) {
       const text = await el.evaluate((node) => node.textContent || "");
-      if (!text.includes(matchKey)) continue;
+      const textNorm = normalize(text);
+      if (!textNorm.includes(targetNorm) && !textNorm.includes(targetSnipNorm)) continue;
 
       const optionBtn = await el.$(".comment_tool_button");
       if (!optionBtn) {
@@ -112,7 +126,7 @@ const deleteCommentOnNaver = async (target: AwkwardTarget): Promise<boolean> => 
         if (btnText === "삭제") {
           await btn.click();
           await page.waitForTimeout(2000);
-          console.log(`  ✅ 삭제: article=${target.articleId} acc=${target.accountId} "${matchKey}..."`);
+          console.log(`  ✅ 삭제: article=${target.articleId} acc=${target.accountId} "${target.contentSnippet.slice(0, 20)}..."`);
           return true;
         }
       }
@@ -121,7 +135,7 @@ const deleteCommentOnNaver = async (target: AwkwardTarget): Promise<boolean> => 
       return false;
     }
 
-    console.log(`  댓글 매칭 안됨 (article=${target.articleId} acc=${target.accountId} key="${matchKey}")`);
+    console.log(`  댓글 매칭 안됨 (article=${target.articleId} acc=${target.accountId} key="${target.contentSnippet.slice(0, 20)}")`);
     return false;
   } finally {
     releaseAccountLock(target.accountId);
