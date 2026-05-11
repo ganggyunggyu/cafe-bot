@@ -25,6 +25,14 @@ const normalizeText = (value: string): string => {
   return value.replace(/\s+/g, ' ').trim();
 };
 
+const COMMENT_PATTERN_GUIDES = [
+  '본문 디테일을 짚고 짧게 질문하는 댓글',
+  '비슷한 경험을 한 문장으로만 공유하는 댓글',
+  '조심스럽게 확인하거나 되묻는 댓글',
+  '가벼운 공감 뒤에 다른 표현으로 마무리하는 댓글',
+  '생활 팁을 살짝 얹되 권유하지 않는 댓글',
+];
+
 export const generateCafeCommentWithGemini = async (
   input: GenerateCafeCommentInput
 ): Promise<string> => {
@@ -38,12 +46,20 @@ export const generateCafeCommentWithGemini = async (
   const safePersona = normalizeText(personaHint ?? '');
 
   const trimmedBody = safeBody.slice(0, 2500);
+  const patternGuide = COMMENT_PATTERN_GUIDES[Math.floor(Math.random() * COMMENT_PATTERN_GUIDES.length)];
 
   const prompt = normalizeText(`
-너는 네이버 카페에서 자연스럽게 댓글을 다는 일반 회원임.
-광고/홍보 티 절대 내지 말고, 링크/연락처/가격/구매유도 금지임.
-이모지/특수문자 남발 금지, 1~2문장, 40~120자 정도로 짧게 작성.
+너는 네이버 카페에서 자연스럽게 댓글을 다는 일반 회원입니다.
+광고/홍보 티 절대 내지 말고, 링크/연락처/가격/구매유도 금지입니다.
+이모지/특수문자 남발 금지, 1~2문장, 40~120자 정도로 짧게 작성합니다.
 글 내용에서 구체적인 포인트 1개를 꼭 집어서 공감/질문/칭찬 중 하나로 반응.
+이번 댓글 패턴: ${patternGuide}
+
+말투 규칙:
+- 반드시 존댓말로 끝냅니다. "~요", "~어요", "~네요", "~거든요", "~더라고요" 중심.
+- "~했어", "~같아", "~좋아", "~맞아", "~문제야", "~하자", "~해봐" 같은 반말 종결 금지.
+- "맞아요", "저도", "오", "헐"로 시작하는 흔한 패턴은 피하고 본문 디테일로 시작.
+- "좋아 보이네요", "괜찮아 보이네요" 대신 "좋아 보여요", "괜찮아 보여요" 사용.
 
 ${safePersona ? `말투 힌트: ${safePersona}` : ''}
 

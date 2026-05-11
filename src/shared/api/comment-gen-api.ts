@@ -25,6 +25,15 @@ interface GenerateCommentResponse {
 }
 
 const POSITIVE_PERSONA_IDS = ['cute_f', 'warm_f', 'enthusiast', 'grateful', 'supporter'];
+const COMMENT_SAFETY_GUIDE = [
+  '',
+  '[댓글 말투 지시] 반드시 존댓말만 사용. "~했어", "~같아", "~좋아", "~맞아", "~문제야", "~하자", "~해봐" 같은 반말 종결 금지. "맞아요/저도/오/헐" 시작 반복 금지. 질문형, 경험형, 정보형, 생활잡담형 중 하나로 자연스럽게 작성.',
+].join('\n\n');
+
+const withCommentSafetyGuide = (content?: string): string | undefined => {
+  if (!content) return COMMENT_SAFETY_GUIDE;
+  return `${content}\n\n${COMMENT_SAFETY_GUIDE}`;
+};
 
 const toNumericPersonaId = (personaId?: string | null): number | undefined => {
   if (!personaId) return undefined;
@@ -40,7 +49,7 @@ export const generateComment = async (
 ): Promise<string> => {
   const normalizedPersonaId = toNumericPersonaId(personaId);
   const body: GenerateCommentRequest = {
-    content: postContent,
+    content: withCommentSafetyGuide(postContent) ?? postContent,
     author_name: authorName,
   };
   if (normalizedPersonaId !== undefined) body.persona_id = normalizedPersonaId;
@@ -75,7 +84,7 @@ export const generateReply = async (
   const normalizedPersonaId = toNumericPersonaId(personaId);
   const body: GenerateReplyRequest = {
     parent_comment: parentComment,
-    content: postContent,
+    content: withCommentSafetyGuide(postContent),
     author_name: authorName,
     parent_author: parentAuthor,
     commenter_name: commenterName,
@@ -113,7 +122,7 @@ export const generateAuthorReply = async (
 
   const body: GenerateReplyRequest = {
     parent_comment: parentComment,
-    content: postContent,
+    content: withCommentSafetyGuide(postContent),
     parent_author: parentAuthor,
     commenter_name: commenterName,
   };

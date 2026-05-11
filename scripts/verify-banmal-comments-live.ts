@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import mongoose from 'mongoose';
+import type { Frame, Page } from 'playwright';
 import { Account } from '../src/shared/models/account';
 import {
   acquireAccountLock,
@@ -39,6 +40,15 @@ interface LiveResult extends AuditMatch {
   error: string;
 }
 
+interface NaverCommentItem {
+  commentId?: string | number;
+  id?: string | number;
+  content?: string;
+  writer?: {
+    nick?: string;
+  };
+}
+
 const getArgValue = (name: string): string | undefined => {
   const index = process.argv.indexOf(name);
   if (index === -1) return undefined;
@@ -49,11 +59,99 @@ const normalize = (value: string): string => {
   return value.replace(/\s+/g, '').replace(/[.,…~ㅋㅎㅠㅜ]/g, '').trim();
 };
 
+const getCommentRoot = async (page: Page): Promise<Page | Frame> => {
+  try {
+    await page.waitForSelector('iframe#cafe_main', { timeout: 5000 });
+    const frameHandle = await page.$('iframe#cafe_main');
+    const frame = await frameHandle?.contentFrame();
+    return frame ?? page;
+  } catch {
+    return page;
+  }
+};
+
+const loadMoreComments = async (root: Page | Frame): Promise<void> => {
+  for (let index = 0; index < 4; index += 1) {
+    try {
+      await root.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await root.waitForTimeout(700);
+    } catch {}
+  }
+
+  const moreButtons = await root.$$('button:has-text("이전"), button:has-text("더보기"), a:has-text("더보기")');
+  for (const button of moreButtons) {
+    try {
+      await button.click({ timeout: 1500 });
+      await root.waitForTimeout(700);
+    } catch {}
+  }
+};
+
+const findCommentInDom = async (
+  page: Page,
+  match: AuditMatch
+): Promise<{ found: true; commentId: string; nickname: string; content: string } | { found: false }> => {
+  const root = await getCommentRoot(page);
+  await loadMoreComments(root);
+
+  const targetContent = normalize(match.content);
+  const items = await root.$$eval('.CommentItem, .comment_item, li.comment, .comment-area li', (nodes) => {
+    return nodes.map((node) => {
+      const element = node as HTMLElement;
+      const id = element.id || element.getAttribute('data-comment-id') || '';
+      const cidNode = element.querySelector('[data-cid]');
+      const cid = cidNode?.getAttribute('data-cid') ?? '';
+      const button = element.querySelector('button[id^="commentItem"]') as HTMLButtonElement | null;
+      const nickname =
+        element.querySelector('.comment_nickname, .CommentItemMeta .nickname, .nick_box, .name')?.textContent?.trim() ?? '';
+      const content =
+        element.querySelector('.text_comment, .comment_text, .CommentItemContent, .comment_view')?.textContent?.trim() ??
+        element.textContent?.trim() ??
+        '';
+      return { id, cid, buttonId: button?.id ?? '', nickname, content };
+    });
+  });
+
+  const found = items.find((item) => {
+    const ids = [item.id, item.cid.split('-').pop() ?? '', item.buttonId.replace('commentItem', '')].filter(Boolean);
+    const itemContent = normalize(item.content);
+    if (match.commentId && ids.includes(match.commentId)) return true;
+    return itemContent.includes(targetContent.slice(0, 40)) || targetContent.includes(itemContent.slice(0, 40));
+  });
+
+  if (!found) return { found: false };
+
+  return {
+    found: true,
+    commentId: found.id || found.cid.split('-').pop() || found.buttonId.replace('commentItem', ''),
+    nickname: found.nickname,
+    content: found.content,
+  };
+};
+
+const findCommentInPageText = async (
+  page: Page,
+  match: AuditMatch
+): Promise<{ found: true; commentId: string; nickname: string; content: string } | { found: false }> => {
+  const targetContent = normalize(match.content);
+  const bodyText = await page.evaluate(() => document.body?.textContent ?? '');
+  const normalizedBody = normalize(bodyText);
+  if (!normalizedBody.includes(targetContent.slice(0, 40))) return { found: false };
+
+  return {
+    found: true,
+    commentId: match.commentId,
+    nickname: match.nickname,
+    content: match.content,
+  };
+};
+
 const fetchComments = async (
   accountId: string,
   cafeId: string,
-  articleId: number
-): Promise<{ success: true; items: any[] } | { success: false; error: string }> => {
+  articleId: number,
+  match: AuditMatch
+): Promise<{ success: true; items: NaverCommentItem[] } | { success: false; error: string }> => {
   const account = await Account.findOne({ accountId, isActive: true }).lean();
   if (!account) return { success: false, error: 'account_missing' };
 
@@ -87,6 +185,28 @@ const fetchComments = async (
     }, { cafeId, articleId });
 
     if (!data.ok) {
+      let domResult = await findCommentInDom(page, match);
+      if (!domResult.found) {
+        await page.goto(`https://m.cafe.naver.com/ca-fe/web/cafes/${cafeId}/articles/${articleId}`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000,
+        });
+        await page.waitForTimeout(2500);
+        domResult = await findCommentInDom(page, match);
+      }
+      if (!domResult.found) {
+        domResult = await findCommentInPageText(page, match);
+      }
+      if (domResult.found) {
+        return {
+          success: true,
+          items: [{
+            commentId: domResult.commentId,
+            content: domResult.content,
+            writer: { nick: domResult.nickname },
+          }],
+        };
+      }
       return { success: false, error: `fetch_failed:${data.error}` };
     }
 
@@ -97,7 +217,7 @@ const fetchComments = async (
 };
 
 const verifyMatch = async (match: AuditMatch): Promise<LiveResult> => {
-  const fetched = await fetchComments(match.accountId, match.cafeId, match.articleId);
+  const fetched = await fetchComments(match.accountId, match.cafeId, match.articleId, match);
   if (!fetched.success) {
     const status = fetched.error.startsWith('login_failed')
       ? 'login_failed'
