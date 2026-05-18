@@ -17,7 +17,6 @@ dotenv.config({ path: ".env" });
 
 import { readFileSync } from "fs";
 import mongoose from "mongoose";
-import { google } from "googleapis";
 import { User } from "../src/shared/models/user";
 import { Account } from "../src/shared/models/account";
 import { PublishedArticle } from "../src/shared/models";
@@ -43,41 +42,6 @@ import type { NaverAccount } from "../src/shared/lib/account-manager";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 const LOGIN_ID = process.env.LOGIN_ID || "21lab";
-
-const SHEET_SPREADSHEET_ID = "1gyipTIEogC9Qopj8w3ggBmD0k5KvAw6yNdIMXQDnwms";
-const SHEET_TAB = "카페키워드";
-
-const CAFE_NAME_MAP: Record<string, string> = {
-  "25460974": "샤넬오픈런",
-  "25729954": "쇼핑지름신",
-  "25636798": "건강한노후준비",
-  "25227349": "건강관리소",
-};
-
-const appendKeywordToSheet = async (
-  cafeName: string,
-  keyword: string,
-): Promise<void> => {
-  try {
-    const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    const sheets = google.sheets({ version: "v4", auth });
-    const today = new Date().toISOString().slice(0, 10);
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SHEET_SPREADSHEET_ID,
-      range: `${SHEET_TAB}!A:D`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[cafeName, keyword, today, 1]] },
-    });
-    console.log(`  📝 시트 기록: ${keyword}`);
-  } catch (e) {
-    console.log(`  ⚠️ 시트 기록 실패: ${e instanceof Error ? e.message : e}`);
-  }
-};
 
 interface ModifyItem {
   link: string;
@@ -551,12 +515,6 @@ const main = async (): Promise<void> => {
           allNaverAccounts,
         );
         console.log(`  댓글 ${comments}개 + 대댓글 ${replies}개 큐 추가`);
-      }
-
-      // 시트에 키워드 기록 (샤넬/쇼핑만, 건강카페 제외)
-      const cafeName = CAFE_NAME_MAP[cafeId];
-      if (cafeName && !cafeName.includes("건강")) {
-        await appendKeywordToSheet(cafeName, item.keyword);
       }
 
       successCount++;
