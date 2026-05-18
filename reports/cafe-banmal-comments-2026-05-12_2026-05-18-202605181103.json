@@ -1,0 +1,208 @@
+{
+  "rangeKst": {
+    "start": "2026-05-12 00:00:00",
+    "endExclusive": "2026-05-19 00:00:00"
+  },
+  "totalArticles": 211,
+  "totalMatches": 9,
+  "matches": [
+    {
+      "severity": "review",
+      "articleId": 31576,
+      "cafeId": "25636798",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25636798/articles/31576",
+      "keyword": "어버이날 선물",
+      "title": "어버이날 선물 뭐 드렸어요?",
+      "publishedAtKst": "2026-05-13 11:17:17",
+      "writerAccountId": "nes1p2kx",
+      "accountId": "nes1p2kx",
+      "nickname": "에스앤비안과 1",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "1",
+      "createdAtKst": "2026-05-13 11:22:19",
+      "content": "저도 그냥 직접 여쭤볼까 하다가 물어보면 \"아무거나 괜찮아\" 하실 것 같아서요ㅠㅠ.",
+      "suggestedContent": "저도 그냥 직접 여쭤볼까 하다가 물어보면 \"아무거나 괜찮아\" 하실 것 같아서요ㅠㅠ.",
+      "reasons": [
+        "문장 중 반말 표현"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 1572,
+      "cafeId": "25227349",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25227349/articles/1572",
+      "keyword": "어버이날 선물",
+      "title": "어버이날 선물 뭐가 나을까요",
+      "publishedAtKst": "2026-05-13 11:30:51",
+      "writerAccountId": "mh8j62wm",
+      "accountId": "mh8j62wm",
+      "nickname": "에스앤비안과 2",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "1",
+      "createdAtKst": "2026-05-13 11:34:21",
+      "content": "현금이 제일 실용적이긴 한데 뭔가 성의가 없어 보일까봐 그게 또 걸리더라고요 ㅠㅠ",
+      "suggestedContent": "현금이 제일 실용적이긴 한데 뭔가 성의가 없어 보일까봐 그게 또 걸리더라고요 ㅠㅠ",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 31577,
+      "cafeId": "25636798",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25636798/articles/31577",
+      "keyword": "청소년 종합영양제",
+      "title": "청소년 종합영양제 뭐 먹이세요?",
+      "publishedAtKst": "2026-05-13 11:58:05",
+      "writerAccountId": "angrykoala270",
+      "accountId": "dq1h3bjy",
+      "nickname": "에스앤비안과, 29년 경력",
+      "type": "comment",
+      "commentId": "89361984",
+      "commentIndex": "0",
+      "parentIndex": "",
+      "createdAtKst": "2026-05-13 11:59:15",
+      "content": "저희 아이도 딱 그 나이 때 얼굴 색이 안 좋아 보여서 걱정했었는데 결국은 밥을 얼마나 먹느냐가 제일 중요하더라고요.",
+      "suggestedContent": "저희 아이도 딱 그 나이 때 얼굴 색이 안 좋아 보여서 걱정했었는데 결국은 밥을 얼마나 먹느냐가 제일 중요하더라고요.",
+      "reasons": [
+        "문장 중 반말 표현"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 11275854,
+      "cafeId": "25729954",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25729954/articles/11275854",
+      "keyword": "신이랑 법률사무소 보다가 야식 시킨 화요일 밤",
+      "title": "신이랑 보다가 야식 시키는 게 맞는 행동인가요",
+      "publishedAtKst": "2026-05-13 17:47:49",
+      "writerAccountId": "regular14631",
+      "accountId": "dq1h3bjy",
+      "nickname": "에스앤비안과, 29년 경력",
+      "type": "comment",
+      "commentId": "145411317",
+      "commentIndex": "0",
+      "parentIndex": "",
+      "createdAtKst": "2026-05-13 17:49:03",
+      "content": "컵라면 씬에서 배달앱 켠 거 저도 완전 공감되는데 그 장면 왜 그렇게 맛있어 보이는지 이상하게 편의점 컵라면이 제일 맛있어 보임 드라마에서",
+      "suggestedContent": "컵라면 씬에서 배달앱 켠 거 저도 완전 공감되는데 그 장면 왜 그렇게 맛있어 보이는지 이상하게 편의점 컵라면이 제일 맛있어 보임 드라마에서",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 31610,
+      "cafeId": "25636798",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25636798/articles/31610",
+      "keyword": "후비루치료",
+      "title": "부모님 후비루치료 선물 후기요",
+      "publishedAtKst": "2026-05-14 18:00:54",
+      "writerAccountId": "angrykoala270",
+      "accountId": "dq1h3bjy",
+      "nickname": "에스앤비안과, 29년 경력",
+      "type": "comment",
+      "commentId": "89376679",
+      "commentIndex": "0",
+      "parentIndex": "",
+      "createdAtKst": "2026-05-14 18:02:04",
+      "content": "아버지 병원 싫어하시는 거 진짜 공감돼요, 저희 아버지도 \"괜찮아\" 하시다가 나중에 더 고생하셨거든요.",
+      "suggestedContent": "아버지 병원 싫어하시는 거 진짜 공감돼요, 저희 아버지도 \"괜찮아\" 하시다가 나중에 더 고생하셨거든요.",
+      "reasons": [
+        "문장 중 반말 표현"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 11279872,
+      "cafeId": "25729954",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25729954/articles/11279872",
+      "keyword": "어버이날 선물",
+      "title": "어버이날 선물 뭐가 나을까요",
+      "publishedAtKst": "2026-05-15 10:51:51",
+      "writerAccountId": "angrykoala270",
+      "accountId": "angrykoala270",
+      "nickname": "앵그리맨",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "0",
+      "createdAtKst": "2026-05-15 10:54:24",
+      "content": "그쵸ㅠ 뭔가 성의 없어 보일까봐 고민이었어요. 안마기는 어떻게 생각하세요?",
+      "suggestedContent": "그쵸ㅠ 뭔가 성의 없어 보일까봐 고민이었어요. 안마기는 어떻게 생각하세요?",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 31626,
+      "cafeId": "25636798",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25636798/articles/31626",
+      "keyword": "어버이날 선물",
+      "title": "어버이날 선물 뭐가 나을까요",
+      "publishedAtKst": "2026-05-15 11:17:56",
+      "writerAccountId": "nes1p2kx",
+      "accountId": "nes1p2kx",
+      "nickname": "에스앤비안과 1",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "0",
+      "createdAtKst": "2026-05-15 11:21:11",
+      "content": "시부모님이 칠십 초반이시고 친정부모님은 육십대 중반이에요. 상품권은 저도 생각해봤는데 뭔가 성의 없어 보일까봐 자꾸 망설여지더라고요ㅠㅠ",
+      "suggestedContent": "시부모님이 칠십 초반이시고 친정부모님은 육십대 중반이에요. 상품권은 저도 생각해봤는데 뭔가 성의 없어 보일까봐 자꾸 망설여지더라고요ㅠㅠ",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 301211,
+      "cafeId": "25460974",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25460974/articles/301211",
+      "keyword": "보테가 카세트 인트레치아토 카멜 사기 직전 마지막 고민",
+      "title": "카세트 카멜 살까 말까 일주일째",
+      "publishedAtKst": "2026-05-15 12:10:35",
+      "writerAccountId": "tinyfish183",
+      "accountId": "bigfish773",
+      "nickname": "고래낚시",
+      "type": "comment",
+      "commentId": "153436933",
+      "commentIndex": "4",
+      "parentIndex": "",
+      "createdAtKst": "2026-05-15 13:23:29",
+      "content": "카세트 인트레치아토 저도 보고 있는데 카멜이 제일 고민되는 색이더라고요 다른 색은 또 왜 없어 보이는지",
+      "suggestedContent": "카세트 인트레치아토 저도 보고 있는데 카멜이 제일 고민되는 색이더라고요 다른 색은 또 왜 없어 보이는지",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 1611,
+      "cafeId": "25227349",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25227349/articles/1611",
+      "keyword": "60대 엄마 선물",
+      "title": "60대 엄마 선물 뭐랑 같이 드시나요",
+      "publishedAtKst": "2026-05-17 22:31:52",
+      "writerAccountId": "regular14631",
+      "accountId": "regular14631",
+      "nickname": "소원",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "1",
+      "createdAtKst": "2026-05-17 22:36:20",
+      "content": "저는 한려담원 흑염소진액으로 먹고 있어요 후기 보다가 괜찮아 보여서 시작했는데 60대 엄마 선물이랑 같이 먹으니까 뭔가 서로 다른 부분을 채워주는 느낌이에요",
+      "suggestedContent": "저는 한려담원 흑염소진액으로 먹고 있어요 후기 보다가 괜찮아 보여서 시작했는데 60대 엄마 선물이랑 같이 먹으니까 뭔가 서로 다른 부분을 채워주는 느낌이에요",
+      "reasons": [
+        "문장 중 반말 표현"
+      ]
+    }
+  ]
+}
