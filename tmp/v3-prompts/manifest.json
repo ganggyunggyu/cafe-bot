@@ -5,7 +5,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/01-자궁경부확대경검사_결과.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/01-자궁경부확대경검사_결과.output.txt",
     "refCount": 10,
-    "promptLen": 4124
+    "promptLen": 4609
   },
   {
     "idx": 2,
@@ -13,7 +13,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/02-노산임신_준비.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/02-노산임신_준비.output.txt",
     "refCount": 10,
-    "promptLen": 4040
+    "promptLen": 4505
   },
   {
     "idx": 3,
@@ -21,7 +21,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/03-임신검사_종류.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/03-임신검사_종류.output.txt",
     "refCount": 10,
-    "promptLen": 4022
+    "promptLen": 4464
   },
   {
     "idx": 4,
@@ -29,7 +29,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/04-임신15주차_태동.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/04-임신15주차_태동.output.txt",
     "refCount": 10,
-    "promptLen": 4007
+    "promptLen": 4449
   },
   {
     "idx": 5,
@@ -37,7 +37,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/05-계류유산_회복.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/05-계류유산_회복.output.txt",
     "refCount": 10,
-    "promptLen": 4032
+    "promptLen": 4500
   },
   {
     "idx": 6,
@@ -45,7 +45,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/06-임신확인시기_테스트기.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/06-임신확인시기_테스트기.output.txt",
     "refCount": 10,
-    "promptLen": 4079
+    "promptLen": 4560
   },
   {
     "idx": 7,
@@ -53,7 +53,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/07-임신초기_갈색냉_양.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/07-임신초기_갈색냉_양.output.txt",
     "refCount": 10,
-    "promptLen": 4058
+    "promptLen": 4519
   },
   {
     "idx": 8,
@@ -61,7 +61,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/08-임신9주차_입덧.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/08-임신9주차_입덧.output.txt",
     "refCount": 10,
-    "promptLen": 4057
+    "promptLen": 4542
   },
   {
     "idx": 9,
@@ -69,7 +69,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/09-임신12주차_안정기.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/09-임신12주차_안정기.output.txt",
     "refCount": 10,
-    "promptLen": 4028
+    "promptLen": 4464
   },
   {
     "idx": 10,
@@ -77,7 +77,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/10-임신전검사_항목.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/10-임신전검사_항목.output.txt",
     "refCount": 10,
-    "promptLen": 4088
+    "promptLen": 4540
   },
   {
     "idx": 11,
@@ -85,7 +85,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/11-신혼부부_산전검사_무료.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/11-신혼부부_산전검사_무료.output.txt",
     "refCount": 10,
-    "promptLen": 4116
+    "promptLen": 4602
   },
   {
     "idx": 12,
@@ -93,7 +93,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/12-임신9주차_초음파.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/12-임신9주차_초음파.output.txt",
     "refCount": 10,
-    "promptLen": 4072
+    "promptLen": 4558
   },
   {
     "idx": 13,
@@ -101,7 +101,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/13-임신초기_어지러움_빈혈.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/13-임신초기_어지러움_빈혈.output.txt",
     "refCount": 10,
-    "promptLen": 4087
+    "promptLen": 4524
   },
   {
     "idx": 14,
@@ -109,7 +109,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/14-임신10주차_피로.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/14-임신10주차_피로.output.txt",
     "refCount": 10,
-    "promptLen": 4127
+    "promptLen": 4583
   },
   {
     "idx": 15,
@@ -117,7 +117,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/15-임신초기_입덧_음식.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/15-임신초기_입덧_음식.output.txt",
     "refCount": 10,
-    "promptLen": 4065
+    "promptLen": 4526
   },
   {
     "idx": 16,
@@ -125,7 +125,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/16-임신_산전검사_시기.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/16-임신_산전검사_시기.output.txt",
     "refCount": 10,
-    "promptLen": 4042
+    "promptLen": 4487
   },
   {
     "idx": 17,
@@ -133,7 +133,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/17-임신8주차_출혈.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/17-임신8주차_출혈.output.txt",
     "refCount": 10,
-    "promptLen": 4090
+    "promptLen": 4533
   },
   {
     "idx": 18,
@@ -141,7 +141,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/18-임신초기_변비_음식.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/18-임신초기_변비_음식.output.txt",
     "refCount": 10,
-    "promptLen": 4111
+    "promptLen": 4540
   },
   {
     "idx": 19,
@@ -149,7 +149,7 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/19-산전검사_보건소.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/19-산전검사_보건소.output.txt",
     "refCount": 10,
-    "promptLen": 4083
+    "promptLen": 4571
   },
   {
     "idx": 20,
@@ -157,6 +157,6 @@
     "promptFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/20-자연분만_회음부_회복.prompt.md",
     "outFile": "/Users/ganggyunggyu/Programing/cafe-bot/tmp/v3-prompts/20-자연분만_회음부_회복.output.txt",
     "refCount": 10,
-    "promptLen": 4119
+    "promptLen": 4556
   }
 ]
