@@ -1,0 +1,76 @@
+{
+  "rangeKst": {
+    "start": "2026-05-20 00:00:00",
+    "endExclusive": "2026-05-21 00:00:00"
+  },
+  "totalArticles": 21,
+  "totalMatches": 3,
+  "matches": [
+    {
+      "severity": "review",
+      "articleId": 31706,
+      "cafeId": "25636798",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25636798/articles/31706",
+      "keyword": "어버이날 선물",
+      "title": "어버이날 선물 챙겨드린 후기요",
+      "publishedAtKst": "2026-05-20 11:39:15",
+      "writerAccountId": "nes1p2kx",
+      "accountId": "bigfish773",
+      "nickname": "고래낚시",
+      "type": "comment",
+      "commentId": "89432912",
+      "commentIndex": "4",
+      "parentIndex": "",
+      "createdAtKst": "2026-05-20 11:53:29",
+      "content": "저는 부모님 선물 진짜 매년 고민인데 결국 상품권 드려요ㅠ 직접 필요한 거 사시라고요. 근데 그것도 좀 성의 없어 보이는 것 같기도 하고... 매년 똑같이 고민하게 되더라고요.",
+      "suggestedContent": "저는 부모님 선물 진짜 매년 고민인데 결국 상품권 드려요ㅠ 직접 필요한 거 사시라고요. 근데 그것도 좀 성의 없어 보이는 것 같기도 하고... 매년 똑같이 고민하게 되더라고요.",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 1629,
+      "cafeId": "25227349",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25227349/articles/1629",
+      "keyword": "어버이날 선물",
+      "title": "어버이날 선물 고민 중이에요",
+      "publishedAtKst": "2026-05-20 11:39:46",
+      "writerAccountId": "mh8j62wm",
+      "accountId": "mh8j62wm",
+      "nickname": "에스앤비안과 2",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "0",
+      "createdAtKst": "2026-05-20 11:42:21",
+      "content": "저도 용돈 생각은 했는데 좀 성의 없어 보일까봐 고민이 되더라고요ㅠ",
+      "suggestedContent": "저도 용돈 생각은 했는데 좀 성의 없어 보일까봐 고민이 되더라고요ㅠ",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    },
+    {
+      "severity": "review",
+      "articleId": 11292094,
+      "cafeId": "25729954",
+      "articleUrl": "https://cafe.naver.com/ca-fe/cafes/25729954/articles/11292094",
+      "keyword": "CU 오리지널 깐풍기 도시락 퇴근길에 사봤어요",
+      "title": "CU 깐풍기 도시락 퇴근길 득템",
+      "publishedAtKst": "2026-05-20 14:19:31",
+      "writerAccountId": "tinyfish183",
+      "accountId": "tinyfish183",
+      "nickname": "티니피쉬",
+      "type": "reply",
+      "commentId": "",
+      "commentIndex": "",
+      "parentIndex": "2",
+      "createdAtKst": "2026-05-20 14:25:02",
+      "content": "5,500원이에요 깐풍기 들어간 거 치고는 뭐 그렇게 비싼 건 아닌 것 같았는데, 일반 도시락 기준으로 보면 좀 있어 보이긴 하죠ㅎ",
+      "suggestedContent": "5,500원이에요 깐풍기 들어간 거 치고는 뭐 그렇게 비싼 건 아닌 것 같았는데, 일반 도시락 기준으로 보면 좀 있어 보이긴 하죠ㅎ",
+      "reasons": [
+        "반말형 연결 표현 검토"
+      ]
+    }
+  ]
+}
