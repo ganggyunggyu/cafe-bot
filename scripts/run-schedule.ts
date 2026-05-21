@@ -6,6 +6,7 @@
  */
 
 import mongoose from "mongoose";
+import { readFileSync } from "fs";
 import { User } from "../src/shared/models/user";
 import { Account } from "../src/shared/models/account";
 import { Cafe } from "../src/shared/models/cafe";
@@ -28,6 +29,7 @@ const LOGIN_ID = process.env.LOGIN_ID || "21lab";
 const SCHEDULE_START_TIME = process.env.SCHEDULE_START_TIME || "";
 const SCHEDULE_END_TIME = process.env.SCHEDULE_END_TIME || "";
 const SCHEDULE_MODEL = process.env.SCHEDULE_MODEL || "deepseek-v4-flash";
+const SCHEDULE_FILE = process.env.SCHEDULE_FILE || "";
 
 const getLocalDateToken = (): string => {
   const now = new Date();
@@ -113,6 +115,16 @@ const SCHEDULE: ScheduleItem[] = [
   { cafe: "건강관리소", cafeId: "25227349", keyword: "임신 좋은 음식", category: "건강이야기", type: "ad", keywordType: "own", accountId: "br5rbg", time: "02:14" },
 ];
 
+const loadScheduleFromFile = (filePath: string): ScheduleItem[] => {
+  const raw = readFileSync(filePath, "utf-8");
+  const parsed = JSON.parse(raw) as ScheduleItem[];
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`SCHEDULE_FILE must contain an array: ${filePath}`);
+  }
+
+  return parsed;
+};
 
 const getEligibleCommenterIds = (
   commenterIds: string[],
@@ -194,7 +206,7 @@ const main = async (): Promise<void> => {
 
   if (writerAccountIds.length === 0) throw new Error("writer 계정 없음");
 
-  const activeSchedule = SCHEDULE;
+  const activeSchedule = SCHEDULE_FILE ? loadScheduleFromFile(SCHEDULE_FILE) : SCHEDULE;
   const filteredSchedule = activeSchedule.filter((item) => {
     const isAfterStart = !SCHEDULE_START_TIME || item.time >= SCHEDULE_START_TIME;
     const isBeforeEnd = !SCHEDULE_END_TIME || item.time <= SCHEDULE_END_TIME;
