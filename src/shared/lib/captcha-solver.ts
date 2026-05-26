@@ -1,7 +1,7 @@
 import { Page } from 'playwright';
 import { GoogleGenAI } from '@google/genai';
 
-const CAPTCHA_MODEL = 'gemini-2.5-flash';
+const CAPTCHA_MODEL = 'gemini-2.5-pro';
 const MAX_CAPTCHA_ATTEMPTS = 3;
 const CAPTCHA_INPUT_DELAY_MS = 200;
 const PW_INPUT_DELAY_MS = 150;
@@ -88,9 +88,21 @@ const solveWithGemini = async (
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: base64 } },
           {
-            text: `이 이미지는 네이버 로그인 캡차로 나오는 가상 영수증 이미지야.
+            text: `이 이미지는 네이버 로그인 캡차로 나오는 가상 영수증(receipt)이다.
+영수증에는 상호명, 주소, 전화번호, 품목명, 단가, 수량, 합계 등이 표 형식으로 적혀있다.
+
+단계:
+1. 영수증의 모든 텍스트를 머릿속으로 정확히 OCR 한다.
+2. 질문을 분해한다. (예: "전화번호의 뒤에서 2번째 숫자" → 전화번호 찾기 → 끝에서 2번째 자릿수 추출)
+3. 정답을 결정한다.
+
 질문: "${question}"
-숫자만 답해. 다른 말 하지마.`,
+
+출력 규칙(절대 지킬 것):
+- 답만 한 줄로 출력. 설명/사고과정/문장 금지.
+- 숫자면 숫자만 (콤마, 원, 개 등 단위 제외).
+- 도로명/품목명이면 그 단어만.
+- 정확히 답을 모르면 가장 가능성 높은 추측 한 가지만.`,
           },
         ],
       },
