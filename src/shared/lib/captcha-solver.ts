@@ -1,7 +1,8 @@
 import { Page } from 'playwright';
 import { GoogleGenAI } from '@google/genai';
 
-const CAPTCHA_MODEL = 'gemini-2.5-pro';
+const CAPTCHA_PROVIDER = process.env.CAPTCHA_PROVIDER || 'gemini';
+const CAPTCHA_MODEL = process.env.GEMINI_CAPTCHA_MODEL || 'gemini-3.5-flash';
 const MAX_CAPTCHA_ATTEMPTS = 3;
 const CAPTCHA_INPUT_DELAY_MS = 200;
 const PW_INPUT_DELAY_MS = 150;
@@ -18,8 +19,8 @@ const SELECTORS = {
 
 const getGeminiApiKey = (): string | null => {
   return (
-    process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_API_KEY ||
+    process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_GENAI_API_KEY ||
     null
   );
@@ -32,6 +33,13 @@ const getGeminiClient = (): GoogleGenAI => {
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error('GEMINI_API_KEY 없음');
+
+  const keySource = process.env.GOOGLE_API_KEY
+    ? 'GOOGLE_API_KEY'
+    : process.env.GEMINI_API_KEY
+      ? 'GEMINI_API_KEY'
+      : 'GOOGLE_GENAI_API_KEY';
+  console.log(`[CAPTCHA] provider=${CAPTCHA_PROVIDER} model=${CAPTCHA_MODEL} key=${keySource}`);
 
   geminiClient = new GoogleGenAI({ apiKey });
   return geminiClient;
