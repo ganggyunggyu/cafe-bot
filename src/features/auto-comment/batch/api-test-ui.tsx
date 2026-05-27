@@ -25,7 +25,9 @@ interface TestResult {
 const BASE_URL = process.env.NEXT_PUBLIC_COMMENT_GEN_API_URL || 'http://localhost:8000';
 
 const MODELS = [
-  { value: '', label: '기본 모델' },
+  { value: '', label: '기본 모델 (DeepSeek V4 Flash)' },
+  { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
   { value: 'chatgpt-4o-latest', label: 'GPT-4o' },
   { value: 'gpt-5.2-2025-12-11', label: 'GPT-5.2' },
   { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
@@ -37,7 +39,7 @@ const MODELS = [
 ];
 
 const TABS: { key: TestType; label: string; endpoint: string; defaultModel: string }[] = [
-  { key: 'cafe-daily', label: '원고', endpoint: '/generate/test/cafe-daily', defaultModel: 'gemini-3.1-pro-preview' },
+  { key: 'cafe-daily', label: '원고', endpoint: '/generate/test/cafe-daily', defaultModel: 'deepseek-v4-flash' },
   { key: 'comment', label: '댓글', endpoint: '/generate/test/comment', defaultModel: 'chatgpt-4o-latest' },
   { key: 'recomment', label: '대댓글', endpoint: '/generate/test/recomment', defaultModel: 'chatgpt-4o-latest' },
 ];
@@ -311,7 +313,7 @@ export const ApiTestUI = () => {
 
         <Button
           onClick={handlePublish}
-          disabled={keywordCount === 0 || !dailyPrompt.trim()}
+          disabled={isPublishDisabled}
           isLoading={isPublishPending}
           fullWidth
         >

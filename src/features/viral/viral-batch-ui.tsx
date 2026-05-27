@@ -38,7 +38,9 @@ interface ViralPreset {
 const PRESET_STORAGE_KEY = 'viral-batch-presets';
 
 const MODELS = [
-  { value: '', label: '기본 (Gemini 3.1 Pro)' },
+  { value: '', label: '기본 (DeepSeek V4 Flash)' },
+  { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
   { value: 'gpt-5.2-2025-12-11', label: 'GPT 5.2' },
   { value: 'gpt-5.1-2025-11-13', label: 'GPT 5.1' },
   { value: 'gpt-5-2025-08-07', label: 'GPT 5' },
@@ -97,7 +99,7 @@ export const ViralBatchUI = () => {
   const [isPending, startTransition] = useTransition();
   const [isGenerating, startGenerating] = useTransition();
   const [keywords, setKeywords] = useState('');
-  const [model, setModel] = useState('claude-sonnet-4-6');
+  const [model, setModel] = useState('deepseek-v4-flash');
   const [cafes, setCafes] = useAtom(cafesAtom);
   const [cafesInitialized, setCafesInitialized] = useAtom(cafesInitializedAtom);
   const [selectedCafeIds, setSelectedCafeIds] = useState<string[]>([]);

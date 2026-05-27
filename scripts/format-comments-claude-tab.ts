@@ -84,6 +84,6 @@ const main = async () => {
   console.log(`✅ ${updates.length}개 행 댓글 컬럼 정리 완료`);
 };
 
-if (process.argv[1] === __filename || import.meta.url?.endsWith("format-comments-claude-tab.ts")) {
+if (process.argv[1] === __filename) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }

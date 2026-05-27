@@ -3,6 +3,8 @@
 export type TestType = 'comment' | 'recomment' | 'cafe-daily';
 
 export type ModelType =
+  | 'deepseek-v4-flash'
+  | 'deepseek-v4-pro'
   | 'chatgpt-4o-latest'
   | 'gpt-5.2-2025-12-11'
   | 'gemini-3.1-pro-preview'
@@ -52,7 +54,7 @@ const ENDPOINT_MAP: Record<TestType, string> = {
 const DEFAULT_MODEL_MAP: Record<TestType, ModelType> = {
   comment: 'chatgpt-4o-latest',
   recomment: 'chatgpt-4o-latest',
-  'cafe-daily': 'gemini-3.1-pro-preview',
+  'cafe-daily': 'deepseek-v4-flash',
 };
 
 // 단일 테스트 실행

@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useAtom } from 'jotai';
 import { cn } from '@/shared/lib/cn';
 import { Select, Checkbox, Button } from '@/shared/ui';
@@ -19,6 +19,8 @@ const TEST_TYPES: { value: TestType; label: string }[] = [
 ];
 
 const MODELS: { value: ModelType; label: string }[] = [
+  { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
   { value: 'chatgpt-4o-latest', label: 'GPT-4o (기본)' },
   { value: 'gpt-5.2-2025-12-11', label: 'GPT-5.2' },
   { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' },
@@ -109,12 +111,6 @@ export const TestUI = () => {
     isPending ||
     (isSingleMode && !prompt.trim()) ||
     (!isSingleMode && !promptsText.trim());
-
-  const submitLabel = isPending
-    ? '테스트 중...'
-    : isSingleMode
-      ? '테스트 실행'
-      : '배치 테스트 실행';
 
   return (
     <div className={cn('space-y-6')}>
@@ -245,8 +241,6 @@ export const KeywordGeneratorUI = () => {
   );
 
   const labelClassName = cn('text-sm font-medium text-(--ink)');
-  const helperClassName = cn('text-xs text-(--ink-muted) mt-1');
-
   const handleGenerate = () => {
     if (categories.length === 0) {
       setError('카페를 선택해주세요.');
