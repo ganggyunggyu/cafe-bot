@@ -16,6 +16,7 @@ const SLEEP_MS = Number.parseInt(process.env.SLEEP_MS || "1200", 10);
 const LIMIT = Number.parseInt(process.env.LIMIT || "0", 10);
 const START_INDEX = Number.parseInt(process.env.START_INDEX || "0", 10);
 const SKIP_RESET = process.env.SKIP_RESET === "1";
+const APPEND_ROWS = process.env.APPEND_ROWS === "1";
 
 interface KeywordCase {
   type: string;
@@ -294,6 +295,12 @@ const buildBodyPromptForCase = (item: KeywordCase): string => `${buildPromptForC
 [댓글]은 절대 출력하지 않는다.
 [제목]과 [본문]만 출력한다.
 
+## 본문 서두 추가 강제
+첫 문단은 "~했는데 ~해서 ~했어요" 식으로 원인과 결과를 정리하지 않는다.
+첫 문장은 짧은 질문, 혼잣말, 방금 한 행동, 숫자 한 줄 중 하나로 시작한다.
+"오늘은 ~를 남겨보려고 해요", "저는 00살이고", "결혼한 지" 같은 자기소개/후기형 도입으로 시작하면 실패다.
+첫 3문장 안에서는 배경 설명을 길게 하지 말고, 글 쓰는 순간의 말문을 먼저 보여준다.
+
 출력 형식:
 [제목]
 (한 줄)
@@ -452,6 +459,16 @@ const writeRow = async (row: (string | number)[], rowNumber: number) => {
   });
 };
 
+const getNextAppendRow = async (): Promise<number> => {
+  const sheets = google.sheets({ version: "v4", auth: getAuth() });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `'${OUT_TAB}'!A:A`,
+  });
+  const values = res.data.values || [];
+  return Math.max(values.length + 1, 2);
+};
+
 const processOne = async (item: KeywordCase, index: number, total: number) => {
   const started = Date.now();
   console.log(`[${index + 1}/${total}] ${item.type} / ${item.keyword} 생성 시작`);
@@ -568,17 +585,21 @@ const main = async () => {
   console.log(`대상 탭: ${OUT_TAB}`);
   console.log(`모델: ${MODEL}`);
   console.log(`처리 대상: ${targets.length}개 (${START_INDEX + 1}번째부터)`);
+  console.log(`저장 방식: ${APPEND_ROWS ? "append" : "fixed-row"}`);
 
   if (!SKIP_RESET) {
     await resetSheet();
   }
+
+  const appendStartRow = APPEND_ROWS ? await getNextAppendRow() : null;
 
   const rows: (string | number)[][] = [];
   for (let i = 0; i < targets.length; i++) {
     const sourceIndex = START_INDEX + i;
     const row = await processOne(targets[i], sourceIndex, KEYWORD_CASES.length);
     rows.push(row);
-    await writeRow(row, sourceIndex + 2);
+    const rowNumber = appendStartRow === null ? sourceIndex + 2 : appendStartRow + i;
+    await writeRow(row, rowNumber);
     if (i < targets.length - 1) {
       await sleep(SLEEP_MS);
     }
