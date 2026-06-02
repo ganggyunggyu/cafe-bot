@@ -7,6 +7,7 @@ import { getRandomDelay } from '@/shared/models/queue-settings';
 import { connectDB } from '@/shared/lib/mongodb';
 import { PublishedArticle, incrementTodayPostCount } from '@/shared/models';
 import { createLogger } from '@/shared/lib/logger';
+import { limitViralCommentItems } from '../viral-comment-limits';
 import mongoose from 'mongoose';
 
 const log = createLogger('POST-HANDLER');
@@ -143,7 +144,7 @@ const addViralCommentJobs = async (
   const { cafeId, keyword, accountId: writerAccountId, userId, viralComments, commenterAccountIds } = postData;
   if (!viralComments || viralComments.comments.length === 0) return;
 
-  const { comments } = viralComments;
+  const comments = limitViralCommentItems(viralComments.comments);
 
   // commenterAccountIds가 undefined면 전체 사용, 빈 배열이면 댓글 스킵
   const commenterAccounts = commenterAccountIds === undefined
@@ -178,7 +179,7 @@ const addViralCommentJobs = async (
   let cumulativeDelay = FIRST_COMMENT_DELAY;
   const lastReplyerByParent: Map<number, string> = new Map();
 
-  console.log(`[WORKER] viral 댓글/대댓글 ${comments.length}개 Job 추가 시작`);
+  console.log(`[WORKER] viral 댓글/대댓글 ${comments.length}/${viralComments.comments.length}개 Job 추가 시작`);
 
   for (const item of comments) {
     const itemDelay = cumulativeDelay;

@@ -38,6 +38,7 @@ import type {
   ReplyJobData,
   ViralCommentsData,
 } from "../src/shared/lib/queue/types";
+import { limitViralCommentItems } from "../src/shared/lib/queue/viral-comment-limits";
 import type { NaverAccount } from "../src/shared/lib/account-manager";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
@@ -243,9 +244,11 @@ const addViralCommentJobs = async (
   commenterAccounts: NaverAccount[],
   allAccounts: NaverAccount[],
 ): Promise<{ comments: number; replies: number }> => {
-  const { comments } = viralComments;
+  const comments = limitViralCommentItems(viralComments.comments);
   if (comments.length === 0 || commenterAccounts.length === 0)
     return { comments: 0, replies: 0 };
+
+  console.log(`  viral 댓글 제한: ${comments.length}/${viralComments.comments.length}개 사용`);
 
   const accountNicknameMap = new Map(
     allAccounts.map((a) => [a.id, a.nickname || a.id]),

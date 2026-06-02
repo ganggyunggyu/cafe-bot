@@ -137,7 +137,7 @@ export const buildPregnancyReferencePrompt = (input: PregnancyReferencePromptInp
   const commentSceneRules = [...COMMENT_SCENES].sort(() => Math.random() - 0.5).slice(0, 6);
   const bodyMin = randomInt(2200, 2800);
   const bodyMax = bodyMin + randomInt(1200, 1800);
-  const commentCount = randomInt(24, 34);
+  const commentCount = randomInt(13, 16);
 
   return `## ★★★ 출력 형식 (최우선) ★★★
 
@@ -148,7 +148,7 @@ export const buildPregnancyReferencePrompt = (input: PregnancyReferencePromptInp
 (${bodyMin}~${bodyMax}자)
 
 [댓글]
-(${commentCount}~${commentCount + 12}개, 각 줄은 [댓글N]/[작성자-N]/[댓글러-N]/[제3자-N] 태그로 시작)
+(${commentCount}~${commentCount + 4}개, 본댓글 8~10개 + 대댓글 5~8개. 각 줄은 [댓글N]/[작성자-N]/[댓글러-N]/[제3자-N] 태그로 시작)
 
 ★ [제목], [본문], [댓글] 세 태그가 없으면 전체 무효.
 ★ 바로 [제목]부터 출력한다.
@@ -250,24 +250,27 @@ ${commentSceneRules.map((item) => `- ${item}`).join("\n")}
 ${COMMENT_PERSONA_RULES.map((item) => `- ${item}`).join("\n")}
 
 댓글 비율:
-- 본인 사연 공유 6~9개
-- 구체 질문 6~9개
-- 감정 공감/위로 4~6개
-- 병원/검사/시기 비교 3~5개
-- 작성자 답글 8~12개
-- 댓글러 재답글 또는 제3자 끼어들기 5~8개
-- 단순 저장/감사 3개 이하
+- 본댓글은 8~10개만 작성한다. 댓글 계정이 10~15개라서 본댓글 10개 초과 금지.
+- 전체 댓글/대댓글 합계는 13~18개만 작성한다.
+- 본인 사연 공유 2~3개
+- 구체 질문 3~4개
+- 감정 공감/위로 1~2개
+- 병원/검사/시기 비교 1~2개
+- 작성자 답글 3~5개
+- 댓글러 재답글 또는 제3자 끼어들기 2~3개
+- 단순 저장/감사 1개 이하
 
 댓글 규칙:
 - 각 댓글은 한 줄.
 - 닉네임 금지. 태그만 사용.
 - [댓글1]부터 번호 순서대로.
+- 본댓글 번호는 [댓글10]을 넘기지 않는다.
 - 답글은 해당 댓글 번호와 맞춘다. 예: [작성자-3], [댓글러-3], [제3자-3].
 - 모든 댓글 첫머리가 비슷하면 안 된다.
 - 광고 의심 댓글, 제품명 요청 댓글, 병원명 공개 요구 댓글 금지.
 - "저도", "저는", "맞아요", "힘내세요", "병원 가보세요"로 시작하는 댓글은 각각 최대 1개만 허용한다.
 - 댓글 첫 8글자는 서로 겹치면 안 된다.
-- 짧은 댓글 5~8개, 긴 사연 댓글 5~7개, 중간 길이 질문 댓글 8~12개를 섞는다.
+- 짧은 댓글 2~3개, 긴 사연 댓글 2~3개, 중간 길이 질문 댓글 4~5개를 섞는다.
 - 댓글마다 감정 온도를 다르게 한다. 울컥함, 담담함, 급함, 조심스러움, 현실적인 피곤함, 정보 확인 욕구가 섞여야 한다.
 - 모든 댓글이 공감문으로 시작하면 실패다. 질문, 숫자 확인, 자기 경험, 생활 잡담, 병원 비교로 시작하는 댓글을 섞는다.
 
