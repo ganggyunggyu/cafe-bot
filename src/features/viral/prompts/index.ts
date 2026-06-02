@@ -34,6 +34,7 @@ export { buildCasualPrompt } from './build-casual-prompt';
 export { buildShortDailyPrompt } from './build-short-daily-prompt';
 export { buildInfoPrompt } from './build-info-prompt';
 export { buildOwnKeywordPrompt } from './build-own-keyword-prompt';
+export { buildPregnancyReferencePrompt } from './build-pregnancy-reference-prompt';
 export { buildAnimePrompt } from './build-anime-prompt';
 export { buildCompetitorKeywordPrompt } from './build-competitor-keyword-prompt';
 export { buildCompetitorAdvocacyPrompt } from './build-competitor-advocacy-prompt';

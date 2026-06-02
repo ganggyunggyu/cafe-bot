@@ -22,7 +22,7 @@ import { Account } from "../src/shared/models/account";
 import { PublishedArticle } from "../src/shared/models";
 import { modifyArticleWithAccount } from "../src/features/auto-comment/batch/article-modifier";
 import { generateViralContent } from "../src/shared/api/content-api";
-import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
+import { buildPregnancyReferencePrompt } from "../src/features/viral/prompts/build-pregnancy-reference-prompt";
 import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
 import { addTaskJob } from "../src/shared/lib/queue";
@@ -431,7 +431,7 @@ const main = async (): Promise<void> => {
       const kType = item.keywordType || "own";
       const prompt = kType === "competitor"
         ? buildCompetitorAdvocacyPrompt({ keyword: item.keyword, keywordType: "competitor" })
-        : buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" });
+        : buildPregnancyReferencePrompt({ keyword: item.keyword });
 
       process.stdout.write(`  원고 생성 중... `);
       const { content } = await generateViralContentWithRetry(prompt);

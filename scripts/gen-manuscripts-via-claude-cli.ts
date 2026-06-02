@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "fs";
 import { spawnSync } from "child_process";
-import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
+import { buildPregnancyReferencePrompt } from "../src/features/viral/prompts/build-pregnancy-reference-prompt";
 import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
 
 interface ModifyItem {
@@ -37,10 +37,7 @@ const buildPrompt = (item: ModifyItem): string => {
     });
   }
 
-  return buildOwnKeywordPrompt({
-    keyword: item.keyword,
-    keywordType: "own",
-  });
+  return buildPregnancyReferencePrompt({ keyword: item.keyword });
 };
 
 const isValidRaw = (raw: string): boolean => {

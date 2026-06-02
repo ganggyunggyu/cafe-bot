@@ -1,7 +1,7 @@
 import type { ContentStyle, ViralPromptInput } from './prompts';
 import {
   buildShortDailyPrompt,
-  buildOwnKeywordPrompt,
+  buildPregnancyReferencePrompt,
   buildAnimePrompt,
 } from './prompts';
 
@@ -20,5 +20,5 @@ export const buildViralPrompt = (
   if (contentStyle === '일상') {
     return buildShortDailyPrompt({ ...input, contentType: 'lifestyle' });
   }
-  return buildOwnKeywordPrompt(input);
+  return buildPregnancyReferencePrompt(input);
 };
