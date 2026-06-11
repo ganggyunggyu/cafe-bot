@@ -1,12 +1,12 @@
 import { readFileSync, writeFileSync } from "fs";
 import { spawnSync } from "child_process";
-import { buildPregnancyReferencePrompt } from "../src/features/viral/prompts/build-pregnancy-reference-prompt";
-import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
+import { buildHanryeoCafePrompt } from "../src/features/viral/prompts/build-hanryeo-cafe-prompt";
 
 interface ModifyItem {
   link: string;
   keyword: string;
   keywordType?: "own" | "competitor";
+  category?: string;
 }
 
 interface ManuscriptItem {
@@ -29,16 +29,8 @@ const parseArticleId = (link: string): number => {
   return parseInt(match[1], 10);
 };
 
-const buildPrompt = (item: ModifyItem): string => {
-  if (item.keywordType === "competitor") {
-    return buildCompetitorAdvocacyPrompt({
-      keyword: item.keyword,
-      keywordType: "competitor",
-    });
-  }
-
-  return buildPregnancyReferencePrompt({ keyword: item.keyword });
-};
+const buildPrompt = (item: ModifyItem): string =>
+  buildHanryeoCafePrompt({ keyword: item.keyword, category: item.category });
 
 const isValidRaw = (raw: string): boolean => {
   return raw.includes("[제목]") && raw.includes("[본문]") && raw.includes("[댓글");

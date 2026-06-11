@@ -2,7 +2,7 @@ import type { NaverAccount } from '@/shared/lib/account-manager';
 import { generateViralContent } from '@/shared/api/content-api';
 import { buildCafePostContent } from '@/shared/lib/cafe-content';
 import { ModifiedArticle, PublishedArticle, type IPublishedArticle } from '@/shared/models';
-import { buildPregnancyReferencePrompt } from '@/features/viral/prompts/build-pregnancy-reference-prompt';
+import { buildHanryeoCafePrompt } from '@/features/viral/prompts/build-hanryeo-cafe-prompt';
 import { parseViralResponse } from '@/features/viral/viral-parser';
 import { modifyArticleWithAccount } from './article-modifier';
 import { parseKeywordWithCategory } from './keyword-utils';
@@ -67,9 +67,8 @@ export const processArticleModification = async ({
 
     console.log(`[MODIFY] 서비스: ${service}`);
 
-    // 광고 콘텐츠 생성 (카테고리가 있으면 키워드에 포함)
-    const keywordWithCategory = category ? `${adKeyword} (카테고리: ${category})` : adKeyword;
-    const prompt = buildPregnancyReferencePrompt({ keyword: keywordWithCategory });
+    // 광고 콘텐츠 생성
+    const prompt = buildHanryeoCafePrompt({ keyword: adKeyword, category });
     const generated = await generateViralContent({ prompt, ref });
     const parsed = parseViralResponse(generated.content);
     const rawContent = parsed ? `${parsed.title}\n${parsed.body}` : generated.content;

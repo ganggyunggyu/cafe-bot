@@ -22,8 +22,7 @@ import { Account } from "../src/shared/models/account";
 import { PublishedArticle } from "../src/shared/models";
 import { modifyArticleWithAccount } from "../src/features/auto-comment/batch/article-modifier";
 import { generateViralContent } from "../src/shared/api/content-api";
-import { buildPregnancyReferencePrompt } from "../src/features/viral/prompts/build-pregnancy-reference-prompt";
-import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
+import { buildHanryeoCafePrompt } from "../src/features/viral/prompts/build-hanryeo-cafe-prompt";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
 import { addTaskJob } from "../src/shared/lib/queue";
 import {
@@ -431,10 +430,7 @@ const main = async (): Promise<void> => {
 
     // 광고 원고 생성
     try {
-      const kType = item.keywordType || "own";
-      const prompt = kType === "competitor"
-        ? buildCompetitorAdvocacyPrompt({ keyword: item.keyword, keywordType: "competitor" })
-        : buildPregnancyReferencePrompt({ keyword: item.keyword });
+      const prompt = buildHanryeoCafePrompt({ keyword: item.keyword, category: item.category });
 
       process.stdout.write(`  원고 생성 중... `);
       const { content } = await generateViralContentWithRetry(prompt);
