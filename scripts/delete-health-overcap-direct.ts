@@ -6,7 +6,9 @@ import type { Page } from 'playwright';
 import {
   acquireAccountLock,
   closeAllContexts,
+  closeContextForAccount,
   getPageForAccount,
+  invalidateLoginCache,
   isAccountLoggedIn,
   isLoginRedirect,
   loginAccount,
@@ -297,6 +299,76 @@ const hasDeletedMessage = async (page: Page): Promise<boolean> => {
     .catch(() => false);
 };
 
+const isArticleMissingByApi = async (
+  page: Page,
+  cafeId: string,
+  articleId: number
+): Promise<boolean> => {
+  const result = await page.evaluate(
+    async ({ targetCafeId, targetArticleId }) => {
+      const response = await fetch(
+        `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${targetCafeId}/articles/${targetArticleId}?useCafeId=true`,
+        {
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        }
+      );
+      const text = await response.text();
+      return {
+        status: response.status,
+        text: text.slice(0, 500),
+      };
+    },
+    { targetCafeId: cafeId, targetArticleId: articleId }
+  );
+
+  return (
+    result.status === 404 ||
+    /삭제되었거나\s*존재하지\s*않는\s*게시글|존재하지\s*않는\s*게시글|삭제된\s*게시글|errorCode"\s*:\s*"4003/i.test(
+      result.text
+    )
+  );
+};
+
+const tryDeleteArticleByApi = async (
+  page: Page,
+  cafeId: string,
+  articleId: number
+): Promise<boolean> => {
+  if (await isArticleMissingByApi(page, cafeId, articleId)) {
+    return true;
+  }
+
+  const result = await page.evaluate(
+    async ({ targetCafeId, targetArticleId }) => {
+      const response = await fetch(
+        `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${targetCafeId}/articles/${targetArticleId}?useCafeId=true`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const text = await response.text();
+      return {
+        status: response.status,
+        ok: response.ok,
+        text: text.slice(0, 500),
+      };
+    },
+    { targetCafeId: cafeId, targetArticleId: articleId }
+  );
+  console.log(
+    `[API_DELETE] #${articleId} status=${result.status} ok=${result.ok} body=${result.text.slice(0, 80)}`
+  );
+
+  await page.waitForTimeout(1200);
+  return isArticleMissingByApi(page, cafeId, articleId);
+};
+
 const clickDeleteControl = async (page: Page): Promise<boolean> => {
   const clickedDirect = await page
     .evaluate(() => {
@@ -371,6 +443,10 @@ const verifyArticleDeleted = async (
   cafeId: string,
   articleId: number
 ): Promise<boolean> => {
+  if (await isArticleMissingByApi(page, cafeId, articleId)) {
+    return true;
+  }
+
   await page
     .goto(`https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`, {
       waitUntil: 'domcontentloaded',
@@ -435,10 +511,40 @@ const deleteArticleWithWriter = async (
 
   await acquireAccountLock(writer.accountId);
   try {
-    await ensureLoggedIn(writer.accountId, writer.password, `delete_article_${target.articleId}`);
+    const loggedIn = await isAccountLoggedIn(writer.accountId);
+    if (!loggedIn) {
+      const loginResult = await loginAccount(writer.accountId, writer.password, {
+        waitForLoginMs: 3 * 60 * 1000,
+        reason: `delete_article_${target.articleId}`,
+        forceFreshLogin: true,
+      });
+      if (!loginResult.success) {
+        throw new Error(loginResult.error || '로그인 실패');
+      }
+    }
     const page = await getPageForAccount(writer.accountId);
+    await page.goto(`https://cafe.naver.com/ca-fe/cafes/${target.cafeId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+    await page.waitForTimeout(800);
 
-    const success = await tryDeleteArticleByUi(page, target.cafeId, target.articleId);
+    if (isLoginRedirect(page.url())) {
+      invalidateLoginCache(writer.accountId);
+      await closeContextForAccount(writer.accountId).catch(() => undefined);
+      const loginResult = await loginAccount(writer.accountId, writer.password, {
+        waitForLoginMs: 3 * 60 * 1000,
+        reason: `delete_article_relogin_${target.articleId}`,
+        forceFreshLogin: true,
+      });
+      if (!loginResult.success) {
+        throw new Error(loginResult.error || '재로그인 실패');
+      }
+    }
+
+    const success =
+      (await tryDeleteArticleByApi(page, target.cafeId, target.articleId)) ||
+      (await tryDeleteArticleByUi(page, target.cafeId, target.articleId));
     if (!success) {
       return { target, success: false, error: 'UI 삭제 실패' };
     }
