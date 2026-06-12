@@ -425,33 +425,86 @@ const parsePlainHanryeoManuscript = (
   content: string,
 ): { title: string; body: string } => {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const titleIndex = lines.findIndex((line) => line.trim().length > 0);
+  const titleIndex = lines.findIndex((line) => {
+    const trimmed = line.trim();
+    return trimmed.length > 0 && !isHanryeoMetaLine(trimmed);
+  });
 
   if (titleIndex < 0) {
     return { title: "", body: "" };
   }
 
   return {
-    title: lines[titleIndex].trim(),
+    title: cleanHanryeoTitle(lines[titleIndex]),
     body: lines.slice(titleIndex + 1).join("\n").trim(),
   };
+};
+
+const isHanryeoMetaLine = (line: string): boolean =>
+  /네이버\s*뷰탭|제목을\s*작성|작성하겠습니다|원고를\s*작성|본문을\s*작성|아래와\s*같이|다음과\s*같이|패턴을\s*적용/i.test(
+    line,
+  );
+
+const cleanHanryeoTitle = (line: string): string =>
+  line
+    .trim()
+    .replace(/^\s*(?:제목|타이틀)\s*[:：]\s*/i, "")
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/g, "")
+    .trim();
+
+const isInvalidHanryeoTitle = (title: string): boolean => {
+  if (!title) return true;
+  if (isHanryeoMetaLine(title)) return true;
+  if (title.length > 80) return true;
+  if (/[.。]$/.test(title)) return true;
+  return false;
+};
+
+const generateParsedTextGenHubHanryeoWithRetry = async (
+  keyword: string,
+  category?: string,
+  maxAttempts: number = 3,
+): Promise<GeneratedModifyContent> => {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { content, model } = await generateTextGenHubHanryeoWithRetry(
+        keyword,
+        category,
+        1,
+      );
+      const { title, body } = parsePlainHanryeoManuscript(content);
+
+      if (isInvalidHanryeoTitle(title) || !body) {
+        throw new Error(`한려담원 원고 형식 이상: ${title || "제목 없음"}`);
+      }
+
+      return { title, body, model };
+    } catch (error) {
+      lastError = error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(
+        `  ⚠️ text-gen-hub 한려담원 원고 재생성 (${attempt}/${maxAttempts}): ${errorMessage}`,
+      );
+
+      if (attempt < maxAttempts) {
+        await sleep(3000 * attempt);
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 };
 
 const generateModifyContent = async (
   item: ModifyItem,
 ): Promise<GeneratedModifyContent> => {
   if (MODIFY_CONTENT_SOURCE === "text-gen-hub-hanryeo") {
-    const { content, model } = await generateTextGenHubHanryeoWithRetry(
+    return generateParsedTextGenHubHanryeoWithRetry(
       item.keyword,
       item.category,
     );
-    const { title, body } = parsePlainHanryeoManuscript(content);
-
-    if (!title || !body) {
-      throw new Error("text-gen-hub 한려담원 원고 파싱 실패");
-    }
-
-    return { title, body, model };
   }
 
   if (MODIFY_CONTENT_SOURCE === "prompt") {
