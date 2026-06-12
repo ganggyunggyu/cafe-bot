@@ -64,6 +64,16 @@ const MODIFY_OVERLOAD_FALLBACK_MODEL =
   process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
 const MODIFY_FORCE_RELOGIN = process.env.MODIFY_FORCE_RELOGIN === "true";
 const MODIFY_LOGIN_WAIT_MS = 3 * 60 * 1000;
+const TEXT_GEN_HUB_URL = (
+  process.env.TEXT_GEN_HUB_URL ||
+  process.env.CONTENT_API_URL ||
+  "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
+const MODIFY_CONTENT_SOURCE =
+  process.env.MODIFY_CONTENT_SOURCE ||
+  (MODIFY_SCHEDULE_FILE.includes("health-modify")
+    ? "text-gen-hub-hanryeo"
+    : "prompt");
 const MODIFY_SKIP_COMMENTS =
   process.env.MODIFY_SKIP_COMMENTS === "true" ||
   process.env.MODIFY_ARTICLE_ONLY === "true";
@@ -162,6 +172,21 @@ const parseBody = (text: string): string => {
   );
   return match ? match[1].trim() : "";
 };
+
+interface HanryeoGenerateResponse {
+  content?: string;
+  engine?: string;
+  model?: string;
+  keyword?: string;
+  category?: string;
+}
+
+interface GeneratedModifyContent {
+  title: string;
+  body: string;
+  viralComments?: ViralCommentsData;
+  model?: string;
+}
 
 const FIRST_COMMENT_DELAY = 30 * 1000;
 const BETWEEN_COMMENTS_DELAY = { min: 30 * 1000, max: 90 * 1000 };
@@ -339,6 +364,123 @@ const generateViralContentWithRetry = async (
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 };
 
+const generateTextGenHubHanryeo = async (
+  keyword: string,
+  category?: string,
+): Promise<{ content: string; model?: string }> => {
+  const response = await fetch(`${TEXT_GEN_HUB_URL}/generate/hanryeo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      service: "cafe",
+      keyword,
+      ref: "",
+      category: category || "",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(
+      `Hanryeo generation failed: ${response.status} - ${errorBody.slice(0, 500)}`,
+    );
+  }
+
+  const data = (await response.json()) as HanryeoGenerateResponse;
+  const content = data.content?.trim();
+  if (!content) {
+    throw new Error("한려담원 원고 생성 결과 없음");
+  }
+
+  return { content, model: data.engine || data.model };
+};
+
+const generateTextGenHubHanryeoWithRetry = async (
+  keyword: string,
+  category?: string,
+  maxAttempts: number = 3,
+): Promise<{ content: string; model?: string }> => {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await generateTextGenHubHanryeo(keyword, category);
+    } catch (error) {
+      lastError = error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(
+        `  ⚠️ text-gen-hub 한려담원 생성 실패 (${attempt}/${maxAttempts}): ${errorMessage}`,
+      );
+
+      if (attempt < maxAttempts) {
+        await sleep(3000 * attempt);
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+};
+
+const parsePlainHanryeoManuscript = (
+  content: string,
+): { title: string; body: string } => {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const titleIndex = lines.findIndex((line) => line.trim().length > 0);
+
+  if (titleIndex < 0) {
+    return { title: "", body: "" };
+  }
+
+  return {
+    title: lines[titleIndex].trim(),
+    body: lines.slice(titleIndex + 1).join("\n").trim(),
+  };
+};
+
+const generateModifyContent = async (
+  item: ModifyItem,
+): Promise<GeneratedModifyContent> => {
+  if (MODIFY_CONTENT_SOURCE === "text-gen-hub-hanryeo") {
+    const { content, model } = await generateTextGenHubHanryeoWithRetry(
+      item.keyword,
+      item.category,
+    );
+    const { title, body } = parsePlainHanryeoManuscript(content);
+
+    if (!title || !body) {
+      throw new Error("text-gen-hub 한려담원 원고 파싱 실패");
+    }
+
+    return { title, body, model };
+  }
+
+  if (MODIFY_CONTENT_SOURCE === "prompt") {
+    const prompt = buildHanryeoCafePrompt({
+      keyword: item.keyword,
+      category: item.category,
+    });
+    const { content, model } = await generateViralContentWithRetry(prompt);
+    const parsedContent = parseViralResponse(content || "");
+    const title = parsedContent?.title || parseTitle(content || "");
+    const body = parsedContent?.body || parseBody(content || "");
+
+    if (!title || !body) {
+      throw new Error("파싱 실패");
+    }
+
+    return {
+      title,
+      body,
+      viralComments: parsedContent?.comments?.length
+        ? { comments: parsedContent.comments }
+        : undefined,
+      model,
+    };
+  }
+
+  throw new Error(`지원하지 않는 MODIFY_CONTENT_SOURCE: ${MODIFY_CONTENT_SOURCE}`);
+};
+
 const addViralCommentJobs = async (
   articleId: number,
   cafeId: string,
@@ -495,7 +637,12 @@ const main = async (): Promise<void> => {
     .filter((a) => a.role === "commenter")
     .map((a) => a.accountId);
 
-  console.log(`=== 글 수정 시작 (${modifySchedule.length}건) ===\n`);
+  console.log(`=== 글 수정 시작 (${modifySchedule.length}건) ===`);
+  console.log(`원고 소스: ${MODIFY_CONTENT_SOURCE}`);
+  if (MODIFY_CONTENT_SOURCE === "text-gen-hub-hanryeo") {
+    console.log(`text-gen-hub: ${TEXT_GEN_HUB_URL}/generate/hanryeo`);
+  }
+  console.log("");
 
   let successCount = 0;
   let failCount = 0;
@@ -549,14 +696,8 @@ const main = async (): Promise<void> => {
 
     // 광고 원고 생성
     try {
-      const prompt = buildHanryeoCafePrompt({ keyword: item.keyword, category: item.category });
-
       process.stdout.write(`  원고 생성 중... `);
-      const { content } = await generateViralContentWithRetry(prompt);
-      const parsedContent = parseViralResponse(content);
-      const title = parsedContent?.title || parseTitle(content);
-      const body = parsedContent?.body || parseBody(content);
-      if (!title || !body) throw new Error("파싱 실패");
+      const { title, body, viralComments } = await generateModifyContent(item);
 
       console.log(`✅ "${title.slice(0, 30)}..."`);
 
@@ -605,12 +746,6 @@ const main = async (): Promise<void> => {
           },
         },
       );
-
-      // 바이럴 댓글 큐 추가
-      const viralComments: ViralCommentsData | undefined = parsedContent
-        ?.comments?.length
-        ? { comments: parsedContent.comments }
-        : undefined;
 
       if (MODIFY_SKIP_COMMENTS) {
         console.log("  댓글 큐 추가 스킵 (MODIFY_SKIP_COMMENTS=true)");
