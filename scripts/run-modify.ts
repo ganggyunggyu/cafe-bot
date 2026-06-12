@@ -31,6 +31,7 @@ import {
   getPageForAccount,
   invalidateLoginCache,
   isAccountLoggedIn,
+  isLoginRedirect,
   loginAccount,
   releaseAccountLock,
 } from "../src/shared/lib/multi-session";
@@ -64,6 +65,7 @@ const MODIFY_OVERLOAD_FALLBACK_MODEL =
   process.env.MODIFY_OVERLOAD_FALLBACK_MODEL || "gemini-3.1-pro-preview";
 const MODIFY_FORCE_RELOGIN = process.env.MODIFY_FORCE_RELOGIN === "true";
 const MODIFY_LOGIN_WAIT_MS = 3 * 60 * 1000;
+const MODIFY_ACCESS_CHECK = process.env.MODIFY_ACCESS_CHECK || "api";
 const TEXT_GEN_HUB_URL = (
   process.env.TEXT_GEN_HUB_URL ||
   process.env.CONTENT_API_URL ||
@@ -77,6 +79,10 @@ const MODIFY_CONTENT_SOURCE =
 const MODIFY_SKIP_COMMENTS =
   process.env.MODIFY_SKIP_COMMENTS === "true" ||
   process.env.MODIFY_ARTICLE_ONLY === "true";
+const DIRECT_MODIFY_READY_SELECTOR =
+  'p.se-text-paragraph, .FlexableTextArea textarea.textarea_input, .se-component-content, textarea.textarea_input, textarea[placeholder*="제목"], input[placeholder*="제목"]';
+const DIRECT_INACCESSIBLE_TEXT =
+  /삭제된\s*게시글|없는\s*게시글|존재하지\s*않|접근할\s*수\s*없|권한이\s*없|비공개|블라인드|게시가\s*중단/i;
 
 if (!process.env.PLAYWRIGHT_HEADLESS) {
   process.env.PLAYWRIGHT_HEADLESS = "true";
@@ -317,6 +323,125 @@ const checkArticleAccessible = async (
   } finally {
     releaseAccountLock(accountId);
   }
+};
+
+const checkArticleAccessibleDirect = async (
+  accountId: string,
+  password: string,
+  cafeId: string,
+  articleId: number,
+): Promise<{ accessible: true; subject?: string } | { accessible: false; reason: string }> => {
+  await acquireAccountLock(accountId);
+
+  try {
+    const loggedIn = await isAccountLoggedIn(accountId);
+    if (!loggedIn) {
+      const loginResult = await loginAccount(accountId, password, {
+        waitForLoginMs: MODIFY_LOGIN_WAIT_MS,
+        reason: `modify_direct_precheck_${articleId}`,
+      });
+
+      if (!loginResult.success) {
+        return {
+          accessible: false,
+          reason: loginResult.error || "직접 접근 전 로그인 실패",
+        };
+      }
+    }
+
+    const page = await getPageForAccount(accountId);
+    const modifyUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}/modify`;
+    const viewUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
+
+    await page.goto(modifyUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 45000,
+    });
+    await page.waitForTimeout(2500);
+
+    if (isLoginRedirect(page.url())) {
+      invalidateLoginCache(accountId);
+      const reloginResult = await loginAccount(accountId, password, {
+        waitForLoginMs: MODIFY_LOGIN_WAIT_MS,
+        reason: `modify_direct_precheck_redirect_${articleId}`,
+        forceFreshLogin: true,
+      });
+
+      if (!reloginResult.success) {
+        return {
+          accessible: false,
+          reason: reloginResult.error || "직접 수정 페이지 재로그인 실패",
+        };
+      }
+
+      await page.goto(modifyUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 45000,
+      });
+      await page.waitForTimeout(2500);
+    }
+
+    const hasEditor = await page
+      .locator(DIRECT_MODIFY_READY_SELECTOR)
+      .first()
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+
+    if (hasEditor) {
+      return { accessible: true };
+    }
+
+    await page.goto(viewUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 45000,
+    });
+    await page.waitForTimeout(2500);
+
+    const directState = await page.evaluate(() => {
+      const subject =
+        document.querySelector("h3.title_text")?.textContent?.trim() ||
+        document.querySelector(".title_area")?.textContent?.trim() ||
+        document.title;
+      const bodyText = document.body.innerText.slice(0, 1000);
+
+      return {
+        subject,
+        bodyText,
+      };
+    });
+
+    if (DIRECT_INACCESSIBLE_TEXT.test(directState.bodyText)) {
+      return {
+        accessible: false,
+        reason: `직접 카페 접근 불가: ${directState.bodyText.slice(0, 80).replace(/\s+/g, " ")}`,
+      };
+    }
+
+    return {
+      accessible: false,
+      reason: `직접 수정 에디터 없음: ${page.url()} / ${directState.subject}`,
+    };
+  } catch (error) {
+    return {
+      accessible: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    releaseAccountLock(accountId);
+  }
+};
+
+const checkModifyTargetAccessible = async (
+  accountId: string,
+  password: string,
+  cafeId: string,
+  articleId: number,
+): Promise<{ accessible: true; subject?: string } | { accessible: false; reason: string }> => {
+  if (MODIFY_ACCESS_CHECK === "direct") {
+    return checkArticleAccessibleDirect(accountId, password, cafeId, articleId);
+  }
+
+  return checkArticleAccessible(accountId, password, cafeId, articleId);
 };
 
 const isOverloadedError = (error: unknown): boolean => {
@@ -692,6 +817,7 @@ const main = async (): Promise<void> => {
 
   console.log(`=== 글 수정 시작 (${modifySchedule.length}건) ===`);
   console.log(`원고 소스: ${MODIFY_CONTENT_SOURCE}`);
+  console.log(`접근 확인: ${MODIFY_ACCESS_CHECK}`);
   if (MODIFY_CONTENT_SOURCE === "text-gen-hub-hanryeo") {
     console.log(`text-gen-hub: ${TEXT_GEN_HUB_URL}/generate/hanryeo`);
   }
@@ -734,7 +860,7 @@ const main = async (): Promise<void> => {
 
     console.log(`  작성자: ${writerAccountId}`);
 
-    const precheck = await checkArticleAccessible(
+    const precheck = await checkModifyTargetAccessible(
       writerAccountId,
       account.password,
       cafeId,
