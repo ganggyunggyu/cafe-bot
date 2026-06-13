@@ -16,6 +16,7 @@ import { buildViralPrompt } from "../src/features/viral/viral-prompt";
 import { buildOwnKeywordPrompt } from "../src/features/viral/prompts/build-own-keyword-prompt";
 import { buildCompetitorKeywordPrompt } from "../src/features/viral/prompts/build-competitor-keyword-prompt";
 import { buildCompetitorAdvocacyPrompt } from "../src/features/viral/prompts/build-competitor-advocacy-prompt";
+import { buildHanryeoCafePrompt } from "../src/features/viral/prompts/build-hanryeo-cafe-prompt";
 import { buildShortDailyPrompt } from "../src/features/viral/prompts/build-short-daily-prompt";
 import { getViralContentStyleForLoginId } from "../src/shared/config/user-profile";
 import { parseViralResponse } from "../src/features/viral/viral-parser";
@@ -30,6 +31,7 @@ const SCHEDULE_START_TIME = process.env.SCHEDULE_START_TIME || "";
 const SCHEDULE_END_TIME = process.env.SCHEDULE_END_TIME || "";
 const SCHEDULE_MODEL = process.env.SCHEDULE_MODEL || "deepseek-v4-flash";
 const SCHEDULE_FILE = process.env.SCHEDULE_FILE || "";
+const SCHEDULE_AD_PROMPT_PROFILE = process.env.SCHEDULE_AD_PROMPT_PROFILE || "";
 
 const getLocalDateToken = (): string => {
   const now = new Date();
@@ -51,6 +53,11 @@ const GLOBAL_BLOCKED_COMMENTER_ACCOUNT_IDS = new Set([
 const BLOCKED_COMMENTER_ACCOUNT_IDS_BY_CAFE_ID: Record<string, Set<string>> = {
   "25729954": new Set(["dhtksk1p"]),
 };
+
+const HANRYEO_CAFE_IDS = new Set([
+  "25636798", // 건강한노후준비
+  "25227349", // 건강관리소
+]);
 
 interface ScheduleItem {
   cafe: string;
@@ -274,6 +281,8 @@ const main = async (): Promise<void> => {
         ? () => buildCompetitorAdvocacyPrompt({ keyword: item.keyword, keywordType: "competitor" })
         : kwType === "competitor"
           ? () => buildCompetitorKeywordPrompt({ keyword: item.keyword, keywordType: "competitor" })
+          : SCHEDULE_AD_PROMPT_PROFILE === "hanryeo" && HANRYEO_CAFE_IDS.has(item.cafeId)
+            ? () => buildHanryeoCafePrompt({ keyword: item.keyword, category: item.category })
           : contentStyle !== '정보'
             ? () => buildViralPrompt({ keyword: item.keyword, keywordType: "own" }, contentStyle)
             : () => buildOwnKeywordPrompt({ keyword: item.keyword, keywordType: "own" });
