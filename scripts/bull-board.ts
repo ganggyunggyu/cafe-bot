@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
+process.env.PLAYWRIGHT_HEADLESS = 'true';
+console.log(`[Bull Board] PLAYWRIGHT_HEADLESS=${process.env.PLAYWRIGHT_HEADLESS}`);
 import express from 'express';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';

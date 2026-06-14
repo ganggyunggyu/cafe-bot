@@ -843,9 +843,10 @@ const main = async (): Promise<void> => {
     const publishedArticle = await PublishedArticle.findOne({
       cafeId,
       articleId,
+      status: { $ne: "modified" },
     }).lean();
     if (!publishedArticle) {
-      console.log(`  ❌ DB에 글 정보 없음 (articleId: ${articleId})`);
+      console.log(`  이미 수정됐거나 DB에 글 정보 없음 (articleId: ${articleId})`);
       failCount++;
       continue;
     }
