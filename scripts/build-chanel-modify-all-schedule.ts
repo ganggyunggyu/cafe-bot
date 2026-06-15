@@ -22,6 +22,7 @@ import { User } from "../src/shared/models/user";
 import {
   acquireAccountLock,
   getPageForAccount,
+  isLoginRedirect,
   isAccountLoggedIn,
   loginAccount,
   releaseAccountLock,
@@ -50,6 +51,11 @@ const PAGE_WAIT_MS = Number(process.env.CHANEL_MODIFY_VERIFY_WAIT_MS || 500);
 const KEYWORD_FAMILY_WINDOW = Number(
   process.env.CHANEL_KEYWORD_FAMILY_WINDOW || 3,
 );
+const VERIFY_MODE = process.env.CHANEL_MODIFY_VERIFY_MODE || "api";
+const DIRECT_MODIFY_READY_SELECTOR =
+  'p.se-text-paragraph, .FlexableTextArea textarea.textarea_input, .se-component-content, textarea.textarea_input, textarea[placeholder*="제목"], input[placeholder*="제목"]';
+const DIRECT_INACCESSIBLE_TEXT =
+  /삭제된\s*게시글|없는\s*게시글|존재하지\s*않|접근할\s*수\s*없|권한이\s*없|비공개|블라인드|게시가\s*중단/i;
 
 interface KeywordRow {
   keyword: string;
@@ -79,6 +85,12 @@ interface ArticleApiResult {
   status?: number;
   title?: string;
   reason?: string;
+}
+
+interface ActiveAccount {
+  accountId: string;
+  password: string;
+  role?: string;
 }
 
 const requireEnv = (name: string): string => {
@@ -296,6 +308,163 @@ const fetchArticleState = async (
   );
 };
 
+const checkArticleDirect = async (
+  page: Page,
+  articleId: number,
+): Promise<ArticleApiResult> => {
+  const modifyUrl = `https://cafe.naver.com/ca-fe/cafes/${CAFE_ID}/articles/${articleId}/modify`;
+  const legacyModifyUrl = `https://cafe.naver.com/ArticleWrite.nhn?m=modify&clubid=${CAFE_ID}&articleid=${articleId}`;
+  const viewUrl = `https://cafe.naver.com/ca-fe/cafes/${CAFE_ID}/articles/${articleId}`;
+
+  await page.goto(modifyUrl, {
+    waitUntil: "domcontentloaded",
+    timeout: 45000,
+  });
+  await page.waitForTimeout(2500);
+
+  if (isLoginRedirect(page.url())) {
+    return {
+      ok: false,
+      status: 401,
+      reason: "직접 수정 페이지 로그인 리다이렉트",
+    };
+  }
+
+  const hasEditor = await page
+    .locator(DIRECT_MODIFY_READY_SELECTOR)
+    .first()
+    .isVisible({ timeout: 3000 })
+    .catch(() => false);
+
+  if (hasEditor) {
+    return {
+      ok: true,
+      status: 200,
+      title: "",
+    };
+  }
+
+  await page.goto(legacyModifyUrl, {
+    waitUntil: "domcontentloaded",
+    timeout: 45000,
+  });
+  await page.waitForTimeout(3000);
+
+  if (isLoginRedirect(page.url())) {
+    return {
+      ok: false,
+      status: 401,
+      reason: "구형 수정 페이지 로그인 리다이렉트",
+    };
+  }
+
+  const hasLegacyEditor = await page
+    .locator(DIRECT_MODIFY_READY_SELECTOR)
+    .first()
+    .isVisible({ timeout: 3000 })
+    .catch(() => false);
+
+  if (hasLegacyEditor) {
+    return {
+      ok: true,
+      status: 200,
+      title: "",
+    };
+  }
+
+  await page.goto(viewUrl, {
+    waitUntil: "domcontentloaded",
+    timeout: 45000,
+  });
+  await page.waitForTimeout(1500);
+
+  const pageState = await page.evaluate(() => ({
+    subject:
+      document.querySelector("h3.title_text")?.textContent?.trim() ||
+      document.querySelector(".title_area")?.textContent?.trim() ||
+      document.title,
+    bodyText: document.body.innerText.slice(0, 1000),
+  }));
+
+  if (DIRECT_INACCESSIBLE_TEXT.test(pageState.bodyText)) {
+    return {
+      ok: false,
+      status: 404,
+      reason: `직접 접근 불가: ${pageState.bodyText.slice(0, 80).replace(/\s+/g, " ")}`,
+    };
+  }
+
+  return {
+    ok: false,
+    status: 403,
+    reason: `직접 수정 에디터 없음: ${page.url()} / ${pageState.subject}`,
+  };
+};
+
+const filterArticlesWithActiveWriters = (
+  articles: ArticleRecord[],
+  accountMap: Map<string, ActiveAccount>,
+): ArticleRecord[] =>
+  articles.filter((article) => {
+    if (accountMap.has(article.writerAccountId)) {
+      return true;
+    }
+
+    console.log(
+      `[CHANEL_SCHEDULE] skip #${article.articleId}: active writer account not found (${article.writerAccountId})`,
+    );
+    return false;
+  });
+
+const ensureLoggedIn = async (
+  accountId: string,
+  password: string,
+): Promise<void> => {
+  const loggedIn = await isAccountLoggedIn(accountId);
+  if (loggedIn) return;
+
+  const loginResult = await loginAccount(accountId, password);
+  if (!loginResult.success) {
+    throw new Error(`login failed: ${loginResult.error}`);
+  }
+};
+
+const filterLiveArticlesDirect = async (
+  articles: ArticleRecord[],
+  accountMap: Map<string, ActiveAccount>,
+): Promise<ArticleRecord[]> => {
+  const liveArticles: ArticleRecord[] = [];
+
+  for (const article of articles) {
+    const account = accountMap.get(article.writerAccountId);
+    if (!account) continue;
+
+    await acquireAccountLock(account.accountId);
+    try {
+      await ensureLoggedIn(account.accountId, account.password);
+      const page = await getPageForAccount(account.accountId);
+      const state = await checkArticleDirect(page, article.articleId);
+
+      if (!state.ok) {
+        console.log(
+          `[CHANEL_SCHEDULE] skip #${article.articleId}: ${state.reason || state.status}`,
+        );
+        continue;
+      }
+
+      liveArticles.push(article);
+      console.log(
+        `[CHANEL_SCHEDULE] direct live #${article.articleId}: ${(article.title || "").slice(0, 35)}`,
+      );
+      await saveCookiesForAccount(account.accountId);
+    } finally {
+      releaseAccountLock(account.accountId);
+    }
+  }
+
+  return liveArticles;
+};
+
 const filterLiveArticles = async (
   articles: ArticleRecord[],
 ): Promise<ArticleRecord[]> => {
@@ -306,10 +475,33 @@ const filterLiveArticles = async (
     userId: user.userId,
     isActive: true,
   }).lean();
-  const accountMap = new Map(accounts.map((account) => [account.accountId, account]));
+  const accountMap = new Map<string, ActiveAccount>(
+    accounts.map((account) => [
+      account.accountId,
+      {
+        accountId: account.accountId,
+        password: account.password,
+        role: account.role,
+      },
+    ]),
+  );
+  const activeWriterArticles = filterArticlesWithActiveWriters(
+    articles,
+    accountMap,
+  );
+
+  if (VERIFY_MODE === "direct") {
+    const directLiveArticles = await filterLiveArticlesDirect(
+      activeWriterArticles,
+      accountMap,
+    );
+    console.log(`[CHANEL_SCHEDULE] direct live unmodified=${directLiveArticles.length}`);
+    return directLiveArticles;
+  }
+
   const checker =
     accountMap.get(CHECKER_ACCOUNT) ||
-    articles.map((article) => accountMap.get(article.writerAccountId)).find(Boolean) ||
+    activeWriterArticles.map((article) => accountMap.get(article.writerAccountId)).find(Boolean) ||
     accounts.find((account) => account.role === "writer") ||
     accounts[0];
   if (!checker) throw new Error(`checker account not found: ${CHECKER_ACCOUNT}`);
@@ -320,24 +512,17 @@ const filterLiveArticles = async (
   }
 
   const liveArticles: ArticleRecord[] = [];
+  let forbiddenCount = 0;
 
   await acquireAccountLock(checker.accountId);
   try {
-    const loggedIn = await isAccountLoggedIn(checker.accountId);
-    if (!loggedIn) {
-      const loginResult = await loginAccount(
-        checker.accountId,
-        checker.password,
-      );
-      if (!loginResult.success) {
-        throw new Error(`login failed: ${loginResult.error}`);
-      }
-    }
+    await ensureLoggedIn(checker.accountId, checker.password);
 
     const page = await getPageForAccount(checker.accountId);
-    for (const article of articles) {
+    for (const article of activeWriterArticles) {
       const state = await fetchArticleState(page, article.articleId);
       if (!state.ok) {
+        if (state.status === 403) forbiddenCount++;
         console.log(
           `[CHANEL_SCHEDULE] skip #${article.articleId}: ${state.reason || state.status}`,
         );
@@ -353,6 +538,20 @@ const filterLiveArticles = async (
     await saveCookiesForAccount(checker.accountId);
   } finally {
     releaseAccountLock(checker.accountId);
+  }
+
+  if (
+    liveArticles.length === 0 &&
+    activeWriterArticles.length > 0 &&
+    forbiddenCount === activeWriterArticles.length
+  ) {
+    console.log("[CHANEL_SCHEDULE] API all 403, fallback to direct writer check");
+    const directLiveArticles = await filterLiveArticlesDirect(
+      activeWriterArticles,
+      accountMap,
+    );
+    console.log(`[CHANEL_SCHEDULE] direct live unmodified=${directLiveArticles.length}`);
+    return directLiveArticles;
   }
 
   console.log(`[CHANEL_SCHEDULE] live unmodified=${liveArticles.length}`);
