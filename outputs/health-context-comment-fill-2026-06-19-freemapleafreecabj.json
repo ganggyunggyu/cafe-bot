@@ -1,0 +1,121 @@
+{
+  "cafeId": "25636798",
+  "targetCommentCount": 4,
+  "targetReplyCount": 2,
+  "attempted": 12,
+  "succeeded": 11,
+  "failed": 1,
+  "skipped": 0,
+  "results": [
+    {
+      "articleId": 32124,
+      "title": "계류유산 후 보양식 비교 고민이에요",
+      "type": "comment",
+      "accountId": "regular14631",
+      "content": "흑염소 냄새 걱정되시면 요새는 비위 안 상하게 즙으로 잘 나오는 곳들도 많더라고요. 몸조리가 제일 중요하니 천천히 알아보셔요.",
+      "success": true,
+      "commentId": "89785190"
+    },
+    {
+      "articleId": 32124,
+      "title": "계류유산 후 보양식 비교 고민이에요",
+      "type": "comment",
+      "accountId": "angrykoala270",
+      "content": "한방 탕 가격이 꽤 나가서 고민되시겠지만 눈 딱 감고 한 달 정도 챙겨 먹으니 저는 기력 회복에 도움 되더라고요. 무조건 푹 쉬셔요.",
+      "success": true,
+      "commentId": "89785196"
+    },
+    {
+      "articleId": 32124,
+      "title": "계류유산 후 보양식 비교 고민이에요",
+      "type": "comment",
+      "accountId": "nes1p2kx",
+      "content": "몸 회복이 더뎌서 많이 힘드시겠어요ㅠ 삼계탕 매일 챙겨 먹기 귀찮으시면 요새 팩으로 잘 나오는 곰탕이나 삼계탕 쟁여두고 편하게 드시는 것도 방법이에요.",
+      "success": true,
+      "commentId": "89785202"
+    },
+    {
+      "articleId": 32124,
+      "title": "계류유산 후 보양식 비교 고민이에요",
+      "type": "comment",
+      "accountId": "fail5644",
+      "content": "7주차에 겪으시고 회복이 더뎌서 걱정이 많으시겠어요. 예전에 흑염소 먹어봤는데 요즘은 약재를 같이 넣어서 그런지 생각보다 냄새도 안 나고 꽤 먹을만하더라고요ㅎㅎ",
+      "success": true,
+      "commentId": "89785214"
+    },
+    {
+      "articleId": 32124,
+      "title": "계류유산 후 보양식 비교 고민이에요",
+      "type": "reply",
+      "accountId": "nes1p2kx",
+      "parentIndex": 0,
+      "content": "맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.",
+      "success": false,
+      "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://nid.naver.com/nidlogin.login\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "articleId": 32119,
+      "title": "알부민 당제로 드셔본 분 계세요?",
+      "type": "comment",
+      "accountId": "regular14631",
+      "content": "이전에 다른 제품 냄새 때문에 버리셨다니 너무 아깝네요ㅠㅠ 단백질 류가 은근 비린 게 많던데, 윤방부박사 알부민 당제로는 냄새가 괜찮을지 저도 궁금해져요.",
+      "success": true,
+      "commentId": "89785224"
+    },
+    {
+      "articleId": 32119,
+      "title": "알부민 당제로 드셔본 분 계세요?",
+      "type": "comment",
+      "accountId": "tinyfish183",
+      "content": "건강검진 받고 단백질 챙겨야 한다는 말 들으면 진짜 공감 가요. 저도 예전에 냄새 때문에 실패한 적 있어서 윤방부박사 제품은 맛이 어떤지 궁금하네요.",
+      "success": true,
+      "commentId": "89785228"
+    },
+    {
+      "articleId": 32119,
+      "title": "알부민 당제로 드셔본 분 계세요?",
+      "type": "comment",
+      "accountId": "mh8j62wm",
+      "content": "단백질 제품들이 잘못 사면 특유의 냄새 때문에 진짜 먹기 힘들죠ㅠㅠ 요즘 계속 몸 무거우시다니 남 일 같지 않은데 저도 후기 올라오면 참고해야겠어요.",
+      "success": true,
+      "commentId": "89785243"
+    },
+    {
+      "articleId": 32119,
+      "title": "알부민 당제로 드셔본 분 계세요?",
+      "type": "comment",
+      "accountId": "angrykoala270",
+      "content": "당제로라서 특유의 냄새나 텁텁함이 좀 덜하지 않을까 싶네요. 나이 탓인지 저도 요즘 자꾸 몸이 무거운데 윤방부박사 제품 후기 올라오면 같이 참고해야겠어요.",
+      "success": true,
+      "commentId": "89785260"
+    },
+    {
+      "articleId": 32119,
+      "title": "알부민 당제로 드셔본 분 계세요?",
+      "type": "reply",
+      "accountId": "mh8j62wm",
+      "parentIndex": 0,
+      "content": "맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.",
+      "success": true
+    },
+    {
+      "articleId": 32119,
+      "title": "알부민 당제로 드셔본 분 계세요?",
+      "type": "reply",
+      "accountId": "compare14310",
+      "parentIndex": 1,
+      "content": "저도 그런 부분이 제일 궁금했는데 댓글 보고 한 번 더 정리됐어요.",
+      "success": true
+    },
+    {
+      "articleId": 32118,
+      "title": "부모님 선물 챙겨드린 후기요",
+      "type": "comment",
+      "accountId": "fail5644",
+      "content": "단백질 수치 때문에 신경 쓰이셨겠어요. 알부민 당제로는 처음이라 낯설어하시는 거 같은데 익숙해지면 잘 챙겨 드실 거예요ㅎㅎ",
+      "success": true,
+      "commentId": "89785317"
+    }
+  ],
+  "updatedAt": "2026-06-19T02:04:20.600Z"
+}
