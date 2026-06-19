@@ -172,3 +172,355 @@ Call log:
 [CAPTCHA] nes1p2kx AI 답: "678" (2357ms)
 [CAPTCHA] nes1p2kx 캡차 풀이 성공 (1회 시도)
 [LOGIN] nes1p2kx 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] nes1p2kx@25636798 comments +1 (2026-06-19)
+[LOCK] nes1p2kx 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32118, accountId=nes1p2kx, type=comment
+[COMMENT-DB] 저장 성공: #32118 - comment by nes1p2kx
+    ✅ commentId=89785334
+  [comment 3/4] compare14310: 원래 어르신들은 처음 보는 거에 반응이 없으시더라고요ㅋㅋ 저희 부모님도 알부
+[LOCK] compare14310 락 획득
+[CAPTCHA] compare14310 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 가게 전화번호의 앞에서 2번째 숫자는 무엇입니까?
+[CAPTCHA] compare14310 AI 답: "5" (3338ms)
+[CAPTCHA] compare14310 캡차 풀이 성공 (1회 시도)
+[LOGIN] compare14310 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] compare14310@25636798 comments +1 (2026-06-19)
+[LOCK] compare14310 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32118, accountId=compare14310, type=comment
+[COMMENT-DB] 저장 성공: #32118 - comment by compare14310
+    ✅ commentId=89785350
+  [comment 4/4] mh8j62wm: 어머님이 "이게 뭐야" 하신 거 너무 공감 가네요ㅋㅋ 저희 집도 처음엔 낯설
+[LOCK] mh8j62wm 락 획득
+[CAPTCHA] mh8j62wm 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 모든 물건의 총 구매 금액은 얼마입니까?
+[CAPTCHA] mh8j62wm AI 답: "31000" (5334ms)
+[CAPTCHA] mh8j62wm 캡차 풀이 성공 (1회 시도)
+[LOGIN] mh8j62wm 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] mh8j62wm@25636798 comments +1 (2026-06-19)
+[LOCK] mh8j62wm 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32118, accountId=mh8j62wm, type=comment
+[COMMENT-DB] 저장 성공: #32118 - comment by mh8j62wm
+    ✅ commentId=89785364
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 1/2] compare14310 -> parent 0: 맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.
+[LOCK] compare14310 락 획득
+[CAPTCHA] compare14310 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 구매한 통조림 하나 당 열량은 몇 kcal 입니까?
+[CAPTCHA] compare14310 AI 답: "200" (4019ms)
+[CAPTCHA] compare14310 캡차 풀이 성공 (1회 시도)
+[LOGIN] compare14310 로그인 완료, 캐시 갱신
+[DEBUG] compare14310 댓글 좋아요 클릭
+[DEBUG] compare14310 글 좋아요 클릭
+[ACTIVITY] compare14310@25636798 replies +1 (2026-06-19)
+[ACTIVITY] compare14310@25636798 likes +1 (2026-06-19)
+[LOCK] compare14310 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32118, accountId=compare14310, type=reply
+[COMMENT-DB] 저장 성공: #32118 - reply by compare14310
+    ✅ reply registered
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 2/2] regular14631 -> parent 1: 저도 그런 부분이 제일 궁금했는데 댓글 보고 한 번 더 정리됐어요.
+[LOCK] regular14631 락 획득
+[CAPTCHA] regular14631 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 모든 물건의 총 구매 금액은 얼마입니까?
+[CAPTCHA] regular14631 AI 답: "47000" (5378ms)
+[CAPTCHA] regular14631 캡차 풀이 성공 (1회 시도)
+[LOGIN] regular14631 로그인 완료, 캐시 갱신
+[DEBUG] regular14631 댓글 좋아요 클릭
+[DEBUG] regular14631 글 좋아요 클릭
+[ACTIVITY] regular14631@25636798 replies +1 (2026-06-19)
+[ACTIVITY] regular14631@25636798 likes +1 (2026-06-19)
+[LOCK] regular14631 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32118, accountId=regular14631, type=reply
+[COMMENT-DB] 저장 성공: #32118 - reply by regular14631
+    ✅ reply registered
+[LOCK] tinyfish183 락 획득
+[LOGIN] tinyfish183 캐시 히트 (517초 전 확인)
+[LOCK] tinyfish183 락 해제
+#32107 "건강식품선물 실패 없는 부모님 선물 고르는 법" start comments=0, replies=0, writer=fail5644
+  [comment 1/4] tinyfish183: 매번 부모님 영양제 고를 때마다 엄청 고민했는데 이거 보고 참고해야겠네요ㅎㅎ
+[LOCK] tinyfish183 락 획득
+[CAPTCHA] tinyfish183 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 모든 물건의 총 구매 금액은 얼마입니까?
+[CAPTCHA] tinyfish183 AI 답: "26000" (4749ms)
+[CAPTCHA] tinyfish183 캡차 풀이 성공 (1회 시도)
+[LOGIN] tinyfish183 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] tinyfish183@25636798 comments +1 (2026-06-19)
+[LOCK] tinyfish183 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32107, accountId=tinyfish183, type=comment
+[COMMENT-DB] 저장 성공: #32107 - comment by tinyfish183
+    ✅ commentId=89785419
+  [comment 2/4] mh8j62wm: 부모님 영양제 고르는게 은근 제일 까다로운데 좋은 정보 감사해요~ 참고해서 
+[LOCK] mh8j62wm 락 획득
+[CAPTCHA] mh8j62wm 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 가장 가격이 비싼 물건의 한 개 당 가격은 얼마인가요?
+[CAPTCHA] mh8j62wm AI 답: "800" (3413ms)
+[CAPTCHA] mh8j62wm 캡차 풀이 성공 (1회 시도)
+[LOGIN] mh8j62wm 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] mh8j62wm@25636798 comments +1 (2026-06-19)
+[LOCK] mh8j62wm 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32107, accountId=mh8j62wm, type=comment
+[COMMENT-DB] 저장 성공: #32107 - comment by mh8j62wm
+    ✅ commentId=89785431
+  [comment 3/4] regular14631: 맞아요 남들 좋다는 거보다 부모님 체질에 맞는 거 고르는 게 제일 어렵더라고
+[LOCK] regular14631 락 획득
+[CAPTCHA] regular14631 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 모든 물건의 총 구매 금액은 얼마입니까?
+[CAPTCHA] regular14631 AI 답: "11000" (4281ms)
+[CAPTCHA] regular14631 캡차 풀이 성공 (1회 시도)
+[LOGIN] regular14631 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] regular14631@25636798 comments +1 (2026-06-19)
+[LOCK] regular14631 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32107, accountId=regular14631, type=comment
+[COMMENT-DB] 저장 성공: #32107 - comment by regular14631
+    ✅ commentId=89785445
+  [comment 4/4] compare14310: 매번 홍삼만 사드렸는데 체질이나 추출방식도 꼼꼼히 확인해보고 사야겠네요ㅎㅎ 
+[LOCK] compare14310 락 획득
+[CAPTCHA] compare14310 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 무농약 건자두는 몇 개 구매했습니까?
+[CAPTCHA] compare14310 AI 답: "7" (4589ms)
+[CAPTCHA] compare14310 캡차 풀이 성공 (1회 시도)
+[LOGIN] compare14310 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] compare14310@25636798 comments +1 (2026-06-19)
+[LOCK] compare14310 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32107, accountId=compare14310, type=comment
+[COMMENT-DB] 저장 성공: #32107 - comment by compare14310
+    ✅ commentId=89785457
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 1/2] regular14631 -> parent 0: 맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.
+[LOCK] regular14631 락 획득
+[CAPTCHA] regular14631 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 영수증의 가게 위치는 기동일촌길 [?] 입니다. (빈 칸을 채워주세요)
+[CAPTCHA] regular14631 AI 답: "374" (3075ms)
+[CAPTCHA] regular14631 캡차 풀이 성공 (1회 시도)
+[LOGIN] regular14631 로그인 완료, 캐시 갱신
+[DEBUG] regular14631 댓글 좋아요 클릭
+[DEBUG] regular14631 글 좋아요 클릭
+[ACTIVITY] regular14631@25636798 replies +1 (2026-06-19)
+[ACTIVITY] regular14631@25636798 likes +1 (2026-06-19)
+[LOCK] regular14631 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32107, accountId=regular14631, type=reply
+[COMMENT-DB] 저장 성공: #32107 - reply by regular14631
+    ✅ reply registered
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 2/2] angrykoala270 -> parent 1: 저도 그런 부분이 제일 궁금했는데 댓글 보고 한 번 더 정리됐어요.
+[LOCK] angrykoala270 락 획득
+[CAPTCHA] angrykoala270 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 영수증에서 구매한 물건은 총 몇 개 입니까?
+[CAPTCHA] angrykoala270 AI 답: "5" (5170ms)
+[CAPTCHA] angrykoala270 캡차 풀이 성공 (1회 시도)
+[LOGIN] angrykoala270 로그인 완료, 캐시 갱신
+[DEBUG] angrykoala270 댓글 좋아요 클릭
+[DEBUG] angrykoala270 글 좋아요 클릭
+[ACTIVITY] angrykoala270@25636798 replies +1 (2026-06-19)
+[ACTIVITY] angrykoala270@25636798 likes +1 (2026-06-19)
+[LOCK] angrykoala270 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32107, accountId=angrykoala270, type=reply
+[COMMENT-DB] 저장 성공: #32107 - reply by angrykoala270
+    ✅ reply registered
+[LOCK] nes1p2kx 락 획득
+[LOGIN] nes1p2kx 캐시 히트 (508초 전 확인)
+[LOCK] nes1p2kx 락 해제
+#32106 "기립성저혈압, 앉았다 일어날 때 눈앞이 깜깜해지는 이유" start comments=0, replies=0, writer=angrykoala270
+  [comment 1/4] nes1p2kx: 저도 맨날 어지러워서 빈혈인 줄 알았는데 아니었네요.. 내일부터 아침에 천천
+[LOCK] nes1p2kx 락 획득
+[CAPTCHA] nes1p2kx 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 가장 적게 구매한 물건의 이름은 무엇입니까?
+[CAPTCHA] nes1p2kx AI 답: "하루 한번 콜라겐" (4265ms)
+[CAPTCHA] nes1p2kx 캡차 풀이 성공 (1회 시도)
+[LOGIN] nes1p2kx 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] nes1p2kx@25636798 comments +1 (2026-06-19)
+[LOCK] nes1p2kx 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32106, accountId=nes1p2kx, type=comment
+[COMMENT-DB] 저장 성공: #32106 - comment by nes1p2kx
+    ✅ commentId=89785500
+  [comment 2/4] compare14310: 헐 저는 지금까지 그냥 빈혈인 줄 알았어요ㅠㅠ 아침에 일어날 때 조심해야겠네
+[LOCK] compare14310 락 획득
+[CAPTCHA] compare14310 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 구매한 물건은 총 몇 종류입니까?
+[CAPTCHA] compare14310 AI 답: "3" (3007ms)
+[CAPTCHA] compare14310 캡차 풀이 성공 (1회 시도)
+[LOGIN] compare14310 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] compare14310@25636798 comments +1 (2026-06-19)
+[LOCK] compare14310 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32106, accountId=compare14310, type=comment
+[COMMENT-DB] 저장 성공: #32106 - comment by compare14310
+    ✅ commentId=89785519
+  [comment 3/4] tinyfish183: 저도 일어날 때 핑 돌아서 빈혈인 줄 알았는데 이거였네요ㅠㅠ 좋은 정보 감사
+[LOCK] tinyfish183 락 획득
+[CAPTCHA] tinyfish183 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 무농약 잣의 한 개 당 가격은 얼마 입니까?
+[CAPTCHA] tinyfish183 AI 답: "900" (3035ms)
+[CAPTCHA] tinyfish183 캡차 풀이 성공 (1회 시도)
+[LOGIN] tinyfish183 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] tinyfish183@25636798 comments +1 (2026-06-19)
+[LOCK] tinyfish183 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32106, accountId=tinyfish183, type=comment
+[COMMENT-DB] 저장 성공: #32106 - comment by tinyfish183
+    ✅ commentId=89785533
+  [comment 4/4] fail5644: 저도 가끔 일어날때 눈앞이 까매지는데 빈혈인줄 알았어요ㅠㅠ 천천히 일어나야겠
+[LOCK] fail5644 락 획득
+[CAPTCHA] fail5644 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 영수증의 가게는 진주시 [?] 삽다리길에 있습니다. (빈 칸을 채워주세요)
+[CAPTCHA] fail5644 AI 답: "울진군" (3450ms)
+[CAPTCHA] fail5644 캡차 풀이 성공 (1회 시도)
+[LOGIN] fail5644 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] fail5644@25636798 comments +1 (2026-06-19)
+[LOCK] fail5644 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32106, accountId=fail5644, type=comment
+[COMMENT-DB] 저장 성공: #32106 - comment by fail5644
+    ✅ commentId=89785544
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 1/2] fail5644 -> parent 0: 맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.
+[LOCK] fail5644 락 획득
+[CAPTCHA] fail5644 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 구매한 삼겹살 국내산돼지고기의 한 개 당 가격은 얼마입니까?
+[CAPTCHA] fail5644 AI 답: "500" (3418ms)
+[CAPTCHA] fail5644 캡차 풀이 성공 (1회 시도)
+[LOGIN] fail5644 로그인 완료, 캐시 갱신
+[DEBUG] fail5644 댓글 좋아요 클릭
+[DEBUG] fail5644 글 좋아요 클릭
+[ACTIVITY] fail5644@25636798 replies +1 (2026-06-19)
+[ACTIVITY] fail5644@25636798 likes +1 (2026-06-19)
+[LOCK] fail5644 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32106, accountId=fail5644, type=reply
+[COMMENT-DB] 저장 성공: #32106 - reply by fail5644
+    ✅ reply registered
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 2/2] nes1p2kx -> parent 1: 저도 그런 부분이 제일 궁금했는데 댓글 보고 한 번 더 정리됐어요.
+[LOCK] nes1p2kx 락 획득
+[CAPTCHA] nes1p2kx 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 짜장 양념장의 한 개 당 가격은 얼마 입니까?
+[CAPTCHA] nes1p2kx AI 답: "900" (3405ms)
+[CAPTCHA] nes1p2kx 캡차 풀이 성공 (1회 시도)
+[LOGIN] nes1p2kx 로그인 완료, 캐시 갱신
+[DEBUG] nes1p2kx 댓글 좋아요 클릭
+[DEBUG] nes1p2kx 글 좋아요 클릭
+[ACTIVITY] nes1p2kx@25636798 replies +1 (2026-06-19)
+[ACTIVITY] nes1p2kx@25636798 likes +1 (2026-06-19)
+[LOCK] nes1p2kx 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32106, accountId=nes1p2kx, type=reply
+[COMMENT-DB] 저장 성공: #32106 - reply by nes1p2kx
+    ✅ reply registered
+[LOCK] mh8j62wm 락 획득
+[LOGIN] mh8j62wm 캐시 히트 (490초 전 확인)
+[LOCK] mh8j62wm 락 해제
+#32103 "60대 아빠 선물 고민 끝 실용적인 선택 기준" start comments=0, replies=0, writer=fail5644
+  [comment 1/4] mh8j62wm: 맞아요 진짜 영양제 사드리면 맨날 서랍행이더라고요ㅋㅋ 앞으로는 평소에 뭐 불
+[LOCK] mh8j62wm 락 획득
+[CAPTCHA] mh8j62wm 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 가게 위치는 통영시 옹진군 [?] 466 입니다. (빈 칸을 채워주세요)
+[CAPTCHA] mh8j62wm AI 답: "골미길" (3115ms)
+[CAPTCHA] mh8j62wm 캡차 풀이 성공 (1회 시도)
+[LOGIN] mh8j62wm 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] mh8j62wm@25636798 comments +1 (2026-06-19)
+[LOCK] mh8j62wm 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32103, accountId=mh8j62wm, type=comment
+[COMMENT-DB] 저장 성공: #32103 - comment by mh8j62wm
+    ✅ commentId=89785576
+  [comment 2/4] regular14631: 영양제 서랍에 방치된다는 거 진짜 공감요ㅋㅋ 이번엔 평소에 뭘 불편해하시는지
+[LOCK] regular14631 락 획득
+[CAPTCHA] regular14631 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 가격이 100원인 물건은 총 몇 개 구매했습니까?
+[CAPTCHA] regular14631 AI 답: "4" (3678ms)
+[CAPTCHA] regular14631 캡차 풀이 성공 (1회 시도)
+[LOGIN] regular14631 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] regular14631@25636798 comments +1 (2026-06-19)
+[LOCK] regular14631 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32103, accountId=regular14631, type=comment
+[COMMENT-DB] 저장 성공: #32103 - comment by regular14631
+    ✅ commentId=89785585
+  [comment 3/4] nes1p2kx: 영양제 서랍행 완전 공감요ㅋㅋ 올해는 평소에 자주 쓰시는 걸로 잘 지켜봐야겠
+[LOCK] nes1p2kx 락 획득
+[CAPTCHA] nes1p2kx 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 영수증에서 구매한 물건은 총 몇 개 입니까?
+[CAPTCHA] nes1p2kx AI 답: "4" (8588ms)
+[CAPTCHA] nes1p2kx 캡차 풀이 성공 (1회 시도)
+[LOGIN] nes1p2kx 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] nes1p2kx@25636798 comments +1 (2026-06-19)
+[LOCK] nes1p2kx 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32103, accountId=nes1p2kx, type=comment
+[COMMENT-DB] 저장 성공: #32103 - comment by nes1p2kx
+    ✅ commentId=89785599
+  [comment 4/4] tinyfish183: 저도 건강식품 사드렸다가 방치된 적 있어서 완전 공감가네요ㅋㅋ 역시 실용적인
+[LOCK] tinyfish183 락 획득
+[CAPTCHA] tinyfish183 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 가게 전화번호의 뒤에서 1번째 숫자는 무엇입니까?
+[CAPTCHA] tinyfish183 AI 답: "7" (3108ms)
+[CAPTCHA] tinyfish183 캡차 풀이 성공 (1회 시도)
+[LOGIN] tinyfish183 로그인 완료, 캐시 갱신
+[COMMENT] 닉네임 불일치, 내용 매칭으로 댓글 등록 확인
+[ACTIVITY] tinyfish183@25636798 comments +1 (2026-06-19)
+[LOCK] tinyfish183 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32103, accountId=tinyfish183, type=comment
+[COMMENT-DB] 저장 성공: #32103 - comment by tinyfish183
+    ✅ commentId=89785613
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 1/2] tinyfish183 -> parent 0: 맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.
+[LOCK] tinyfish183 락 획득
+[CAPTCHA] tinyfish183 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 구매한 죽 하나 당 열량은 몇 kcal 입니까?
+[CAPTCHA] tinyfish183 AI 답: "200" (3728ms)
+[CAPTCHA] tinyfish183 캡차 풀이 성공 (1회 시도)
+[LOGIN] tinyfish183 로그인 완료, 캐시 갱신
+[DEBUG] tinyfish183 댓글 좋아요 클릭
+[DEBUG] tinyfish183 글 좋아요 클릭
+[ACTIVITY] tinyfish183@25636798 replies +1 (2026-06-19)
+[ACTIVITY] tinyfish183@25636798 likes +1 (2026-06-19)
+[LOCK] tinyfish183 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32103, accountId=tinyfish183, type=reply
+[COMMENT-DB] 저장 성공: #32103 - reply by tinyfish183
+    ✅ reply registered
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 2/2] mh8j62wm -> parent 1: 저도 그런 부분이 제일 궁금했는데 댓글 보고 한 번 더 정리됐어요.
+[LOCK] mh8j62wm 락 획득
+[CAPTCHA] mh8j62wm 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 영수증의 가게 위치는 온방길 [?] 입니다. (빈 칸을 채워주세요)
+[CAPTCHA] mh8j62wm AI 답: "248" (2842ms)
+[CAPTCHA] mh8j62wm 캡차 풀이 성공 (1회 시도)
+[LOGIN] mh8j62wm 로그인 완료, 캐시 갱신
+[DEBUG] mh8j62wm 댓글 좋아요 클릭
+[DEBUG] mh8j62wm 글 좋아요 클릭
+[ACTIVITY] mh8j62wm@25636798 replies +1 (2026-06-19)
+[ACTIVITY] mh8j62wm@25636798 likes +1 (2026-06-19)
+[LOCK] mh8j62wm 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32103, accountId=mh8j62wm, type=reply
+[COMMENT-DB] 저장 성공: #32103 - reply by mh8j62wm
+    ✅ reply registered
+=== DONE: success 34, skipped 0, failed 1 ===
+=== HEALTH CONTEXT COMMENT FILL RUN ===
+cafeId: 25636798
+targets: 32124
+goal: comments=4, replies=2 per article
+output: /Users/ganggyunggyu/Programing/cafe-bot/outputs/health-context-comment-fill-2026-06-19-freemapleafreecabj.json
+[LOCK] regular14631 락 획득
+[BROWSER] 브라우저 시작 (headless: true)
+[CAPTCHA] regular14631 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 영수증에서 구매한 물건은 총 몇 개 입니까?
+[CAPTCHA] provider=gemini model=gemini-3.5-flash key=GEMINI_API_KEY
+[CAPTCHA] regular14631 AI 답: "6" (4083ms)
+[CAPTCHA] regular14631 캡차 풀이 성공 (1회 시도)
+[LOGIN] regular14631 로그인 완료, 캐시 갱신
+[LOCK] regular14631 락 해제
+#32124 "계류유산 후 보양식 비교 고민이에요" start comments=4, replies=0, writer=compare14310
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 1/2] nes1p2kx -> parent 0: 맞아요, 본문처럼 기준을 나눠서 보면 덜 헷갈리는 것 같아요.
+[LOCK] nes1p2kx 락 획득
+[CAPTCHA] nes1p2kx 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 구매한 곤약젤리 하나 당 열량은 몇 kcal 입니까?
+[CAPTCHA] nes1p2kx AI 답: "5" (3611ms)
+[CAPTCHA] nes1p2kx 캡차 풀이 성공 (1회 시도)
+[LOGIN] nes1p2kx 로그인 완료, 캐시 갱신
+[DEBUG] nes1p2kx 댓글 좋아요 클릭
+[DEBUG] nes1p2kx 글 좋아요 클릭
+[ACTIVITY] nes1p2kx@25636798 replies +1 (2026-06-19)
+[ACTIVITY] nes1p2kx@25636798 likes +1 (2026-06-19)
+[LOCK] nes1p2kx 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32124, accountId=nes1p2kx, type=reply
+[COMMENT-DB] 저장 성공: #32124 - reply by nes1p2kx
+    ✅ reply registered
+[GEN] reply fallback: 대댓글 생성 API 오류: 500
+  [reply 2/2] mh8j62wm -> parent 1: 저도 그런 부분이 제일 궁금했는데 댓글 보고 한 번 더 정리됐어요.
+[LOCK] mh8j62wm 락 획득
+[CAPTCHA] mh8j62wm 캡차 감지 (시도 1/3) — 타입: receipt, 질문: 보통맛 고춧가루는 몇 개 구매했습니까?
+[CAPTCHA] mh8j62wm AI 답: "9" (3406ms)
+[CAPTCHA] mh8j62wm 캡차 풀이 성공 (1회 시도)
+[LOGIN] mh8j62wm 로그인 완료, 캐시 갱신
+[DEBUG] mh8j62wm 댓글 좋아요 클릭
+[DEBUG] mh8j62wm 글 좋아요 클릭
+[ACTIVITY] mh8j62wm@25636798 replies +1 (2026-06-19)
+[ACTIVITY] mh8j62wm@25636798 likes +1 (2026-06-19)
+[LOCK] mh8j62wm 락 해제
+[COMMENT-DB] 저장 시도: cafeId=25636798, articleId=32124, accountId=mh8j62wm, type=reply
+[COMMENT-DB] 저장 성공: #32124 - reply by mh8j62wm
+    ✅ reply registered
+=== DONE: success 2, skipped 0, failed 0 ===

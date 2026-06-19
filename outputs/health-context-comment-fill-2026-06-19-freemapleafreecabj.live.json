@@ -1,0 +1,44 @@
+{
+  "cafeId": "25636798",
+  "accountId": "regular14631",
+  "allOk": true,
+  "rows": [
+    {
+      "articleId": 32124,
+      "articleStatus": 200,
+      "subject": "계류유산 후 보양식 비교 고민이에요",
+      "articleCommentCount": 6
+    },
+    {
+      "articleId": 32119,
+      "articleStatus": 200,
+      "subject": "알부민 당제로 드셔본 분 계세요?",
+      "articleCommentCount": 6
+    },
+    {
+      "articleId": 32118,
+      "articleStatus": 200,
+      "subject": "부모님 선물 챙겨드린 후기요",
+      "articleCommentCount": 6
+    },
+    {
+      "articleId": 32107,
+      "articleStatus": 200,
+      "subject": "건강식품선물 실패 없는 부모님 선물 고르는 법",
+      "articleCommentCount": 6
+    },
+    {
+      "articleId": 32106,
+      "articleStatus": 200,
+      "subject": "기립성저혈압, 앉았다 일어날 때 눈앞이 깜깜해지는 이유",
+      "articleCommentCount": 6
+    },
+    {
+      "articleId": 32103,
+      "articleStatus": 200,
+      "subject": "60대 아빠 선물 고민 끝 실용적인 선택 기준",
+      "articleCommentCount": 6
+    }
+  ],
+  "updatedAt": "2026-06-19T02:27:23.934Z"
+}
