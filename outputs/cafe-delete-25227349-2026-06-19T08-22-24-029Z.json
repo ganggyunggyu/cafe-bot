@@ -1,0 +1,217 @@
+{
+  "cafeId": "25227349",
+  "cafeUrl": "minemh",
+  "pageUrl": "https://cafe.naver.com/f-e/cafes/25227349/menus/0?viewType=L&page=1&size=50",
+  "deletedTotal": 0,
+  "summaries": [
+    {
+      "batch": 1,
+      "beforeTotal": 568,
+      "fetchedCount": 50,
+      "deletedIds": [],
+      "failed": [
+        {
+          "articleId": 596,
+          "error": "405:"
+        },
+        {
+          "articleId": 595,
+          "error": "405:"
+        },
+        {
+          "articleId": 594,
+          "error": "405:"
+        },
+        {
+          "articleId": 593,
+          "error": "405:"
+        },
+        {
+          "articleId": 592,
+          "error": "405:"
+        },
+        {
+          "articleId": 591,
+          "error": "405:"
+        },
+        {
+          "articleId": 590,
+          "error": "405:"
+        },
+        {
+          "articleId": 589,
+          "error": "405:"
+        },
+        {
+          "articleId": 588,
+          "error": "405:"
+        },
+        {
+          "articleId": 587,
+          "error": "405:"
+        },
+        {
+          "articleId": 586,
+          "error": "405:"
+        },
+        {
+          "articleId": 585,
+          "error": "405:"
+        },
+        {
+          "articleId": 584,
+          "error": "405:"
+        },
+        {
+          "articleId": 583,
+          "error": "405:"
+        },
+        {
+          "articleId": 582,
+          "error": "405:"
+        },
+        {
+          "articleId": 581,
+          "error": "405:"
+        },
+        {
+          "articleId": 580,
+          "error": "405:"
+        },
+        {
+          "articleId": 579,
+          "error": "405:"
+        },
+        {
+          "articleId": 578,
+          "error": "405:"
+        },
+        {
+          "articleId": 577,
+          "error": "405:"
+        },
+        {
+          "articleId": 576,
+          "error": "405:"
+        },
+        {
+          "articleId": 575,
+          "error": "405:"
+        },
+        {
+          "articleId": 574,
+          "error": "405:"
+        },
+        {
+          "articleId": 573,
+          "error": "405:"
+        },
+        {
+          "articleId": 572,
+          "error": "405:"
+        },
+        {
+          "articleId": 571,
+          "error": "405:"
+        },
+        {
+          "articleId": 569,
+          "error": "405:"
+        },
+        {
+          "articleId": 568,
+          "error": "405:"
+        },
+        {
+          "articleId": 567,
+          "error": "405:"
+        },
+        {
+          "articleId": 566,
+          "error": "405:"
+        },
+        {
+          "articleId": 565,
+          "error": "405:"
+        },
+        {
+          "articleId": 564,
+          "error": "405:"
+        },
+        {
+          "articleId": 563,
+          "error": "405:"
+        },
+        {
+          "articleId": 562,
+          "error": "405:"
+        },
+        {
+          "articleId": 561,
+          "error": "405:"
+        },
+        {
+          "articleId": 560,
+          "error": "405:"
+        },
+        {
+          "articleId": 559,
+          "error": "405:"
+        },
+        {
+          "articleId": 558,
+          "error": "405:"
+        },
+        {
+          "articleId": 557,
+          "error": "405:"
+        },
+        {
+          "articleId": 556,
+          "error": "405:"
+        },
+        {
+          "articleId": 555,
+          "error": "405:"
+        },
+        {
+          "articleId": 554,
+          "error": "405:"
+        },
+        {
+          "articleId": 553,
+          "error": "405:"
+        },
+        {
+          "articleId": 552,
+          "error": "405:"
+        },
+        {
+          "articleId": 551,
+          "error": "405:"
+        },
+        {
+          "articleId": 550,
+          "error": "405:"
+        },
+        {
+          "articleId": 549,
+          "error": "405:"
+        },
+        {
+          "articleId": 548,
+          "error": "405:"
+        },
+        {
+          "articleId": 547,
+          "error": "405:"
+        },
+        {
+          "articleId": 546,
+          "error": "405:"
+        }
+      ],
+      "afterTotal": 568
+    }
+  ]
+}
